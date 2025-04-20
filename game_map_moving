@@ -1,0 +1,192 @@
+import pygame
+import random
+import time
+import os
+
+# === Setup ===
+os.chdir("C:/Users/ASUS/OneDrive - mmu.edu.my/Desktop/Mini IT Project/Mini-IT-Project-2-06")
+
+pygame.init()
+
+# Screen setup
+SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("No Money, No Life")
+
+# Load assets
+map_img = pygame.image.load("final_map.png").convert()
+MAP_WIDTH, MAP_HEIGHT = map_img.get_size()
+
+player_img = pygame.image.load("MALE IN FRONT.png").convert_alpha()
+player_img = pygame.transform.scale(player_img, (128, 128))
+
+npc_img = pygame.image.load("FEMALE BACK.png").convert_alpha()
+npc_img = pygame.transform.scale(npc_img, (128, 128))
+
+# Fonts
+FONT = pygame.font.SysFont("arial", 20)
+BIG_FONT = pygame.font.SysFont("arial", 26)
+
+# Player
+player_x, player_y = 500, 500
+player_speed = 3
+
+# Camera
+def get_camera_offset():
+    camera_x = max(0, min(player_x - SCREEN_WIDTH // 2, MAP_WIDTH - SCREEN_WIDTH))
+    camera_y = max(0, min(player_y - SCREEN_HEIGHT // 2, MAP_HEIGHT - SCREEN_HEIGHT))
+    return camera_x, camera_y
+
+# NPC class
+class NPC:
+    def __init__(self, x, y, dialogue, x_min=500, x_max=MAP_WIDTH - 500, y_min=500, y_max=MAP_HEIGHT - 500):
+        self.x = x
+        self.y = y
+        self.dialogue = dialogue
+        self.current_line = 0
+        self.talking = False
+        self.last_change = time.time()
+        self.direction = "idle"
+        self.x_min = x_min
+        self.x_max = x_max
+        self.y_min = y_min
+        self.y_max = y_max
+
+    def is_near_player(self, px, py):
+        distance = ((self.x - px)**2 + (self.y - py)**2)**0.5
+        return distance < 60
+
+    def draw(self, surface, camera_x, camera_y):
+        surface.blit(npc_img, (self.x - camera_x, self.y - camera_y))
+        if self.is_near_player(player_x, player_y) and not self.talking:
+            prompt = FONT.render("PRESS E", True, (255, 255, 255))
+            surface.blit(prompt, (self.x - camera_x, self.y - camera_y - 25))
+
+        # Optional: Draw NPC movement bounds (for debugging)
+        pygame.draw.rect(
+            surface,
+            (255, 0, 0),
+            (self.x_min - camera_x, self.y_min - camera_y, self.x_max - self.x_min, self.y_max - self.y_min),
+            2
+        )
+
+    def move_random(self):
+        now = time.time()
+        if now - self.last_change > 2:
+            self.direction = random.choice(["w", "a", "s", "d", "idle"])
+            self.last_change = now
+
+        if self.direction == "w":
+            self.y -= 1
+        elif self.direction == "a":
+            self.x -= 1
+        elif self.direction == "s":
+            self.y += 1
+        elif self.direction == "d":
+            self.x += 1
+
+        self.x = max(self.x_min, min(self.x, self.x_max))
+        self.y = max(self.y_min, min(self.y, self.y_max))
+
+# NPC dialogue
+dialogue_lines = [
+    "Hi! Welcome to the grocery store!",
+    "DON'T COME BACK",
+    "BYE",
+    "[MENU]"
+]
+
+# Create NPC with custom roam area near grocery
+npc = NPC(
+    x=1100,
+    y=1000,
+    dialogue=dialogue_lines,
+    x_min=1000,
+    x_max=1250,
+    y_min=950,
+    y_max=1150
+)
+
+# Menu choices
+menu_options = ["🛒 Shop", "📜 Quest"]
+selected_option = 0
+
+# Dialogue state
+show_dialogue = False
+
+# Main loop
+clock = pygame.time.Clock()
+running = True
+while running:
+    screen.fill((0, 0, 0))
+    camera_x, camera_y = get_camera_offset()
+
+    screen.blit(map_img, (0, 0), (camera_x, camera_y, SCREEN_WIDTH, SCREEN_HEIGHT))
+
+    # Player movement
+    keys = pygame.key.get_pressed()
+    if not npc.talking:
+        if keys[pygame.K_w]: player_y -= player_speed
+        if keys[pygame.K_s]: player_y += player_speed
+        if keys[pygame.K_a]: player_x -= player_speed
+        if keys[pygame.K_d]: player_x += player_speed
+
+    # Clamp player
+
+    player_x = max(0, min(player_x, MAP_WIDTH - player_img.get_width()))
+    player_y = max(0, min(player_y, MAP_HEIGHT - player_img.get_height()))
+
+    # NPC movement and drawing
+    npc.move_random()
+    npc.draw(screen, camera_x, camera_y)
+
+    # Draw player
+    screen.blit(player_img, (player_x - camera_x, player_y - camera_y))
+
+    # Dialogue rendering
+    if npc.talking:
+        pygame.draw.rect(screen, (0, 0, 0), (50, SCREEN_HEIGHT - 160, SCREEN_WIDTH - 100, 110))
+        pygame.draw.rect(screen, (255, 255, 255), (50, SCREEN_HEIGHT - 160, SCREEN_WIDTH - 100, 110), 3)
+
+        current_line = npc.dialogue[npc.current_line]
+
+        if current_line == "[MENU]":
+            for i, opt in enumerate(menu_options):
+                color = (255, 255, 0) if i == selected_option else (255, 255, 255)
+                txt = BIG_FONT.render(opt, True, color)
+                screen.blit(txt, (80 + i*150, SCREEN_HEIGHT - 120))
+        else:
+            txt = FONT.render(current_line, True, (255, 255, 255))
+            screen.blit(txt, (60, SCREEN_HEIGHT - 130))
+
+    pygame.display.update()
+
+    # Event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_e and npc.is_near_player(player_x, player_y):
+                npc.talking = True
+                npc.current_line = 0
+                selected_option = 0
+
+            if npc.talking:
+                if npc.dialogue[npc.current_line] == "[MENU]":
+                    if event.key == pygame.K_LEFT:
+                        selected_option = (selected_option - 1) % len(menu_options)
+                    elif event.key == pygame.K_RIGHT:
+                        selected_option = (selected_option + 1) % len(menu_options)
+                    elif event.key == pygame.K_RETURN:
+                        print(f"You selected: {menu_options[selected_option]}")
+                        npc.talking = False
+                else:
+                    if event.key == pygame.K_SPACE:
+                        npc.current_line += 1
+                        if npc.current_line >= len(npc.dialogue):
+                            npc.talking = False
+
+    clock.tick(60)
+
+pygame.quit()
