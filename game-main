@@ -1,19 +1,20 @@
 import pygame
 import os
 import json
+import sys
 
-# === Setup ===
-os.chdir("C:/Users/ASUS/OneDrive - mmu.edu.my/Desktop/Mini IT Project/Mini-IT-Project-2-06")
+# === SETUP ===
+os.chdir("C:/Users/User/Desktop/Mini IT Project/Mini-IT-Project-2-06")
 
 pygame.init()
 pygame.mixer.init()
 
-# === Music ===
+# === MUSIC ===
 pygame.mixer.music.load("background.mp3")
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
 
-# === Screen and Fonts ===
+# === SCREEN & FONTS ===
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No Money, No Life")
@@ -21,7 +22,7 @@ pygame.display.set_caption("No Money, No Life")
 font = pygame.font.Font("PressStart2P.ttf", 20)
 small_font = pygame.font.Font("PressStart2P.ttf", 14)
 
-# === Colors ===
+# === COLORS ===
 BLACK = (0, 0, 0)
 GRAY = (150, 150, 150)
 HIGHLIGHT = (255, 215, 0)
@@ -31,11 +32,11 @@ WARNING_COLOR = (255, 0, 0)
 BUTTON_COLOR = (220, 220, 220)
 WHITE = (255, 255, 255)
 
-# === Load Images ===
+# === LOAD IMG ===
 bg_img = pygame.transform.scale(pygame.image.load("main.png").convert(), (WIDTH, HEIGHT))
 map_img = pygame.transform.scale(pygame.image.load("final_map.png").convert(), (WIDTH, HEIGHT))
 
-# === Save/Load ===
+# === SAVE/LOAD ===
 SAVE_FILE = "save_data.json"
 
 def save_game():
@@ -65,7 +66,7 @@ def reset_game():
     else:
         warning_message = "No save file to delete!"
 
-# === Game Variables ===
+# === GAME VARIABLES ===
 player_name = ''
 selected_character = None
 active_input = False
@@ -75,24 +76,24 @@ show_intro_message = True
 typing_done = False
 running = True
 
-# Cursor blinking
+# CURSOR BLINKING
 cursor_visible = True
 cursor_timer = 0
-cursor_interval = 500  # milliseconds
+cursor_interval = 500  # 毫秒
 
-# === UI Elements ===
+# === UI ELEMENTS ===
 male_box = pygame.Rect(250, 330, 40, 40)
 female_box = pygame.Rect(500, 330, 40, 40)
 start_button = pygame.Rect(70, 455, 200, 60)
 continue_button = pygame.Rect(300, 455, 200, 60)
 reset_button = pygame.Rect(530, 455, 200, 60)
 
-# === Typing effect parameters ===
+# === TYPING EFFECT ===
 typed_message = ""
 typing_index = 0
-typing_speed = 50  # Milliseconds between each character
+typing_speed = 50  
 
-# === Function to generate intro message ===
+# === FUNCTION TO GENERATE INTRO MESSAGE ===
 def generate_intro_message(name):
     return (
         f"WELCOME {name.upper()}! In this game, you need money to survive. "
@@ -101,7 +102,7 @@ def generate_intro_message(name):
         "which takes more time. So plan wisely, keep your energy up, and make the most of your day!"
     )
 
-# === Function to render wrapped text ===
+# === RENDER WRAPPED TEXT ===
 def draw_text_box(surface, message, font, color, box_rect, padding=10, line_height=20):
     words = message.split(' ')
     lines = []
@@ -123,26 +124,26 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
         line_surface = font.render(l.strip(), True, color)
         surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
 
-# === Main Loop ===
+# === MAIN LOOP ===
 clock = pygame.time.Clock()
-intro_message = ""  # initialize empty
+intro_message = "" 
 
 while running:
     screen.fill(WHITE)
     dt = clock.tick(60)
 
-    # Update cursor blinking
+    # UPDATE CURSOR BLINKING
     cursor_timer += dt
     if cursor_timer >= cursor_interval:
         cursor_visible = not cursor_visible
         cursor_timer = 0
 
-    # === Intro State ===
+    # === INTRO STATE ===
     if game_state == "intro":
         screen.blit(bg_img, (0, 0))
 
         name_color = BLACK if player_name else GRAY
-        display_name = player_name if player_name else "Enter Your Name"
+        display_name = player_name if player_name else "ENTER YOUR NAME"
 
         if active_input and cursor_visible:
             display_name += "|"
@@ -150,7 +151,7 @@ while running:
         name_surface = font.render(display_name, True, name_color)
         screen.blit(name_surface, (230, 215))
 
-        # Character Selection Boxes
+        # CHARACTER SELECTION BOXES
         pygame.draw.rect(screen, BLACK, male_box, 3)
         pygame.draw.rect(screen, BLACK, female_box, 3)
 
@@ -164,7 +165,7 @@ while running:
             pygame.draw.line(screen, TICK_COLOR, (510, 350), (520, 360), 3)
             pygame.draw.line(screen, TICK_COLOR, (520, 360), (535, 340), 3)
 
-        # Start Button
+        # START BUTTON
         pygame.draw.rect(screen, BUTTON_COLOR, start_button)
         pygame.draw.rect(screen, BLACK, start_button, 4)
         if player_name and selected_character:
@@ -172,13 +173,13 @@ while running:
         start_text = font.render("Start", True, BLACK)
         screen.blit(start_text, (start_button.x + 55, start_button.y + 20))
 
-        # Continue Button
+        #CONTINUE BUTTON
         pygame.draw.rect(screen, BUTTON_COLOR, continue_button)
         pygame.draw.rect(screen, BLACK, continue_button, 4)
         continue_text = font.render("Continue", True, BLACK)
-        screen.blit(continue_text, (continue_button.x + 25, continue_button.y + 20))  # Centered
+        screen.blit(continue_text, (continue_button.x + 25, continue_button.y + 20))  # 居中
 
-        # Reset Button
+        # RESET BUTTON
         pygame.draw.rect(screen, BUTTON_COLOR, reset_button)
         pygame.draw.rect(screen, BLACK, reset_button, 4)
         reset_text = font.render("Reset", True, BLACK)
@@ -191,7 +192,7 @@ while running:
     elif game_state == "game":
         screen.blit(map_img, (0, 0))
 
-        # Typing effect for intro message
+        # EFFECT FOR INTRO MESSAGE
         if show_intro_message:
             if not typing_done:
                 if typing_index < len(intro_message):
@@ -200,11 +201,11 @@ while running:
                 else:
                     typing_done = True
 
-            # Draw message box
+            # DRAW MESSAGE BOX
             dialog_box_rect = pygame.Rect(25, 410, 750, 180)
             draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
 
-    # === Event Handling ===
+    # === EVENT ===
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -222,16 +223,10 @@ while running:
 
                 if start_button.collidepoint(mouse_x, mouse_y):
                     if player_name and selected_character:
-                        intro_message = generate_intro_message(player_name)
-                        game_state = "game"
-                        warning_message = ''
-                        show_intro_message = True
-                        typing_done = False
-                        typed_message = ""
-                        typing_index = 0
                         save_game()
+                        running = False
                     else:
-                        warning_message = "Enter name and choose a character!"
+                            warning_message = "Enter name and choose a character!"
 
                 if continue_button.collidepoint(mouse_x, mouse_y):
                     if load_game():
