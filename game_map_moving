@@ -2,10 +2,10 @@ import pygame
 import random
 import time
 import os
+import json
 
 # === Setup ===
-os.chdir("C:/Users/ASUS/OneDrive - mmu.edu.my/Desktop/Mini IT Project/Mini-IT-Project-2-06")
-
+os.chdir("C:/Users/User/Desktop/Mini IT Project/Mini-IT-Project-2-06")
 pygame.init()
 
 # Screen setup
@@ -13,23 +13,71 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("No Money, No Life")
 
-# Load assets
+# Load map and NPC
 map_img = pygame.image.load("final_map.png").convert()
 MAP_WIDTH, MAP_HEIGHT = map_img.get_size()
 
-player_img = pygame.image.load("MALE IN FRONT.png").convert_alpha()
-player_img = pygame.transform.scale(player_img, (128, 128))
-
-npc_img = pygame.image.load("FEMALE BACK.png").convert_alpha()
+npc_img = pygame.image.load("female/female_idle_left.png").convert_alpha()
 npc_img = pygame.transform.scale(npc_img, (128, 128))
+
+# Load player data
+SAVE_FILE = "save_data.json"
+selected_character = ""  # default
+if os.path.exists(SAVE_FILE):
+    with open(SAVE_FILE, "r") as f:
+        data = json.load(f)
+        selected_character = data.get("selected_character", "male")
+
+# Player image paths
+character_paths = {
+    "male": "male/",
+    "female": "female/"
+}
+
+# Load player images dynamically
+def load_player_images(character_folder):
+    path = character_paths[character_folder]
+    return {
+        "idle": {
+            "w": pygame.image.load(path + f"{character_folder}_idle_up.png").convert_alpha(),
+            "s": pygame.image.load(path + f"{character_folder}_idle_down.png").convert_alpha(),
+            "a": pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha(),
+            "d": pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+        },
+        "walk": {
+            "w": [
+                pygame.image.load(path + f"{character_folder}_walk_up_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_walk_up_2.png").convert_alpha()
+            ],
+            "s": [
+                pygame.image.load(path + f"{character_folder}_walk_down_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_walk_down_2.png").convert_alpha()
+            ],
+            "a": [
+                pygame.image.load(path + f"{character_folder}_walk_left_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha()
+            ],
+            "d": [
+                pygame.image.load(path + f"{character_folder}_walk_right_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+            ]
+        }
+    }
+
+# Load character based on selection
+player_imgs = load_player_images(selected_character)
+
+# Player info
+player_x, player_y = 500, 500
+player_speed = 3
+player_direction = "s"
+walk_frame = 0
+walk_timer = 0
+walk_delay = 200
 
 # Fonts
 FONT = pygame.font.SysFont("arial", 20)
 BIG_FONT = pygame.font.SysFont("arial", 26)
-
-# Player
-player_x, player_y = 500, 500
-player_speed = 3
 
 # Camera
 def get_camera_offset():
@@ -53,7 +101,7 @@ class NPC:
         self.y_max = y_max
 
     def is_near_player(self, px, py):
-        distance = ((self.x - px)**2 + (self.y - py)**2)**0.5
+        distance = ((self.x - px) ** 2 + (self.y - py) ** 2) ** 0.5
         return distance < 60
 
     def draw(self, surface, camera_x, camera_y):
@@ -61,14 +109,6 @@ class NPC:
         if self.is_near_player(player_x, player_y) and not self.talking:
             prompt = FONT.render("PRESS E", True, (255, 255, 255))
             surface.blit(prompt, (self.x - camera_x, self.y - camera_y - 25))
-
-        # Optional: Draw NPC movement bounds (for debugging)
-        pygame.draw.rect(
-            surface,
-            (255, 0, 0),
-            (self.x_min - camera_x, self.y_min - camera_y, self.x_max - self.x_min, self.y_max - self.y_min),
-            2
-        )
 
     def move_random(self):
         now = time.time()
@@ -78,11 +118,11 @@ class NPC:
 
         if self.direction == "w":
             self.y -= 1
-        elif self.direction == "a":
+        if self.direction == "a":
             self.x -= 1
-        elif self.direction == "s":
+        if self.direction == "s":
             self.y += 1
-        elif self.direction == "d":
+        if self.direction == "d":
             self.x += 1
 
         self.x = max(self.x_min, min(self.x, self.x_max))
@@ -96,7 +136,7 @@ dialogue_lines = [
     "[MENU]"
 ]
 
-# Create NPC with custom roam area near grocery
+# Create NPC
 npc = NPC(
     x=1100,
     y=1000,
@@ -107,61 +147,74 @@ npc = NPC(
     y_max=1150
 )
 
-# Menu choices
+# Menu options
 menu_options = ["🛒 Shop", "📜 Quest"]
 selected_option = 0
-
-# Dialogue state
-show_dialogue = False
 
 # Main loop
 clock = pygame.time.Clock()
 running = True
+
 while running:
     screen.fill((0, 0, 0))
     camera_x, camera_y = get_camera_offset()
+    screen.blit(map_img, (-camera_x, -camera_y))
 
-    screen.blit(map_img, (0, 0), (camera_x, camera_y, SCREEN_WIDTH, SCREEN_HEIGHT))
-
-    # Player movement
     keys = pygame.key.get_pressed()
-    if not npc.talking:
-        if keys[pygame.K_w]: player_y -= player_speed
-        if keys[pygame.K_s]: player_y += player_speed
-        if keys[pygame.K_a]: player_x -= player_speed
-        if keys[pygame.K_d]: player_x += player_speed
+    moving = False
 
-    # Clamp player
+    if keys[pygame.K_w]:
+        player_y -= player_speed
+        player_direction = "w"
+        moving = True
+    if keys[pygame.K_s]:
+        player_y += player_speed
+        player_direction = "s"
+        moving = True
+    if keys[pygame.K_a]:
+        player_x -= player_speed
+        player_direction = "a"
+        moving = True
+    if keys[pygame.K_d]:
+        player_x += player_speed
+        player_direction = "d"
+        moving = True
 
-    player_x = max(0, min(player_x, MAP_WIDTH - player_img.get_width()))
-    player_y = max(0, min(player_y, MAP_HEIGHT - player_img.get_height()))
+    if moving:
+        if pygame.time.get_ticks() - walk_timer > walk_delay:
+            walk_frame = (walk_frame + 1) % len(player_imgs["walk"][player_direction])
+            walk_timer = pygame.time.get_ticks()
+    else:
+        walk_frame = 0
 
-    # NPC movement and drawing
+    player_x = max(0, min(player_x, MAP_WIDTH - player_imgs["idle"][player_direction].get_width()))
+    player_y = max(0, min(player_y, MAP_HEIGHT - player_imgs["idle"][player_direction].get_height()))
+
     npc.move_random()
     npc.draw(screen, camera_x, camera_y)
 
-    # Draw player
-    screen.blit(player_img, (player_x - camera_x, player_y - camera_y))
+    current_img = (
+        player_imgs["walk"][player_direction][walk_frame]
+        if moving else player_imgs["idle"][player_direction]
+    )
+    screen.blit(current_img, (player_x - camera_x, player_y - camera_y))
 
-    # Dialogue rendering
     if npc.talking:
         pygame.draw.rect(screen, (0, 0, 0), (50, SCREEN_HEIGHT - 160, SCREEN_WIDTH - 100, 110))
         pygame.draw.rect(screen, (255, 255, 255), (50, SCREEN_HEIGHT - 160, SCREEN_WIDTH - 100, 110), 3)
 
         current_line = npc.dialogue[npc.current_line]
-
         if current_line == "[MENU]":
             for i, opt in enumerate(menu_options):
                 color = (255, 255, 0) if i == selected_option else (255, 255, 255)
                 txt = BIG_FONT.render(opt, True, color)
-                screen.blit(txt, (80 + i*150, SCREEN_HEIGHT - 120))
+                screen.blit(txt, (80 + i * 150, SCREEN_HEIGHT - 120))
         else:
             txt = FONT.render(current_line, True, (255, 255, 255))
             screen.blit(txt, (60, SCREEN_HEIGHT - 130))
 
     pygame.display.update()
 
-    # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -186,6 +239,8 @@ while running:
                         npc.current_line += 1
                         if npc.current_line >= len(npc.dialogue):
                             npc.talking = False
+                    if event.key == pygame.K_ESCAPE:
+                        npc.talking = False
 
     clock.tick(60)
 

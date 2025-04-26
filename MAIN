@@ -1,0 +1,399 @@
+# === MINI IT GAME: FINAL COMBINED CODE ===
+# 支持主菜单（命名+角色选择）+ 地图行走 + 阻挡功能
+
+import pygame
+import os
+import json
+import time
+import random
+
+# === SETUP ===
+os.chdir("C:/Users/User/Desktop/Mini IT Project/Mini-IT-Project-2-06")
+pygame.init()
+pygame.mixer.init()
+
+# === SCREEN ===
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("No Money, No Life")
+
+# === FONTS ===
+font = pygame.font.Font("PressStart2P.ttf", 20)
+small_font = pygame.font.Font("PressStart2P.ttf", 14)
+FONT = pygame.font.SysFont("arial", 20)
+BIG_FONT = pygame.font.SysFont("arial", 26)
+
+# === MUSIC ===
+pygame.mixer.music.load("background.mp3")
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)
+
+# === COLORS ===
+BLACK = (0, 0, 0)
+GRAY = (150, 150, 150)
+WHITE = (255, 255, 255)
+HIGHLIGHT = (255, 215, 0)
+TICK_COLOR = (0, 200, 0)
+WARNING_COLOR = (255, 0, 0)
+BUTTON_COLOR = (220, 220, 220)
+
+# === IMAGES ===
+bg_img = pygame.transform.scale(pygame.image.load("main.png").convert(), (WIDTH, HEIGHT))
+map_img = pygame.image.load("final_map.png").convert()
+MAP_WIDTH, MAP_HEIGHT = map_img.get_size()
+
+# === TILEMAP BLOCKING ===
+def load_tilemap(filename):
+    tilemap = []
+    with open(filename, 'r') as file:
+        for line in file:
+            row = [int(char) for char in line.strip()]
+            tilemap.append(row)
+
+    return tilemap
+
+tilemap = load_tilemap("map_tiled.txt")
+blocking_tiles = [1]
+TILE_SIZE = 16
+collision_rects = []
+for y, row in enumerate(tilemap):
+    for x, tile in enumerate(row):
+        if tile in blocking_tiles:
+            collision_rects.append(pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+
+# === SAVE/LOAD ===
+SAVE_FILE = "save_data.json"
+
+def save_game():
+    data = {"player_name": player_name, "selected_character": selected_character}
+    with open(SAVE_FILE, "w") as f:
+        json.dump(data, f)
+
+def generate_intro_message(name):
+    return (f"WELCOME {name.upper()}! In this game, you need money to survive. "
+            "Explore different rooms to work and earn cash. To restore your energy, "
+            "you can either buy food or drinks, which is faster, or go back home to sleep, "
+            "which takes more time. So plan wisely, keep your energy up, and make the most of your day!")
+
+def draw_text_box(surface, message, font, color, box_rect, padding=10, line_height=20):
+    words = message.split(' ')
+    lines = []
+    line = ''
+    for word in words:
+        test_line = line + word + ' '
+        if font.size(test_line)[0] < box_rect.width - 2 * padding:
+            line = test_line
+        else:
+            lines.append(line)
+            line = word + ' '
+    lines.append(line)
+    pygame.draw.rect(surface, WHITE, box_rect)
+    pygame.draw.rect(surface, BLACK, box_rect, 3)
+    for i, l in enumerate(lines):
+        surface.blit(font.render(l.strip(), True, color), (box_rect.x + padding, box_rect.y + padding + i * line_height))
+
+
+def load_game():
+    global player_name, selected_character, intro_message, game_state
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, "r") as f:
+            data = json.load(f)
+            player_name = data.get("player_name", "")
+            selected_character = data.get("selected_character", None)
+            intro_message = generate_intro_message(player_name)
+            return True
+    return False
+
+def reset_game():
+    global warning_message
+    if os.path.exists(SAVE_FILE):
+        os.remove(SAVE_FILE)
+        warning_message = "Save file deleted!"
+    else:
+        warning_message = "No save file to delete!"
+
+# === GAME VARIABLES ===
+player_name = ''
+selected_character = None
+active_input = False
+warning_message = ''
+game_state = "intro"
+show_intro_message = True
+typing_done = False
+running = True
+
+# CURSOR
+cursor_visible = True
+cursor_timer = 0
+cursor_interval = 500
+
+# UI ELEMENTS
+male_box = pygame.Rect(250, 330, 40, 40)
+female_box = pygame.Rect(500, 330, 40, 40)
+start_button = pygame.Rect(70, 455, 200, 60)
+continue_button = pygame.Rect(300, 455, 200, 60)
+reset_button = pygame.Rect(530, 455, 200, 60)
+
+typed_message = ""
+typing_index = 0
+
+# === PLAYER ===
+character_paths = {"male": "male/", "female": "female/"}
+
+def load_player_images(character_folder):
+    path = character_paths[character_folder]
+    return {
+        "idle": {
+            "w": pygame.image.load(path + f"{character_folder}_idle_up.png").convert_alpha(),
+            "s": pygame.image.load(path + f"{character_folder}_idle_down.png").convert_alpha(),
+            "a": pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha(),
+            "d": pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+        },
+        "walk": {
+            "w": [
+                pygame.image.load(path + f"{character_folder}_walk_up_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_walk_up_2.png").convert_alpha()
+            ],
+            "s": [
+                pygame.image.load(path + f"{character_folder}_walk_down_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_walk_down_2.png").convert_alpha()
+            ],
+            "a": [
+                pygame.image.load(path + f"{character_folder}_walk_left_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha()
+            ],
+            "d": [
+                pygame.image.load(path + f"{character_folder}_walk_right_1.png").convert_alpha(),
+                pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+            ]
+        }
+    }
+
+# === CAMERA ===
+def get_camera_offset():
+    camera_x = max(0, min(player_x - WIDTH // 2, MAP_WIDTH - WIDTH))
+    camera_y = max(0, min(player_y - HEIGHT // 2, MAP_HEIGHT - HEIGHT))
+    return camera_x, camera_y
+
+# === NPC ===
+npc_img = pygame.image.load("female/female_idle_left.png").convert_alpha()
+npc_img = pygame.transform.scale(npc_img, (128, 128))
+class NPC:
+    def __init__(self, x, y, dialogue):
+        self.x = x
+        self.y = y
+        self.dialogue = dialogue
+        self.current_line = 0
+        self.talking = False
+        self.last_change = time.time()
+        self.direction = "idle"
+    def is_near_player(self, px, py):
+        return ((self.x - px)**2 + (self.y - py)**2)**0.5 < 60
+    def draw(self, surface, camera_x, camera_y):
+        surface.blit(npc_img, (self.x - camera_x, self.y - camera_y))
+        if self.is_near_player(player_x, player_y) and not self.talking:
+            screen.blit(FONT.render("PRESS E", True, WHITE), (self.x - camera_x, self.y - camera_y - 25))
+    def move_random(self):
+        if time.time() - self.last_change > 2:
+            self.direction = random.choice(["w", "a", "s", "d", "idle"])
+            self.last_change = time.time()
+        if self.direction == "w": self.y -= 1
+        if self.direction == "a": self.x -= 1
+        if self.direction == "s": self.y += 1
+        if self.direction == "d": self.x += 1
+
+# === GAME LOOP ===
+dialogue_lines = ["Hi! Welcome to the store!", "DON'T COME BACK", "BYE", "[MENU]"]
+npc = NPC(1100, 1000, dialogue_lines)
+menu_options = ["🛒 Shop", "📜 Quest"]
+selected_option = 0
+
+# 初始位置
+player_x = 15 * 32
+player_y = 20 * 32
+player_speed = 1.5
+player_direction = "s"
+walk_frame = 0
+walk_timer = 0
+walk_delay = 200
+player_imgs = load_player_images("male")
+
+clock = pygame.time.Clock()
+while running:
+    dt = clock.tick(60)
+    screen.fill(WHITE)
+    cursor_timer += dt
+    if cursor_timer >= cursor_interval:
+        cursor_visible = not cursor_visible
+        cursor_timer = 0
+
+    if game_state == "intro":
+        screen.blit(bg_img, (0, 0))
+        name_color = BLACK if player_name else GRAY
+        display_name = player_name if player_name else "ENTER YOUR NAME"
+        if active_input and cursor_visible:
+            display_name += "|"
+        screen.blit(font.render(display_name, True, name_color), (230, 215))
+
+        pygame.draw.rect(screen, BLACK, male_box, 3)
+        pygame.draw.rect(screen, BLACK, female_box, 3)
+        if selected_character == 'male':
+            pygame.draw.rect(screen, HIGHLIGHT, male_box, 3)
+            pygame.draw.line(screen, TICK_COLOR, (260, 350), (270, 360), 3)
+            pygame.draw.line(screen, TICK_COLOR, (270, 360), (285, 340), 3)
+        elif selected_character == 'female':
+            pygame.draw.rect(screen, HIGHLIGHT, female_box, 3)
+            pygame.draw.line(screen, TICK_COLOR, (510, 350), (520, 360), 3)
+            pygame.draw.line(screen, TICK_COLOR, (520, 360), (535, 340), 3)
+
+        pygame.draw.rect(screen, BUTTON_COLOR, start_button)
+        pygame.draw.rect(screen, HIGHLIGHT if player_name and selected_character else BLACK, start_button, 4)
+        screen.blit(font.render("Start", True, BLACK), (start_button.x + 55, start_button.y + 20))
+
+        pygame.draw.rect(screen, BUTTON_COLOR, continue_button)
+        pygame.draw.rect(screen, BLACK, continue_button, 4)
+        screen.blit(font.render("Continue", True, BLACK), (continue_button.x + 25, continue_button.y + 20))
+
+        pygame.draw.rect(screen, BUTTON_COLOR, reset_button)
+        pygame.draw.rect(screen, BLACK, reset_button, 4)
+        screen.blit(font.render("Reset", True, BLACK), (reset_button.x + 55, reset_button.y + 20))
+
+        if warning_message:
+            screen.blit(font.render(warning_message, True, WARNING_COLOR), (80, 560))
+
+    elif game_state == "game":
+        camera_x, camera_y = get_camera_offset()
+        screen.blit(map_img, (-camera_x, -camera_y))
+
+        old_x, old_y = player_x, player_y
+    # 获取按键
+        keys = pygame.key.get_pressed()
+        moving = False
+        new_x, new_y = player_x, player_y  # 保存新的目标位置
+
+        if keys[pygame.K_w]:
+            new_y -= player_speed
+            player_direction = "w"
+            moving = True
+        if keys[pygame.K_s]:
+            new_y += player_speed
+            player_direction = "s"
+            moving = True
+        if keys[pygame.K_a]:
+            new_x -= player_speed
+            player_direction = "a"
+            moving = True
+        if keys[pygame.K_d]:
+            new_x += player_speed
+            player_direction = "d"
+            moving = True
+
+        # 创建玩家的目标矩形，用来检查碰撞
+        player_rect = pygame.Rect(new_x, new_y, player_imgs["idle"][player_direction].get_width(), player_imgs["idle"][player_direction].get_height())
+
+        # 检查碰撞
+        for rect in collision_rects:
+            if player_rect.colliderect(rect):
+                moving = False  # 如果发生碰撞，则不允许移动
+                break
+
+        # 如果没有发生碰撞，更新玩家位置
+        if moving:
+            player_x, player_y = new_x, new_y
+
+        # 更新动画帧
+        if moving:
+            if pygame.time.get_ticks() - walk_timer > walk_delay:
+                walk_frame = (walk_frame + 1) % len(player_imgs["walk"][player_direction])
+                walk_timer = pygame.time.get_ticks()
+        else:
+            walk_frame = 0
+
+        # 更新NPC和绘制玩家
+        npc.move_random()
+        npc.draw(screen, camera_x, camera_y)
+        current_img = player_imgs["walk"][player_direction][walk_frame] if moving else player_imgs["idle"][player_direction]
+        screen.blit(current_img, (player_x - camera_x, player_y - camera_y))
+        # for rect in collision_rects:
+            # pygame.draw.rect(screen, (255, 0, 0), (rect.x - camera_x, rect.y - camera_y, rect.width, rect.height), 1)
+
+        if npc.talking:
+            pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 160, WIDTH - 100, 110))
+            pygame.draw.rect(screen, (255, 255, 255), (50, HEIGHT - 160, WIDTH - 100, 110), 3)
+            current_line = npc.dialogue[npc.current_line]
+            if current_line == "[MENU]":
+                for i, opt in enumerate(menu_options):
+                    color = (255, 255, 0) if i == selected_option else WHITE
+                    txt = BIG_FONT.render(opt, True, color)
+                    screen.blit(txt, (80 + i * 150, HEIGHT - 120))
+            else:
+                screen.blit(FONT.render(current_line, True, WHITE), (60, HEIGHT - 130))
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if game_state == "intro":
+                active_input = True
+                if male_box.collidepoint(event.pos): selected_character = 'male'
+                if female_box.collidepoint(event.pos): selected_character = 'female'
+                if start_button.collidepoint(event.pos):
+                    if player_name and selected_character:
+                        save_game
+                        game_state = "game"
+                        show_intro_message = True
+                        typing_done = False
+                        typed_message = ""
+                        typing_index = 0
+                        player_imgs = load_player_images(selected_character)
+                    else:
+                        warning_message = "Enter name and choose a character!"
+                if continue_button.collidepoint(event.pos):
+                    if load_game():
+                        game_state = "game"
+                        warning_message = ''
+                        show_intro_message = True
+                        typing_done = False
+                        typed_message = ""
+                        typing_index = 0
+                        player_imgs = load_player_images(selected_character)
+                    else:
+                        warning_message = "No saved game found!"
+                if reset_button.collidepoint(event.pos): reset_game()
+            elif game_state == "game" and show_intro_message and typing_done:
+                show_intro_message = False
+
+        if event.type == pygame.KEYDOWN:
+            if game_state == "intro":
+                if event.key == pygame.K_BACKSPACE:
+                    player_name = player_name[:-1]
+                elif len(player_name) < 30:
+                    player_name += event.unicode
+            elif game_state == "game":
+                if event.key == pygame.K_RETURN and show_intro_message and typing_done:
+                    show_intro_message = False
+                if event.key == pygame.K_e and npc.is_near_player(player_x, player_y):
+                    npc.talking = True
+                    npc.current_line = 0
+                    selected_option = 0
+                if npc.talking:
+                    if npc.dialogue[npc.current_line] == "[MENU]":
+                        if event.key == pygame.K_LEFT:
+                            selected_option = (selected_option - 1) % len(menu_options)
+                        elif event.key == pygame.K_RIGHT:
+                            selected_option = (selected_option + 1) % len(menu_options)
+                        elif event.key == pygame.K_RETURN:
+                            print(f"You selected: {menu_options[selected_option]}")
+                            npc.talking = False
+                    else:
+                        if event.key == pygame.K_SPACE:
+                            npc.current_line += 1
+                            if npc.current_line >= len(npc.dialogue):
+                                npc.talking = False
+                        if event.key == pygame.K_ESCAPE:
+                            npc.talking = False
+
+    pygame.display.flip()
+
+pygame.quit()
