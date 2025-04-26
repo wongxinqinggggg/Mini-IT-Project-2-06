@@ -1,7 +1,6 @@
 import pygame
-import os
 import time
-from Features import MG1
+from Features import MiniGame1
 
 # === Setup ===
 pygame.init()
@@ -9,7 +8,7 @@ pygame.mixer.init()
 
 # === Music ===
 pygame.mixer.music.load("Assets/Audio/background.mp3")
-pygame.mixer.music.set_volume(0)
+pygame.mixer.music.set_volume(1)
 pygame.mixer.music.play(-1)
 
 # === Screen and Fonts ===
@@ -43,10 +42,11 @@ MAXHP, MAXMP = 1000, 1000
 hp, mp = 123, 456
 active_input = False
 warning_message = ''
-game_state = "mg1" 
-mg_state = "mainpage"
+game_state = "intro" 
+mg_state = None
 show_intro_message = True  # False — intro message will display
 typing_done = False        # Added this flag to control when typing is done
+dragging = False
 running = True
 
 # Cursor blinking
@@ -97,14 +97,21 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
 def update_stats(hpchange, mpchange):
     global hp, mp
 
-    if hpchange:    
-        hp += hpchange
-        if hp <= 0:     hp = 0
-        elif hp >= MAXHP:     hp = 1000
-    if mpchange:    
-        mp += mpchange
-        if mp <= 0:     mp = 0
-        elif mp >= MAXMP:     mp = 1000
+    if hpchange: hp = min(max(hp + hpchange, 0), MAXHP)
+    if mpchange: mp = min(max(mp + mpchange, 0), MAXMP)
+
+# === Function to display hp and mp ===
+def display_stats(hp, mp):
+    statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
+
+    hpsurf = large_font.render(hp.zfill(4), False, 'Black')
+    hprect = pygame.Rect(95, 30, 100, 50)
+    mpsurf = large_font.render(mp.zfill(4), False, 'Black')
+    mprect = pygame.Rect(95, 105, 100, 50)
+    screen.blit(statsbar, (0,0))
+
+    screen.blit(hpsurf, hprect)
+    screen.blit(mpsurf, mprect)
 
 # === Main Loop ===
 clock = pygame.time.Clock()
@@ -112,6 +119,9 @@ clock = pygame.time.Clock()
 while running:
     screen.fill(WHITE)
     dt = clock.tick(60)
+
+    # Pause music if muted
+    if not pygame.mixer.music.get_volume(): pygame.mixer.music.pause()
 
     # Update cursor blinking
     cursor_timer += dt
@@ -126,7 +136,7 @@ while running:
         name_color = BLACK if player_name else GRAY
         display_name = player_name if player_name else "Enter Your Name"
 
-        if active_input and cursor_visible:    display_name += "|"
+        if active_input and cursor_visible: display_name += "|"
 
         name_surface = font.render(display_name, True, name_color)
         screen.blit(name_surface, (230, 215))
@@ -167,7 +177,7 @@ while running:
                 if typing_index < len(intro_message):
                     typed_message += intro_message[typing_index]
                     typing_index += 1
-                else:   typing_done = True
+                else: typing_done = True
 
             # Draw message box
             dialog_box_rect = pygame.Rect(30, 40, 740, 180)
@@ -175,41 +185,54 @@ while running:
 
     # == Lanching Mini game 1 ==
     elif game_state == "mg1":   
-        PlayMG1 = MG1.PlayMG1(screen, WIDTH, HEIGHT, mg_state)
-        mg_state = PlayMG1.getstate()
+        MG1 = MiniGame1.MG1(screen, WIDTH, HEIGHT, mg_state)
+        mg_state = MG1.getstate()
 
-        if mg_state == "mainpage": PlayMG1.mainpage(str(hp), str(mp), large_font)
-
-        elif mg_state == "instruc": PlayMG1.instruc(middle_font)
+        if mg_state == "mainpage": display_stats(str(hp), str(mp))
+        elif mg_state == "instruc": MG1.instruc(middle_font)
 
         elif mg_state == "newgame":
             if hp <= 10:
-                print("error: insufficient hp")     # TODO: Print error msg
-                mg_state = "mainpage"
+                msg = "Insufficient energy"
+                xpos, ypos = 100, 480
+                mg_state = "displaymsg"
                 continue 
+
             update_stats(-10, None)
             plates = 0
-            start_time = time.time()
+            start_time, time_passed = time.time(), 0
             new_plate = True
-            stains = {}
+            stains = pygame.sprite.Group()      # Initialize sprite group
             mg_state = "game"
 
         elif mg_state == "game":
-            plates, new_plate, start_time = PlayMG1.game(plates, new_plate, start_time, stains, large_font)
-            mg_state = PlayMG1.getstate()
-            stains, win = PlayMG1.checkcond()
+            time_passed = (time.time() - start_time)
+            plates, new_plate = MG1.game(plates, new_plate, (10 - time_passed), stains, large_font)
+            mg_state = MG1.getstate()
+            stains, win = MG1.checkcond()
 
-        elif mg_state == "win":
-            update_stats(None, +10)
+        elif mg_state == "resume":
+            start_time = time.time() - time_passed
+            mg_state = "game"
+
+        elif mg_state == "end":
+            if win:
+                update_stats(None, +10)
+                msg = "You win!"
+            else: msg = "You lose"
+
+            xpos, ypos = 280, 480
             mg_state = "end"
 
-        elif mg_state == "end": PlayMG1.end(win, str(hp), str(mp), large_font)
-                
+        elif mg_state == "displaymsg": 
+            MG1.displaymsg(msg, xpos, ypos, large_font)
+            display_stats(str(hp), str(mp))
+
     # === Event Handling ===
     for event in pygame.event.get():
         if event.type == pygame.QUIT:   running = False
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = event.pos
             if game_state == "intro":
                 active_input = True
@@ -231,22 +254,29 @@ while running:
             elif game_state == "game" and show_intro_message and typing_done:   show_intro_message = False
 
             elif game_state == "mg1":   
-                PlayMG1.eventhandler(mouse_x, mouse_y)
-                mg_state = PlayMG1.getstate()
+                dragging = MG1.eventhandler(mouse_x, mouse_y)
+                mg_state = MG1.getstate()
 
-                if mg_state == "game": stains, win = PlayMG1.checkcond()
+                if mg_state == "game": stains, win = MG1.checkcond()
                 elif not mg_state:    game_state = "game"
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_BACKSPACE:     player_name = player_name[:-1]
+        elif event.type == pygame.MOUSEMOTION:
+            mouse_x, mouse_y = event.pos
+            if game_state == "mg1" and dragging: dragging = MG1.eventhandler(mouse_x, mouse_y, dragging)
 
-            elif len(player_name) < 30:     player_name += event.unicode
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if game_state == "mg1":  dragging = False
 
-            if event.key == pygame.K_RETURN and game_state == "game" and show_intro_message and typing_done:
+        elif event.type == pygame.KEYDOWN:
+            if game_state == "intro" and event.key == pygame.K_BACKSPACE: player_name = player_name[:-1]
+
+            elif game_state == "intro" and len(player_name) < 30: player_name += event.unicode
+
+            elif event.key == pygame.K_RETURN and game_state == "game" and show_intro_message and typing_done:
                 show_intro_message = False
             
             # Placeholder for launching minigames
-            if event.key == pygame.K_1: 
+            elif event.key == pygame.K_1: 
                 game_state = "mg1"
                 mg_state = "mainpage"
 
