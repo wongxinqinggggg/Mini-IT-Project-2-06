@@ -232,6 +232,7 @@ while running:
     # == Launching Mini Game 4 ==
     elif game_state == "mg4":
         MG4 = MiniGame4.MG4(screen, WIDTH, HEIGHT, mg_state, vending_machine)
+        display_stats(str(hp), str(mp))
 
     # === Event Handling ===
     for event in pygame.event.get():
@@ -263,7 +264,10 @@ while running:
                 mg_state = MG1.getstate()
 
                 if mg_state == "game": stains, win = MG1.checkcond()
-                elif not mg_state:    game_state = "game"
+
+            elif game_state == "mg4":
+                vending_machine = MG4.eventhandler(mouse_x, mouse_y)
+                mg_state = MG4.getstate()
                 
         elif event.type == pygame.MOUSEMOTION:
             mouse_x, mouse_y = event.pos
@@ -288,6 +292,8 @@ while running:
             elif event.key == pygame.K_4: 
                 game_state = "mg4"
                 mg_state = "mainpage"
+
+    if not mg_state and game_state != "intro": game_state = "game"
 
     pygame.display.flip()
 
