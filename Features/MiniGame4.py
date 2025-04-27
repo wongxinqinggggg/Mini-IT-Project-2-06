@@ -1,10 +1,13 @@
 import pygame
 
-templist = None
+temp_vm = None
+mpchange = None
+buyingprices = [[300, 400, 500], [800, 900, 1000]]
+sellingprices = [[150, 350, 600], [400, 850, 1350]]
 
 class MG4():
-    def __init__(self, screen, width, height, mg_state, vending_machines):
-        self.screen, self.WIDTH, self.HEIGHT, self.mg_state, self.vending_machines = screen, width, height, mg_state, vending_machines
+    def __init__(self, screen, width, height, mg_state, vm_level):
+        self.screen, self.WIDTH, self.HEIGHT, self.mg_state, self.vm_level = screen, width, height, mg_state, vm_level
         
         if self.mg_state == "mainpage": self.mainpage()
 
@@ -24,8 +27,8 @@ class MG4():
         self.screen.blit(exitbtn, self.exitbtnrect)
 
         self.buttons = pygame.sprite.Group()
-        for i in range(len(self.vending_machines)):
-            if not self.vending_machines[i]:
+        for i in range(len(self.vm_level)):
+            if not self.vm_level[i]:
                 btnpaths = ["Buybtn"]
             else:
                 btnpaths = ["Upgradebtn", "Sellbtn"]
@@ -42,13 +45,13 @@ class MG4():
         image.blit(surf, (0,0))
         return image
     
-    def eventhandler(self, mouse_X, mouse_Y):
-        global templist
-        templist = self.vending_machines
+    def eventhandler(self, mouse_X, mouse_Y, mp, VM1, VM2):
+        global temp_vm, mpchange
+        temp_vm, mpchange = self.vm_level, None
 
         if self.exitbtnrect.collidepoint(mouse_X, mouse_Y): self.mg_state = None
-        else: self.buttons.update(mouse_X, mouse_Y)
-        return templist
+        else: self.buttons.update(mouse_X, mouse_Y, mp, VM1, VM2)
+        return temp_vm
 
     def getstate(self):
         return self.mg_state
@@ -62,14 +65,27 @@ class Buttons(pygame.sprite.Sprite):
         else: X_pos, self.attributes[0] = 455, 1
 
         if btnpath == "Buybtn": Y_pos, self.attributes[1] = 300, 1
-        elif btnpath == "Upgradebtn": Y_pos, self.attributes[1] = 250, +1
+        elif btnpath == "Upgradebtn": Y_pos, self.attributes[1] = 250, 2
         else: Y_pos, self.attributes[1] = 380, 0
 
         self.image = pygame.image.load(f"Assets/Images/MGE_{btnpath}.png").convert_alpha()
         self.rect = pygame.rect.Rect(X_pos, Y_pos, 76, 34)                                        
                                                                  
-    def update(self, mouse_X, mouse_Y):
-        global templist
+    def update(self, mouse_X, mouse_Y, mp, VM1, VM2):
+        global temp_vm, mpchange
 
         if self.rect.collidepoint(mouse_X, mouse_Y): 
-           templist[self.attributes[0]] = self.attributes[1]
+            if not self.attributes[1]: 
+                mpchange = sellingprices[self.attributes[0]][temp_vm[self.attributes[0]] - 1]
+                temp_vm[self.attributes[0]] = 0
+                if not self.attributes[0]: pygame.time.set_timer(VM1, 0)
+                else: pygame.time.set_timer(VM2, 0)
+
+            elif temp_vm[self.attributes[0]] <= 2:
+                buyingprice =  buyingprices[self.attributes[0]][temp_vm[self.attributes[0]]]
+                if mp >= buyingprice: 
+                    mpchange = -buyingprice 
+                    temp_vm[self.attributes[0]] += 1
+                    if not self.attributes[0]: pygame.time.set_timer(VM1, 10000)
+                    else: pygame.time.set_timer(VM2, 10000)
+        

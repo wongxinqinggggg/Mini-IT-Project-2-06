@@ -47,7 +47,9 @@ mg_state = None
 show_intro_message = True  # False — intro message will display
 typing_done = False        # Added this flag to control when typing is done
 dragging = False
-vending_machines = [None, None]
+vm_level = [0, 0]   # Vending machine level for Mini Game 4
+vm_income = [[1, 2, 3], [5, 6, 7]]
+VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
 running = True
 
 # Cursor blinking
@@ -95,7 +97,7 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
         surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
 
 # === Function to update hp and mp ===
-def update_stats(hpchange, mpchange):
+def update_stats(hpchange = None, mpchange = None):
     global hp, mp
 
     if hpchange: hp = min(max(hp + hpchange, 0), MAXHP)
@@ -199,7 +201,7 @@ while running:
                 mg_state = "displaymsg"
                 continue 
 
-            update_stats(-10, None)
+            update_stats(hpchange = -10)
             plates = 0
             start_time, time_passed = time.time(), 0
             new_plate = True
@@ -218,7 +220,7 @@ while running:
 
         elif mg_state == "end":
             if win:
-                update_stats(None, +10)
+                update_stats(mpchange = 10)
                 msg = "You win!"
             else: msg = "You lose"
 
@@ -231,7 +233,7 @@ while running:
 
     # == Launching Mini Game 4 ==
     elif game_state == "mg4":
-        MG4 = MiniGame4.MG4(screen, WIDTH, HEIGHT, mg_state, vending_machines)
+        MG4 = MiniGame4.MG4(screen, WIDTH, HEIGHT, mg_state, vm_level)
         display_stats(str(hp), str(mp))
 
     # === Event Handling ===
@@ -266,7 +268,8 @@ while running:
                 if mg_state == "game": stains, win = MG1.checkcond()
 
             elif game_state == "mg4":
-                vending_machines = MG4.eventhandler(mouse_x, mouse_y)
+                vm_level, mpchange = MG4.eventhandler(mouse_x, mouse_y, mp, VM1, VM2)
+                update_stats(mpchange = mpchange)
                 mg_state = MG4.getstate()
                 
         elif event.type == pygame.MOUSEMOTION:
@@ -292,6 +295,10 @@ while running:
             elif event.key == pygame.K_4: 
                 game_state = "mg4"
                 mg_state = "mainpage"
+
+        # == EVENTS for passive income from Mini Game 4 ==
+        elif event.type == VM1: update_stats(mpchange = vm_income[0][vm_level[0] - 1])
+        elif event.type == VM2: update_stats(mpchange = vm_income[1][vm_level[1] - 1])
 
     if not mg_state and game_state != "intro": game_state = "game"
 
