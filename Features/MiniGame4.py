@@ -5,8 +5,9 @@ temp_vm = None
 mpchange = None
 buyingprices = [[300, 400, 500], [800, 900, 1000]]
 sellingprices = [[150, 350, 600], [400, 850, 1350]]
-vm1_colour = [(50, 41, 71), (207, 255, 112), (255, 250, 209), (77, 166, 255)]
-vm2_colour = [(235, 23, 23), (102, 255, 227), (39, 39, 54)]
+vm_colour = [[(50, 41, 71), (207, 255, 112), (255, 250, 209), (77, 166, 255)], 
+             [(235, 23, 23), (102, 255, 227), (39, 39, 54)]]
+btncolour = (15, 97, 43)
 txtboxposX = [[64, 52], [464, 452]]
 txtboxposY = [[343, 363], [295, 315], 428]
 txtrectsize = (200, 100)
@@ -14,20 +15,21 @@ txtinfo = ["f\"{buyingprices[i][self.vm_level[i]]}$\"",
           "f\"({vm_income[i][self.vm_level[i]]}$/s)\"",
           "f\"({sellingprices[i][self.vm_level[i] - 1]}$)\""]
 
+def greyscale(surf, colour = None):
+        image = pygame.Surface(surf.get_size())
+        newRGB = (colour[0] + colour[1] + colour[2]) / 3 if colour else 0
+        image.fill((newRGB, newRGB, newRGB))
+        surf.set_colorkey(colour)
+        image.blit(surf, (0,0))
+        return image
+
 class MG4():
-    def mainpage(self, screen, width, height, mg_state, vm_level, vm_income, Sfont):
+    def mainpage(self, screen, width, height, mg_state, mp, vm_level, vm_income, Sfont):
+        colourlist = []
         self.screen, self.mg_state, self.vm_level = screen, mg_state, vm_level
         mg4_base = pygame.transform.scale(pygame.image.load("Assets/Images/MG4_Base.png").convert(), (width, height))
         exitbtn = pygame.image.load("Assets/Images/MGE_Exitbtn.png").convert_alpha()
         self.exitbtnrect = exitbtn.get_rect(center = (750, 50))
-
-        colourlist = []
-        if not self.vending_machine[0]: colourlist.extend(vm1_colour)
-        if not self.vending_machine[1]: colourlist.extend(vm2_colour)
-
-        for colour in colourlist: mg4_base = self.greyscale(mg4_base, colour)
-        self.screen.blit(mg4_base, (0, 0))
-        self.screen.blit(exitbtn, self.exitbtnrect)
 
         self.buttons = pygame.sprite.Group()
         for i in range(len(self.vm_level)):     # Determine which btn to display based on lvl
@@ -35,18 +37,15 @@ class MG4():
             elif self.vm_level[i] <= 2: btnpaths = ["Upgradebtn", "Sellbtn"]
             else: btnpaths = ["Maxbtn", "Sellbtn"]
 
-            for btnpath in btnpaths: self.buttons.add(Buttons(i, btnpath))
+            for btnpath in btnpaths: self.buttons.add(Buttons(i, btnpath, mp, self.vm_level[i]))
+
+            if not self.vm_level[i]: colourlist.extend(vm_colour[i])     # Greyscale vm that are not bought
         
+        for colour in colourlist: mg4_base = greyscale(mg4_base, colour)
+        self.screen.blit(mg4_base, (0, 0))
+        self.screen.blit(exitbtn, self.exitbtnrect)
         self.buttons.draw(self.screen)
         self.displayinfo(vm_income, Sfont)
-
-    def greyscale(self, surf, colour):
-        image = pygame.Surface(surf.get_size())
-        newRGB = (colour[0] + colour[1] + colour[2]) / 3
-        image.fill((newRGB, newRGB, newRGB))
-        surf.set_colorkey(colour)
-        image.blit(surf, (0,0))
-        return image
     
     def eventhandler(self, mouse_X, mouse_Y, mp, VM1, VM2):
         global temp_vm, mpchange
@@ -79,11 +78,11 @@ class MG4():
         for surf, rect in infolist: self.screen.blit(surf, rect)
 
 class Buttons(pygame.sprite.Sprite):
-    def __init__(self, vending_machine, btnpath):
+    def __init__(self, vm, btnpath, mp, vm_level):
         super().__init__()
         self.attributes = [None, None]
 
-        if not vending_machine: X_pos, self.attributes[0] = 55, 0 
+        if not vm: X_pos, self.attributes[0] = 55, 0 
         else: X_pos, self.attributes[0] = 455, 1
 
         if btnpath == "Buybtn": Y_pos, self.attributes[1] = 300, 1
@@ -93,7 +92,12 @@ class Buttons(pygame.sprite.Sprite):
 
         self.image = pygame.image.load(f"Assets/Images/MGE_{btnpath}.png").convert_alpha()
         self.rect = pygame.rect.Rect(X_pos, Y_pos, 76, 34)                                        
-                                                                 
+
+        if vm_level <= 2 and mp < buyingprices[vm][vm_level]:  
+            self.image = greyscale(self.image)
+            self.image = greyscale(self.image, btncolour)   # Greyscale btns that cannot afford
+            self.image.set_colorkey((0, 0, 0))  
+
     def update(self, mouse_X, mouse_Y, mp, VM1, VM2):
         global temp_vm, mpchange
 
