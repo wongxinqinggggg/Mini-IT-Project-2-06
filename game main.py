@@ -234,7 +234,7 @@ while running:
     # == Launching Mini Game 4 ==
     elif game_state == "mg4":
         MG4 = MiniGame4.MG4()
-        MG4.mainpage(screen, WIDTH, HEIGHT, mg_state, vm_level)
+        MG4.mainpage(screen, WIDTH, HEIGHT, mg_state, vm_level, vm_income, small_font)
         display_stats(str(hp), str(mp))
 
     # === Event Handling ===
