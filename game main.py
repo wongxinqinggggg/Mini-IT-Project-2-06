@@ -1,6 +1,6 @@
 import pygame
 import time
-from Features import MiniGame1
+from Features import MiniGame1, MiniGame4
 
 # === Setup ===
 pygame.init()
