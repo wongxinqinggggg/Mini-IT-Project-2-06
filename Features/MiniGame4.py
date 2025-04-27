@@ -1,26 +1,23 @@
 import pygame
 
+# Variable for MG4
 temp_vm = None
 mpchange = None
 buyingprices = [[300, 400, 500], [800, 900, 1000]]
 sellingprices = [[150, 350, 600], [400, 850, 1350]]
+vm1_colour = [(50, 41, 71), (207, 255, 112), (255, 250, 209), (77, 166, 255)]
+vm2_colour = [(235, 23, 23), (102, 255, 227), (39, 39, 54)]
 
 class MG4():
-    def __init__(self, screen, width, height, mg_state, vm_level):
-        self.screen, self.WIDTH, self.HEIGHT, self.mg_state, self.vm_level = screen, width, height, mg_state, vm_level
-        
-        if self.mg_state == "mainpage": self.mainpage()
-
-    def mainpage(self):
-        mg4_base = pygame.transform.scale(pygame.image.load("Assets/Images/MG4_Base.png").convert(), (self.WIDTH, self.HEIGHT))
+    def mainpage(self, screen, width, height, mg_state, vm_level):
+        self.screen, self.mg_state, self.vm_level = screen, mg_state, vm_level
+        mg4_base = pygame.transform.scale(pygame.image.load("Assets/Images/MG4_Base.png").convert(), (width, height))
         exitbtn = pygame.image.load("Assets/Images/MGE_Exitbtn.png").convert_alpha()
         self.exitbtnrect = exitbtn.get_rect(center = (750, 50))
 
         colourlist = []
-        if not self.vending_machine[0]: 
-            colourlist += [(50, 41, 71), (207, 255, 112), (255, 250, 209), (77, 166, 255)]
-        if not self.vending_machine[1]: 
-            colourlist += [(235, 23, 23), (102, 255, 227), (39, 39, 54)]
+        if not self.vending_machine[0]: colourlist.extend(vm1_colour)
+        if not self.vending_machine[1]: colourlist.extend(vm2_colour)
 
         for colour in colourlist: mg4_base = self.greyscale(mg4_base, colour)
         self.screen.blit(mg4_base, (0, 0))
