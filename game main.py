@@ -47,7 +47,7 @@ mg_state = None
 show_intro_message = True  # False — intro message will display
 typing_done = False        # Added this flag to control when typing is done
 dragging = False
-vending_machine = [None, None]
+vending_machines = [None, None]
 running = True
 
 # Cursor blinking
@@ -231,7 +231,7 @@ while running:
 
     # == Launching Mini Game 4 ==
     elif game_state == "mg4":
-        MG4 = MiniGame4.MG4(screen, WIDTH, HEIGHT, mg_state, vending_machine)
+        MG4 = MiniGame4.MG4(screen, WIDTH, HEIGHT, mg_state, vending_machines)
         display_stats(str(hp), str(mp))
 
     # === Event Handling ===
@@ -266,7 +266,7 @@ while running:
                 if mg_state == "game": stains, win = MG1.checkcond()
 
             elif game_state == "mg4":
-                vending_machine = MG4.eventhandler(mouse_x, mouse_y)
+                vending_machines = MG4.eventhandler(mouse_x, mouse_y)
                 mg_state = MG4.getstate()
                 
         elif event.type == pygame.MOUSEMOTION:
