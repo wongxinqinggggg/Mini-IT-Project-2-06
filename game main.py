@@ -1,6 +1,6 @@
 import pygame
 import time
-from Features import MiniGame1, MiniGame4
+from Features import FoodStore, MiniGame1, MiniGame4
 
 # === Setup ===
 pygame.init()
@@ -12,7 +12,7 @@ pygame.mixer.music.set_volume(1)
 pygame.mixer.music.play(-1)
 
 # === Screen and Fonts ===
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1024, 576
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No Money, No Life")
 
@@ -104,12 +104,12 @@ def update_stats(hpchange = None, mpchange = None):
     if mpchange: mp = min(max(mp + mpchange, 0), MAXMP)
 
 # === Function to display hp and mp ===
-def display_stats(hp, mp):
+def display_stats():
     statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
 
-    hpsurf = large_font.render(hp.zfill(4), False, 'Black')
+    hpsurf = large_font.render(str(hp).zfill(4), False, 'Black')
     hprect = pygame.Rect(95, 30, 100, 50)
-    mpsurf = large_font.render(mp.zfill(4), False, 'Black')
+    mpsurf = large_font.render(str(mp).zfill(4), False, 'Black')
     mprect = pygame.Rect(95, 105, 100, 50)
     screen.blit(statsbar, (0,0))
 
@@ -191,7 +191,7 @@ while running:
         MG1 = MiniGame1.MG1(screen, WIDTH, HEIGHT, mg_state)
         mg_state = MG1.getstate()
 
-        if mg_state == "mainpage": display_stats(str(hp), str(mp))
+        if mg_state == "mainpage": display_stats()
         elif mg_state == "instruc": MG1.instruc(middle_font)
 
         elif mg_state == "newgame":
@@ -229,13 +229,19 @@ while running:
 
         elif mg_state == "displaymsg": 
             MG1.displaymsg(msg, xpos, ypos, large_font)
-            display_stats(str(hp), str(mp))
+            display_stats()
 
     # == Launching Mini Game 4 ==
     elif game_state == "mg4":
         MG4 = MiniGame4.MG4()
         MG4.mainpage(screen, WIDTH, HEIGHT, mg_state, vm_level, vm_income, small_font)
-        display_stats(str(hp), str(mp))
+        display_stats()
+
+    # == Lanching Food Store ==
+    elif game_state == "store": 
+        STORE = FoodStore.STORE()
+        STORE.mainpage(screen, WIDTH, HEIGHT, mg_state, mp)
+        display_stats()
 
     # === Event Handling ===
     for event in pygame.event.get():
@@ -272,6 +278,11 @@ while running:
                 vm_level, mpchange = MG4.eventhandler(mouse_x, mouse_y, mp, VM1, VM2)
                 update_stats(mpchange = mpchange)
                 mg_state = MG4.getstate()
+
+            elif game_state == "store":
+                hpchange, mpchange = STORE.eventhandler(mouse_x, mouse_y, mp)
+                update_stats(hpchange, mpchange)
+                mg_state = STORE.getstate()
                 
         elif event.type == pygame.MOUSEMOTION:
             mouse_x, mouse_y = event.pos
@@ -295,6 +306,10 @@ while running:
 
             elif event.key == pygame.K_4: 
                 game_state = "mg4"
+                mg_state = "mainpage"
+            
+            elif event.key == pygame.K_5:
+                game_state = "store"
                 mg_state = "mainpage"
 
         # == EVENTS for passive income from Mini Game 4 ==
