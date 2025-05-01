@@ -67,7 +67,6 @@ class Buttons(pygame.sprite.Sprite):
          
         if self.rect.collidepoint(mouse_X, mouse_Y):
             if mp >= pricelist[self.id]: 
-                print(pricelist[self.id])
                 statschange[0] = hplist[self.id]
                 statschange[1] = (-pricelist[self.id])
             else:
