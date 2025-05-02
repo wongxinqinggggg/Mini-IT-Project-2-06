@@ -107,10 +107,11 @@ exit_button_rect = pygame.Rect(30, 30, 100, 50)
 back_button_rect = pygame.Rect(460, 400, 120, 50)
 start_button_rect = pygame.Rect(450, 350, 150, 60)
 retry_button_rect = pygame.Rect(450, 460, 120, 50)
-menu_button_rect = pygame.Rect(720, 0, 301, 576)
-restart_button_rect = pygame.Rect(450, 520, 120, 50)
-quit_button_rect = pygame.Rect(450, 580, 120, 50)
-resume_button_rect = pygame.Rect(450, 200, 120, 50)
+menu_button_menu_screen_rect = pygame.Rect(720, 0, 301, 576)
+menu_button_base_screen = pygame.Rect(720, 50, 301, 576) 
+restart_button_rect = pygame.Rect(380, 300, 270, 80)
+quit_button_rect = pygame.Rect(380, 400, 270, 80)
+resume_button_rect = pygame.Rect(390, 195, 270, 80)
 
 
 # Set Energy etc
@@ -182,7 +183,6 @@ def full_map_screen():
 
 def mg3_menu():
     global inside_menu_active  # Ensure inside_menu_active is accessed globally
-
     error_display_time = 0
     error_duration = 2
 
@@ -207,7 +207,7 @@ def mg3_menu():
                     else:
                         button_click.play()
                         return "mg3_base"
-                elif menu_button_rect.collidepoint(event.pos):  # Menu button click event
+                elif menu_button_menu_screen_rect.collidepoint(event.pos):  # Menu button click event
                     button_click.play()
                     inside_menu_active = not inside_menu_active  # Toggle inside menu visibility
                     print(f"Inside menu active state toggled: {inside_menu_active}")  # Debug print
@@ -219,28 +219,47 @@ def mg3_menu():
 
         # Display the inside menu if it's active
         if inside_menu_active:
-            screen.blit(Inside_menu_image, (250, 50))  # Inside menu background
-            inside_menu_screen()  # Inside menu options or interactions
+            result = inside_menu_screen()
+            if result == "resume":
+                inside_menu_active = False  # Close menu, return to main menu
+            elif result == "restart":
+                return "mg3_base"
+            elif result == "full_map":
+                return "full_map"
+            elif result == "quit":
+                return "quit"
 
         # Handle the error message if the energy is insufficient
         if time.time() - error_display_time < error_duration:
             error_font = pygame.font.SysFont(None, 36)
             error_text = error_font.render("Error: Insufficient HP", True, (255, 0, 0))
             screen.blit(error_text, (360, 450))
-            
+    
         pygame.display.flip()
 
 def inside_menu_screen():
     global dragging, volume
-
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()  
-                return "quit"  
+                return "quit"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_x, mouse_y = event.pos
+
+                if resume_button_rect.collidepoint(event.pos):
+                    button_click.play()
+                    return "resume"
+
+                elif restart_button_rect.collidepoint(event.pos):
+                    button_click.play()
+                    return "restart"
+
+                elif quit_button_rect.collidepoint(event.pos):
+                    button_click.play()
+                    return "full_map"
+
+                # Handle volume dragging
                 knob_x = slider_x + int(volume * slider_width)
                 if (mouse_x - knob_x) ** 2 + (mouse_y - (slider_y + slider_height // 2)) ** 2 <= knob_radius ** 2:
                     dragging = True
@@ -248,24 +267,24 @@ def inside_menu_screen():
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 dragging = False
 
-            elif event.type == pygame.MOUSEMOTION:
-                if dragging:
-                    mouse_x, _ = event.pos
-                    new_volume = (mouse_x - slider_x) / slider_width
-                    new_volume = max(0, min(1, new_volume))
-                    volume = new_volume
-                    pygame.mixer.music.set_volume(volume)
+            elif event.type == pygame.MOUSEMOTION and dragging:
+                mouse_x, _ = event.pos
+                new_volume = (mouse_x - slider_x) / slider_width
+                volume = max(0, min(1, new_volume))
+                pygame.mixer.music.set_volume(volume)
 
-        screen.blit(Inside_menu_image, (250, 50))  
+        screen.blit(Inside_menu_image, (250, 50))
 
-        # Draw the slider bar
+        # Draw the volume slider
         pygame.draw.rect(screen, (0, 0, 0), (slider_x, slider_y, slider_width, slider_height))
-
-        # Draw the knob
         knob_x = slider_x + int(volume * slider_width)
         pygame.draw.circle(screen, (0, 0, 0), (knob_x, slider_y + slider_height // 2), knob_radius)
-        pygame.display.flip()
 
+        SLASH_FONT = pygame.font.SysFont('Arial', 80)
+        if volume == 0:
+            slash_symbol = SLASH_FONT.render("\\", True, (0, 0, 0))
+            screen.blit(slash_symbol, (slider_x + slider_width - 248, slider_y - 45))
+        pygame.display.flip()
 
 def mg3_instruction():
     while True:
@@ -279,7 +298,6 @@ def mg3_instruction():
         screen.blit(mg3_instruction_image, (0, 0))
         draw_floating_texts()
         pygame.display.flip()
-
 
 def mg3_base():
     global energy, money, total_energy_spent, total_money_earned
@@ -316,6 +334,7 @@ def mg3_base():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "quit"
+
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if result_shown and retry_button_rect.collidepoint(event.pos):
                     if energy >= 20:
@@ -334,11 +353,37 @@ def mg3_base():
                     else:
                         button_click.play()
                         result_message = "Not enough energy to retry."
-                if exit_mg3_base_rect.collidepoint(event.pos):
+
+                elif exit_mg3_base_rect.collidepoint(event.pos):
                     success_sound.stop()
                     fail_sound.stop()
                     button_click.play()
                     return "full_map"
+
+                elif menu_button_base_screen.collidepoint(event.pos):
+                    result = inside_menu_screen()
+                    if result == "resume":
+                        continue
+                    elif result == "restart":
+                        if energy >= 20:
+                            energy -= 20
+                            total_energy_spent += 20
+                            paragraph = random.choice(paragraphs)
+                            user_input = ""
+                            typing_started = False
+                            remaining_time = 60.0
+                            result_shown = False
+                            result_message = ""
+                            success_sound.stop()
+                            fail_sound.stop()
+                        else:
+                            result_message = "Not enough energy to restart."
+                        continue
+                    elif result == "full_map":
+                        success_sound.stop()
+                        fail_sound.stop()
+                        return "full_map"
+
             elif event.type == pygame.KEYDOWN and not result_shown:
                 if not typing_started:
                     typing_started = True
@@ -350,6 +395,8 @@ def mg3_base():
                     user_input += event.unicode
 
         screen.blit(mg3_base_image, (0, 0))
+        screen.blit(Menu_image, (720, 50))
+
         pygame.draw.rect(screen, (128, 0, 0), exit_mg3_base_rect)
         exit_text = font.render("Exit", True, (255, 255, 255))
         screen.blit(exit_text, (exit_mg3_base_rect.x + 25, exit_mg3_base_rect.y + 15))
@@ -372,7 +419,7 @@ def mg3_base():
             y += 30
 
         if not result_shown:
-            if (pygame.time.get_ticks() // 500) % 2 == 0:  # Blink every 500ms
+            if (pygame.time.get_ticks() // 500) % 2 == 0:
                 pygame.draw.line(screen, (0, 0, 0), (cursor_x, cursor_y), (cursor_x, cursor_y + font.get_height()), 2)
             if typed_lines:
                 last_line = typed_lines[-1]
@@ -405,19 +452,17 @@ def mg3_base():
             pygame.draw.rect(screen, (0, 0, 0), (300, 250, 430, 100))
             screen.blit(font.render(result_message, True, (255, 255, 255)), (320, 270))
             screen.blit(font.render(f"High Score: {high_score:.2f} WPM", True, (255, 255, 0)), (320, 300))
-            
-            # Draw the retry button
+
             pygame.draw.rect(screen, (200, 0, 0), retry_button_rect)
             retry_text = font.render("Retry", True, (255, 255, 255))
             retry_text_rect = retry_text.get_rect(center=retry_button_rect.center)
             screen.blit(retry_text, retry_text_rect)
-        
+
         pygame.display.flip()
 
 # Game loop
 game_state = "full_map"
 while game_state != "quit":
-    print("Current game state:", game_state)
     if game_state == "full_map":
         game_state = full_map_screen()
     elif game_state == "mg3_menu":
@@ -427,7 +472,7 @@ while game_state != "quit":
     elif game_state == "mg3_base":
         game_state = mg3_base()
     elif game_state == "inside_menu":
-        game_state =  inside_menu_screen()
+        game_state = inside_menu_screen()
 
 
 
