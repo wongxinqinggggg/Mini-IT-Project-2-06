@@ -1,19 +1,15 @@
-# === MINI IT GAME: FINAL COMBINED CODE ===
-# 支持主菜单（命名+角色选择）+ 地图行走 + 阻挡功能
-
 import pygame
-import os
 import json
 import time
 import random
+import os
 
 # === SETUP ===
-os.chdir("C:/Users/User/Desktop/Mini IT Project/Mini-IT-Project-2-06")
 pygame.init()
 pygame.mixer.init()
 
 # === SCREEN ===
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1024, 576
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No Money, No Life")
 
@@ -40,7 +36,7 @@ BUTTON_COLOR = (220, 220, 220)
 # === IMAGES ===
 bg_img = pygame.transform.scale(pygame.image.load("main.png").convert(), (WIDTH, HEIGHT))
 map_img = pygame.image.load("final_map.png").convert()
-MAP_WIDTH, MAP_HEIGHT = map_img.get_size()
+MAP_WIDTH, MAP_HEIGHT = ((800, 800))
 
 # === TILEMAP BLOCKING ===
 def load_tilemap(filename):
@@ -49,7 +45,6 @@ def load_tilemap(filename):
         for line in file:
             row = [int(char) for char in line.strip()]
             tilemap.append(row)
-
     return tilemap
 
 tilemap = load_tilemap("map_tiled.txt")
@@ -64,45 +59,19 @@ for y, row in enumerate(tilemap):
 # === SAVE/LOAD ===
 SAVE_FILE = "save_data.json"
 
-def save_game():
+def save_game(player_name, selected_character):
     data = {"player_name": player_name, "selected_character": selected_character}
     with open(SAVE_FILE, "w") as f:
         json.dump(data, f)
 
-def generate_intro_message(name):
-    return (f"WELCOME {name.upper()}! In this game, you need money to survive. "
-            "Explore different rooms to work and earn cash. To restore your energy, "
-            "you can either buy food or drinks, which is faster, or go back home to sleep, "
-            "which takes more time. So plan wisely, keep your energy up, and make the most of your day!")
-
-def draw_text_box(surface, message, font, color, box_rect, padding=10, line_height=20):
-    words = message.split(' ')
-    lines = []
-    line = ''
-    for word in words:
-        test_line = line + word + ' '
-        if font.size(test_line)[0] < box_rect.width - 2 * padding:
-            line = test_line
-        else:
-            lines.append(line)
-            line = word + ' '
-    lines.append(line)
-    pygame.draw.rect(surface, WHITE, box_rect)
-    pygame.draw.rect(surface, BLACK, box_rect, 3)
-    for i, l in enumerate(lines):
-        surface.blit(font.render(l.strip(), True, color), (box_rect.x + padding, box_rect.y + padding + i * line_height))
-
-
 def load_game():
-    global player_name, selected_character, intro_message, game_state
     if os.path.exists(SAVE_FILE):
         with open(SAVE_FILE, "r") as f:
             data = json.load(f)
-            player_name = data.get("player_name", "")
-            selected_character = data.get("selected_character", None)
-            intro_message = generate_intro_message(player_name)
-            return True
-    return False
+        return data
+    else:
+        print("No save file found. Starting a new game.")
+        return None  
 
 def reset_game():
     global warning_message
@@ -128,12 +97,11 @@ cursor_timer = 0
 cursor_interval = 500
 
 # UI ELEMENTS
-male_box = pygame.Rect(250, 330, 40, 40)
-female_box = pygame.Rect(500, 330, 40, 40)
-start_button = pygame.Rect(70, 455, 200, 60)
-continue_button = pygame.Rect(300, 455, 200, 60)
-reset_button = pygame.Rect(530, 455, 200, 60)
-
+male_box = pygame.Rect(330, 325, 40, 40)
+female_box = pygame.Rect(650, 325, 40, 40)
+start_button = pygame.Rect(100, 455, 200, 60)
+continue_button = pygame.Rect(400, 455, 200, 60)
+reset_button = pygame.Rect(700, 455, 200, 60)
 typed_message = ""
 typing_index = 0
 
@@ -175,9 +143,95 @@ def get_camera_offset():
     camera_y = max(0, min(player_y - HEIGHT // 2, MAP_HEIGHT - HEIGHT))
     return camera_x, camera_y
 
+# Load and scale character images, and define their positions
+def is_near(player_x, player_y, npc_x, npc_y, distance=50):
+    return abs(player_x - npc_x) < distance and abs(player_y - npc_y) < distance
+
+def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255), border_color=(0, 0, 0), padding=20, line_spacing=5):
+    screen_width, screen_height = screen.get_size()
+    box_margin = 40
+    box_width = screen_width - 2 * box_margin
+    box_height = 160
+    box_x = box_margin
+    box_y = screen_height - box_height - 20
+    box_rect = pygame.Rect(box_x, box_y, box_width, box_height)
+
+    # Wrap text
+    words = message.split(' ')
+    lines = []
+    line = ''
+    for word in words:
+        test_line = line + word + ' '
+        if font.size(test_line)[0] < box_width - 2 * padding:
+            line = test_line
+        else:
+            lines.append(line.strip())
+            line = word + ' '
+    lines.append(line.strip())
+
+    # Transparent background surface
+    popup_surface = pygame.Surface((box_width, box_height))
+    popup_surface.set_alpha(230)  # Adjust transparency
+    popup_surface.fill(bg_color)
+
+    # Border
+    pygame.draw.rect(popup_surface, border_color, popup_surface.get_rect(), 4)
+
+    # Draw text
+    line_height = font.get_height() + line_spacing
+    y_offset = padding
+    for l in lines:
+        if y_offset + line_height > box_height - padding:
+            break
+        text_surf = font.render(l, True, color)
+        popup_surface.blit(text_surf, (padding, y_offset))
+        y_offset += line_height
+
+    # Finally blit to main screen (overlapping everything)
+    screen.blit(popup_surface, (box_x, box_y))
+
+characters = [
+    {
+        "img": pygame.transform.scale(pygame.image.load("restaurant.png"), (80, 80)),
+        "x": 770,
+        "y": 130,
+        "description": "Welcome to the restaurant, where the scent of sizzling meals meets the sound of scrubbing dishes. "
+                       "Ready to roll up your sleeves? Take on the washing challenge and earn some well-deserved money."
+    },
+    {
+        "img": pygame.transform.scale(pygame.image.load("grocerry.png"), (100, 100)),  
+        "x": 600,
+        "y": 660,
+        "description": "Bustling with customers and chaos. But today, you are not shopping — you are working. "
+                       "Step behind the counter and become the cashier of the day."
+    },
+    {
+        "img": pygame.transform.scale(pygame.image.load("cyber_cafe.png"), (80, 80)),
+        "x": 90,
+        "y": 665,
+        "description": "This is the teenagers' zone, and the only way to win here is to type like lightning. "
+                       "Put your speed and accuracy to the test and rake in digital dough with each correct keystroke."
+    },
+    {
+        "img": pygame.transform.scale(pygame.image.load("Food_stall.png"), (65, 65)),
+        "x": 750,
+        "y": 353,
+        "description": "Ready to bring you back to life. Choose your meal, sit back, and recover the energy you need to keep going. "
+                       "After all, a hardworking spirit needs fuel to thrive."
+    },
+    {
+        "img": pygame.transform.scale(pygame.image.load("lazapee.png"), (80, 80)),
+        "x": 60,
+        "y": 170,
+        "description": "This is not just another shop — it is a gateway to passive income. "
+                       "Invest wisely, and your money will work while you rest. "
+                       "In this town, fortune favors the bold... and the smart."
+    }
+]
+
 # === NPC ===
 npc_img = pygame.image.load("female/female_idle_left.png").convert_alpha()
-npc_img = pygame.transform.scale(npc_img, (128, 128))
+npc_img = pygame.transform.scale(npc_img, (80, 80))
 class NPC:
     def __init__(self, x, y, dialogue):
         self.x = x
@@ -202,15 +256,46 @@ class NPC:
         if self.direction == "s": self.y += 1
         if self.direction == "d": self.x += 1
 
+# FUNCTION TO GENERATE INTRO MESSAGE
+def generate_intro_message(name):
+    return (
+        f"WELCOME {name.upper()}! In this game, you need money to survive. "
+        "Explore different rooms to work and earn cash. To restore your energy, "
+        "you can either buy food or drinks, which is faster, or go back home to sleep, "
+        "which takes more time. So plan wisely, keep your energy up, and make the most of your day!"
+    )
+
+# === RENDER WRAPPED TEXT ===
+def draw_text_box(surface, message, font, color, box_rect, padding=10, line_height=20):
+    words = message.split(' ')
+    lines = []
+    line = ''
+
+    for word in words:
+        test_line = line + word + ' '
+        if font.size(test_line)[0] < box_rect.width - 2 * padding:
+            line = test_line
+        else:
+            lines.append(line)
+            line = word + ' '
+    lines.append(line)
+
+    pygame.draw.rect(surface, WHITE, box_rect)
+    pygame.draw.rect(surface, BLACK, box_rect, 3)
+
+    for i, l in enumerate(lines):
+        line_surface = font.render(l.strip(), True, color)
+        surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
+
 # === GAME LOOP ===
 dialogue_lines = ["Hi! Welcome to the store!", "DON'T COME BACK", "BYE", "[MENU]"]
-npc = NPC(1100, 1000, dialogue_lines)
+npc = NPC(300, 300 , dialogue_lines)
 menu_options = ["🛒 Shop", "📜 Quest"]
 selected_option = 0
 
 # 初始位置
-player_x = 15 * 32
-player_y = 20 * 32
+player_x = 500
+player_y = 400
 player_speed = 1.5
 player_direction = "s"
 walk_frame = 0
@@ -228,23 +313,24 @@ while running:
         cursor_timer = 0
 
     if game_state == "intro":
+        # Intro Screen Logic
         screen.blit(bg_img, (0, 0))
         name_color = BLACK if player_name else GRAY
         display_name = player_name if player_name else "ENTER YOUR NAME"
         if active_input and cursor_visible:
             display_name += "|"
-        screen.blit(font.render(display_name, True, name_color), (230, 215))
+        screen.blit(font.render(display_name, True, name_color), (380, 210))
 
         pygame.draw.rect(screen, BLACK, male_box, 3)
         pygame.draw.rect(screen, BLACK, female_box, 3)
         if selected_character == 'male':
             pygame.draw.rect(screen, HIGHLIGHT, male_box, 3)
-            pygame.draw.line(screen, TICK_COLOR, (260, 350), (270, 360), 3)
-            pygame.draw.line(screen, TICK_COLOR, (270, 360), (285, 340), 3)
+            pygame.draw.line(screen, TICK_COLOR, (340, 345), (345, 355), 3)
+            pygame.draw.line(screen, TICK_COLOR, (345, 355), (360, 335), 3)
         elif selected_character == 'female':
             pygame.draw.rect(screen, HIGHLIGHT, female_box, 3)
-            pygame.draw.line(screen, TICK_COLOR, (510, 350), (520, 360), 3)
-            pygame.draw.line(screen, TICK_COLOR, (520, 360), (535, 340), 3)
+            pygame.draw.line(screen, TICK_COLOR, (660, 345), (665, 355), 3)
+            pygame.draw.line(screen, TICK_COLOR, (665, 355), (680, 335), 3)
 
         pygame.draw.rect(screen, BUTTON_COLOR, start_button)
         pygame.draw.rect(screen, HIGHLIGHT if player_name and selected_character else BLACK, start_button, 4)
@@ -259,18 +345,38 @@ while running:
         screen.blit(font.render("Reset", True, BLACK), (reset_button.x + 55, reset_button.y + 20))
 
         if warning_message:
-            screen.blit(font.render(warning_message, True, WARNING_COLOR), (80, 560))
+            screen.blit(font.render(warning_message, True, WARNING_COLOR), (180, 530))
 
     elif game_state == "game":
         camera_x, camera_y = get_camera_offset()
-        screen.blit(map_img, (-camera_x, -camera_y))
+        screen.fill((0, 0, 0))
+        screen.blit(map_img, (0 - camera_x, 0 - camera_y))  # Apply camera offset # Apply camera offset here
 
+       # EFFECT FOR INTRO MESSAGE
+        if show_intro_message:
+            if not typing_done:
+                if typing_index < len(intro_message):
+                    typed_message += intro_message[typing_index]
+                    typing_index += 1
+                else:
+                    typing_done = True
+
+            # DRAW MESSAGE BOX
+            dialog_box_rect = pygame.Rect(110, 380, 800, 180)
+            draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
+
+        # Player movement 
         old_x, old_y = player_x, player_y
+        keys = pygame.key.get_pressed()
+        moving = False
+        new_x, new_y = player_x, player_y  # New position after moving
+
+
     # 获取按键
         keys = pygame.key.get_pressed()
         moving = False
-        new_x, new_y = player_x, player_y  # 保存新的目标位置
-
+        new_x, new_y = player_x, player_y  # 
+        
         if keys[pygame.K_w]:
             new_y -= player_speed
             player_direction = "w"
@@ -290,6 +396,10 @@ while running:
 
         # 创建玩家的目标矩形，用来检查碰撞
         player_rect = pygame.Rect(new_x, new_y, player_imgs["idle"][player_direction].get_width(), player_imgs["idle"][player_direction].get_height())
+        for rect in collision_rects:
+            if player_rect.colliderect(rect):
+                moving = False  # Stop movement on collision
+                break
 
         # 检查碰撞
         for rect in collision_rects:
@@ -329,6 +439,14 @@ while running:
             else:
                 screen.blit(FONT.render(current_line, True, WHITE), (60, HEIGHT - 130))
 
+        for character in characters:
+            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
+            if is_near(player_x, player_y, character["x"], character["y"]):
+                draw_popup(screen, character["description"], font)
+
+        for char in characters:
+            screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -339,21 +457,27 @@ while running:
                 if male_box.collidepoint(event.pos): selected_character = 'male'
                 if female_box.collidepoint(event.pos): selected_character = 'female'
                 if start_button.collidepoint(event.pos):
+                    if start_button.collidepoint(event.pos):
+                        if player_name and selected_character:
+                            save_game(player_name, selected_character)
                     if player_name and selected_character:
-                        save_game
-                        game_state = "game"
+                        intro_message = generate_intro_message(player_name)
                         show_intro_message = True
                         typing_done = False
                         typed_message = ""
                         typing_index = 0
-                        player_imgs = load_player_images(selected_character)
+                        player_imgs = load_player_images(selected_character)  # Load correct character assets
+                        game_state = "game"
                     else:
-                        warning_message = "Enter name and choose a character!"
+                        warning_message = "Enter name and choose a character!"  # Only show this when conditions aren't met
                 if continue_button.collidepoint(event.pos):
-                    if load_game():
+                    saved_data = load_game()
+                    if saved_data:
+                        player_name = saved_data["player_name"]
+                        selected_character = saved_data["selected_character"]
                         game_state = "game"
                         warning_message = ''
-                        show_intro_message = True
+                        show_intro_message = False
                         typing_done = False
                         typed_message = ""
                         typing_index = 0
@@ -393,7 +517,6 @@ while running:
                                 npc.talking = False
                         if event.key == pygame.K_ESCAPE:
                             npc.talking = False
-
     pygame.display.flip()
 
 pygame.quit()
