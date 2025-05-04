@@ -1,6 +1,6 @@
 import pygame
 import time
-from Features import FoodStore, MiniGame1, MiniGame4
+from Features import MiniGame1, MiniGame4, Store
 
 # === Setup ===
 pygame.init()
@@ -239,7 +239,7 @@ while running:
 
     # == Lanching Food Store ==
     elif game_state == "store": 
-        STORE = FoodStore.STORE()
+        STORE = Store.STORE()
         STORE.mainpage(screen, WIDTH, HEIGHT, mg_state, mp)
         display_stats()
 
