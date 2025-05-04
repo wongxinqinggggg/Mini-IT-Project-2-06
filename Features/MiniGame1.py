@@ -1,85 +1,130 @@
 import pygame
 from random import randint, choice, uniform
 
+STATS = {'hp': 10, 'mp': 10}
+time_limit, plate_requirement = 10, 5
+msg = [["YOU LOSE!", 380], ["YOU WIN!", 400], ["INSUFFICIENT ENERGY!", 190]]
+audiobarxpos = [447, 649]
+menubtnpos = (975, 50)
+
 class MG1():
-    def __init__(self, screen, WIDTH, HEIGHT, mg_state):
-        self.screen = screen
-        self.WIDTH = WIDTH
-        self.HEIGHT = HEIGHT
-        self.mg_state = mg_state
-        mg1_base = pygame.transform.scale(pygame.image.load("Assets/Images/MG1_Base.png").convert(), (self.WIDTH, self.HEIGHT))
-        self.screen.blit(mg1_base, (0, 0))
+    def __init__(self, S, W, H, var_dict, E=None, C=None):
+        global statschange
+        self.var_dict, statschange = var_dict, {'hpc': None, 'mpc': None}
 
-        # Call function for certain mg state
-        if self.mg_state == "mainpage": self.mainpage()
-        elif self.mg_state == "menu": self.menu()
+        if E: self.eventhandler(E, self.var_dict['mg_state'])
+        self.update()
+        if not E: self.draw(S, W, H, self.var_dict['mg_state'], C)
+        self.update()
 
-    def getstate(self):
-        return self.mg_state
-    
-    def eventhandler(self, mouse_X, mouse_Y, dragging = False):
-        if self.mg_state == "mainpage":
-            if self.startbtnrect.collidepoint(mouse_X, mouse_Y):    self.mg_state = "newgame"
-            elif self.instrucbtnrect.collidepoint(mouse_X, mouse_Y):    self.mg_state = "instruc"
-            elif self.exitbtnrect.collidepoint(mouse_X, mouse_Y):   self.mg_state = None
+    def eventhandler(self, E, mg_state):
+        if E.type == pygame.MOUSEBUTTONDOWN:
+            mouse_x, mouse_y = E.pos
+            if mg_state == "mainpage":
+                if self.var_dict['msg']: self.var_dict['msg'] = None
+                elif self.exitbtnrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = None
+                elif self.instrucbtnrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = "instruc"
+                elif self.startbtnrect.collidepoint(mouse_x, mouse_y): 
+                    if self.var_dict['hp'] >= STATS['hp']:
+                        statschange['hpc'] = (-STATS['hp'])
+                        self.var_dict['mg_state'] = "game"
+                        self.var_dict['new_plate'] = True
+                        self.var_dict['time_passed'] = 0
+
+                    else: self.var_dict['msg'] = msg[2]
+
+            elif mg_state == "instruc":
+                if self.instrucbackrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = "mainpage"
         
-        elif self.mg_state == "instruc":
-            if self.instrucbackrect.collidepoint(mouse_X, mouse_Y): self.mg_state = "mainpage"
-        
-        elif self.mg_state == "game":
-            if self.menubtnrect.collidepoint(mouse_X, mouse_Y): self.mg_state = "menu"
-            else: self.stains.update(mouse_X, mouse_Y)
+            elif mg_state == "game": 
+                if self.menubtnrect.collidepoint(mouse_x, mouse_y): 
+                    self.var_dict['mg_state'] = "menu"
+                    self.var_dict['time_passed'] = self.time_passed
 
-        elif self.mg_state == "displaymsg": self.mg_state = "mainpage"
+                else: self.stains.update(mouse_x, mouse_y)
 
-        elif self.mg_state == "menu":
-            if self.resumebtnrect.collidepoint(mouse_X, mouse_Y): self.mg_state = "resume"
-            elif self.restartbtnrect.collidepoint(mouse_X, mouse_Y): self.mg_state = "newgame"
-            elif self.quitbtnrect.collidepoint(mouse_X, mouse_Y): self.mg_state = None
+            elif self.var_dict['mg_state'] == "displaymsg": self.var_dict['mg_state'] = "mainpage"
 
-            elif self.audiobtnrect.collidepoint(mouse_X, mouse_Y): 
-                # Toggle on and off the audio btn
-                if pygame.mixer.music.get_busy(): pygame.mixer.music.pause()
-                else: 
-                    pygame.mixer.music.unpause()
-                    # Set volume to .33 if its initially zero
-                    if not pygame.mixer.music.get_volume(): pygame.mixer.music.set_volume(0.33)
+            elif self.var_dict['mg_state'] == "menu":
+                if self.resumebtnrect.collidepoint(mouse_x, mouse_y): 
+                    self.var_dict['mg_state'] = "game"
 
-            elif self.audiosliderrect.collidepoint(mouse_X, mouse_Y):
-                dragging = True     # To detect dragging of audio slider
-            
-            if dragging:
+                elif self.restartbtnrect.collidepoint(mouse_x, mouse_y): 
+                    self.var_dict['mg_state'] = "game"
+                    self.var_dict['new_plate'] = True
+                    self.var_dict['time_passed'] = 0
+
+                elif self.quitbtnrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = None
+
+                elif self.audiobtnrect.collidepoint(mouse_x, mouse_y): 
+                    # Toggle on and off the audio btn
+                    if pygame.mixer.music.get_busy(): pygame.mixer.music.pause()
+                    else: 
+                        pygame.mixer.music.unpause()
+                        # Set volume to .33 if its initially zero
+                        if not pygame.mixer.music.get_volume(): pygame.mixer.music.set_volume(0.33)
+
+                elif self.audiosliderrect.collidepoint(mouse_x, mouse_y):
+                    self.var_dict['dragging'] = True     # To detect dragging of audio slider
+ 
+        elif E.type == pygame.MOUSEMOTION:
+            mouse_x, mouse_y = E.pos
+            if self.var_dict['dragging']:
                 # Update volume by using position of mouse
-                pygame.mixer.music.set_volume(min(max((mouse_X - 335) / (535 - 335), 0), 1))
+                pygame.mixer.music.set_volume(min(max((mouse_x - audiobarxpos[0]) / (audiobarxpos[1] - audiobarxpos[0]), 0), 1))
                 if not pygame.mixer.music.get_busy(): pygame.mixer.music.unpause()
-        
-        return dragging
 
-    def mainpage(self):
+        elif E.type == pygame.MOUSEBUTTONUP:
+            self.var_dict['dragging'] = False
+
+    def update(self):
+        self.var_dict['hpc'], self.var_dict['mpc'] = statschange['hpc'], statschange['mpc']
+
+    def draw(self, S, W, H, mg_state, C):
+        base = pygame.transform.scale(pygame.image.load("Assets/Images/MG1_Base.png").convert(), (W, H))
+        S.blit(base, (0, 0))
+
+        if mg_state == "mainpage": 
+            self.mainpage(S, W, H, self.var_dict['Lfont'])
+            pygame.mouse.set_cursor()
+        elif mg_state == "instruc": 
+            self.instruc(S, W, H, self.var_dict['Mfont'])
+            pygame.mouse.set_cursor()
+        elif mg_state == "game": 
+            self.game(S, W, H, self.var_dict['plates'], self.var_dict['new_plate'], self.var_dict['Lfont'], C)
+            sponge = pygame.image.load("Assets/Images/MG1_Sponge.png").convert_alpha()
+            pygame.mouse.set_cursor((50, 50), sponge)
+        elif mg_state == "menu": 
+            self.menu(S, W, H)
+            pygame.mouse.set_cursor()
+
+    def mainpage(self, S, W, H, Lfont):
         title = pygame.image.load("Assets/Images/MG1_Title.png").convert_alpha()
         startbtn = pygame.image.load("Assets/Images/MGE_Startbtn.png").convert_alpha()
-        self.startbtnrect = startbtn.get_rect(center = (400, 500))
+        self.startbtnrect = startbtn.get_rect(center = (W/2, 490))
         instrucbtn = pygame.image.load("Assets/Images/MGE_Instrucbtn.png").convert_alpha()
-        self.instrucbtnrect = instrucbtn.get_rect(center = (400, 400))
+        self.instrucbtnrect = instrucbtn.get_rect(center = (W/2, 390))
         exitbtn = pygame.image.load("Assets/Images/MGE_Exitbtn.png").convert_alpha()
-        self.exitbtnrect = exitbtn.get_rect(center = (750, 50))
+        self.exitbtnrect = exitbtn.get_rect(center = menubtnpos)
 
-        self.screen.blit(title, (0,0))
-        self.screen.blit(startbtn, self.startbtnrect)
-        self.screen.blit(instrucbtn, self.instrucbtnrect)
-        self.screen.blit(exitbtn, self.exitbtnrect)
+        S.blit(title, title.get_rect(center = (W/2, 240)))
+        S.blit(startbtn, self.startbtnrect)
+        S.blit(instrucbtn, self.instrucbtnrect)
+        S.blit(exitbtn, self.exitbtnrect)
 
-    def instruc(self, Mfont):
+        if self.var_dict['msg']: self.displaymsg(S, W, H, self.var_dict['msg'][0], self.var_dict['msg'][1], Lfont)
+
+    def instruc(self, S, W, H, Mfont):
         instruction = ("This game cost 10 Energy to play. "
                        "Click on the dirty area of the plate to clean it. "
                        "Clean a total of 5 plates in 10 seconds to earn 10$.")
         instrucbox = pygame.image.load("Assets/Images/MGE_Instrucbox.png").convert_alpha()
         instrucback = pygame.image.load("Assets/Images/MGE_Instrucback.png").convert_alpha()
-        self.instrucbackrect = instrucback.get_rect(center = (400, 450))
-        instrucrect = pygame.Rect(100, 180, 650, 400)
+        self.instrucbackrect = instrucback.get_rect(center = (W/2, 450))
+        instrucrect = pygame.Rect(200, 180, 710, 400)
 
-        self.screen.blit(instrucbox, (0,0))
-        self.screen.blit(instrucback, self.instrucbackrect)
+        S.blit(instrucbox, instrucbox.get_rect(center = (W/2, H/2)))
+        S.blit(instrucback, self.instrucbackrect)
         
         words = instruction.split(' ')
         lines, line = [], ''
@@ -96,101 +141,102 @@ class MG1():
         # Display insturction msg
         for i, l in enumerate(lines):
             line_surface = Mfont.render(l.strip(), True, 'Black')
-            self.screen.blit(line_surface, (instrucrect.x + padding, instrucrect.y + padding + i * lineheight))
+            S.blit(line_surface, (instrucrect.x + padding, instrucrect.y + padding + i * lineheight))
 
-    def game(self, plates, new_plate, time_left, stains, Lfont):
-        self.win = False
-        self.stains = stains
+    def game(self, S, H, W, plates, new_plate, Lfont, C):
+        self.stains, self.time_passed = self.var_dict['stains'], self.var_dict['time_passed']
+        self.time_passed += C.get_time()/1000
 
-        if (time_left >= 10): 
-            self.stains.empty()
-            self.mg_state, self.win = "end", False
-            return None, None
+        if self.time_passed >= time_limit: 
+            self.var_dict['mg_state'], self.var_dict['msg'] = "mainpage", msg[0]
+            self.var_dict['stains'], self.var_dict['plates'] = None, 0
+            return
         
         menubtn = pygame.image.load("Assets/Images/MAIN_Menubtn.png").convert_alpha()
-        self.menubtnrect = menubtn.get_rect(center = (750, 50))
+        self.menubtnrect = menubtn.get_rect(center = menubtnpos)
         plate = pygame.image.load("Assets/Images/MG1_Plate.png").convert_alpha()
-        platerect = plate.get_rect(center = (400,300))
+        platerect = plate.get_rect(center = (W/2 + 100, H/2))
+        horiplate = pygame.image.load("Assets/Images/MG1_Horiplate.png").convert_alpha()
+        horiplatestack = pygame.Surface((225, 500), pygame.SRCALPHA)
+
+        for i in range(plate_requirement - plates - 1):
+            horiplatestack.blit(horiplate, horiplate.get_rect(bottomleft = (0, 500 - i * 25)))
 
         if new_plate:
             # Creating new stains for new plate
+            self.stains = pygame.sprite.Group()
             platemask = pygame.mask.from_surface(plate)
-            plate_sprite = pygame.sprite.Sprite()
-            plate_sprite.image = plate
-            plate_sprite.rect = platerect
-            plate_sprite.mask = platemask
-            for i in range(randint(3, 5)):
-                self.stains.add(Stains(plate_sprite, self.stains))
+            for i in range(randint(3, 5)): self.stains.add(Stains(platerect, platemask, self.stains))
             new_plate = False
 
-        self.screen.blit(plate, platerect)
-        self.screen.blit(menubtn, self.menubtnrect)
-        self.displayscore(plates, time_left, Lfont)
+        S.blit(plate, platerect)
+        S.blit(menubtn, self.menubtnrect)
+        S.blit(horiplatestack, horiplatestack.get_rect(bottomleft = (20, 550)))
+        self.displayscore(S, plates, (time_limit - self.time_passed), Lfont)
 
-        if self.stains:
-            self.stains.draw(self.screen)
+        if self.stains: self.stains.draw(S)
         else:
             plates += 1
-            if plates < 5:  new_plate = True
-            else: self.mg_state, self.win, plates, new_plate = "win", True, None, None
-
-        return plates, new_plate
+            if plates < plate_requirement:  new_plate = True
+            else: 
+                self.var_dict['msg'], statschange['mpc'] = msg[1], STATS['mp']
+                self.var_dict['stains'], self.var_dict['plates'] = None, 0
+                self.var_dict['mg_state'] = "mainpage"
+                return
             
-    def menu(self):
+        self.var_dict ['stains'] = self.stains
+        self.var_dict ['plates'] = plates
+        self.var_dict ['new_plate'] = new_plate
+        self.var_dict ['time_passed'] = self.time_passed
+
+    def menu(self, S, W, H):
         menu = pygame.image.load("Assets/Images/MENU_Menu.png").convert_alpha()
         resumebtn = pygame.image.load("Assets/Images/MENU_Resumebtn.png").convert_alpha()
-        self.resumebtnrect = resumebtn.get_rect(center = (400, 265))
+        self.resumebtnrect = resumebtn.get_rect(center = (W/2, 235))
         restartbtn = pygame.image.load("Assets/Images/MENU_Restartbtn.png").convert_alpha()
-        self.restartbtnrect = restartbtn.get_rect(center = (400, 365))
+        self.restartbtnrect = restartbtn.get_rect(center = (W/2, 335))
         quitbtn = pygame.image.load("Assets/Images/MENU_Quitbtn.png").convert_alpha()
-        self.quitbtnrect = quitbtn.get_rect(center = (400, 465))
+        self.quitbtnrect = quitbtn.get_rect(center = (W/2, 435))
         audioslider = pygame.image.load("Assets/Images/MENU_Audioslider.png").convert_alpha()
 
         # Get pos of audio slider based on volume
-        self.audiosliderrect = audioslider.get_rect(center = (335  + pygame.mixer.music.get_volume() * (535 - 335), 170))
+        audiosliderxpos = audiobarxpos[0] + pygame.mixer.music.get_volume() * (audiobarxpos[1] - audiobarxpos[0])
+        self.audiosliderrect = audioslider.get_rect(center = (audiosliderxpos, 132))
 
         # Load audio btn if music playing, load muted btn otherwise
-        if pygame.mixer.music.get_busy():
-            audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
+        if pygame.mixer.music.get_busy(): audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
         else: audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn2.png").convert_alpha()
+        self.audiobtnrect = audiobtn.get_rect(center = (400, 132))
+        
+        S.blit(menu, (0,0))
+        S.blit(resumebtn, self.resumebtnrect)
+        S.blit(restartbtn, self.restartbtnrect)
+        S.blit(quitbtn, self.quitbtnrect)
+        S.blit(audiobtn, self.audiobtnrect)
+        S.blit(audioslider, self.audiosliderrect)
 
-        self.audiobtnrect = audiobtn.get_rect(center = (290, 170))
-        self.screen.blit(menu, (0,0))
-        self.screen.blit(resumebtn, self.resumebtnrect)
-        self.screen.blit(restartbtn, self.restartbtnrect)
-        self.screen.blit(quitbtn, self.quitbtnrect)
-        self.screen.blit(audiobtn, self.audiobtnrect)
-        self.screen.blit(audioslider, self.audiosliderrect)
-
-    def checkcond(self):
-        return self.stains, self.win
-
-    def displayscore(self, plates, time_left, Lfont):
+    def displayscore(self, S, plates, time_left, Lfont):
         # Display no of plates and time left
-        plates = 'No:' + str(plates) + "/5"
-        scoresurf = Lfont.render(plates, False, 'Black')
-        scorerect = pygame.Rect(20, 20, 200, 80)
         time_left = (str(format(time_left, '.2f')) + 's').zfill(6)
         time_leftsurf = Lfont.render(time_left, False, 'Black')
-        time_leftrect = pygame.Rect(380, 20, 200, 80)
+        time_leftrect = pygame.Rect(20, 20, 230, 80)
+        plates = 'No:' + str(plates) + "/5"
+        platessurf = Lfont.render(plates, False, 'Black')
+        platesrect = pygame.Rect(20, 140, 230, 80)
 
-        pygame.draw.rect(self.screen, 'Dark Green', scorerect)
-        pygame.draw.rect(self.screen, 'Dark Green', time_leftrect)
-        self.screen.blit(scoresurf, (scorerect.x + 22, scorerect.y + 22))
-        self.screen.blit(time_leftsurf, (time_leftrect.x + 22, time_leftrect.y + 22))
+        pygame.draw.rect(S, 'Dark Green', platesrect)
+        pygame.draw.rect(S, 'Dark Green', time_leftrect)
+        S.blit(platessurf, (platesrect.x + 22, platesrect.y + 22))
+        S.blit(time_leftsurf, (time_leftrect.x + 22, time_leftrect.y + 22))
 
-    def displaymsg(self, msg, xpos, ypos, Lfont):
-        self.msg = msg
-        self.xpos = xpos
-        self.ypos = ypos
-        self.Lfont = Lfont
-        box_rect = pygame.Rect(30, 410, 740, 180)
-        pygame.draw.rect(self.screen, 'White', box_rect)
-        pygame.draw.rect(self.screen, 'Black', box_rect, 3)
-        self.screen.blit(self.Lfont.render(self.msg, True, 'Black'), (self.xpos, self.ypos))
+    def displaymsg(self, S, W, H, msg, xpos, Lfont, ypos = 480):
+        box_rect = pygame.Rect(30, 40, W-60, 180)
+        pygame.draw.rect(S, 'White', box_rect)
+        pygame.draw.rect(S, 'Black', box_rect, 3)
+        S.blit(self.Lfont.render(self.msg, True, 'Black'), (xpos, ypos))
 
 class Stains(pygame.sprite.Sprite):
-    def __init__(self, plate, stains):
+    def __init__(self, platerect, platemask, stains):
         super().__init__()
 
         path = choice(["MG1_Stain1", "MG1_Stain2"])
@@ -199,43 +245,37 @@ class Stains(pygame.sprite.Sprite):
         while True:
             # Randomize stain images
             temp = pygame.sprite.Sprite()
-            temp.image = pygame.transform.rotozoom(image, randint(-360, 360), round(uniform(0.6, 1), 2))
+            temp.image = pygame.transform.rotozoom(image, randint(-360, 360), round(uniform(1, 1,4), 2))
             temp.mask = pygame.mask.from_surface(temp.image)
-            temp.rect = temp.mask.get_rect(center = (randint(180, 620),randint(180, 580)))
+            temp.rect = temp.mask.get_rect(center = (randint(350, 850),randint(50, 550)))
 
             # Ensure stains images is within the plate and does not overlap with each other
-            if pygame.sprite.collide_rect(temp, plate):
-                offset = plate.rect[0] - temp.rect[0], plate.rect[1] - temp.rect[1]
-                overlap = temp.mask.overlap_area(plate.mask, offset)
-
-                if temp.mask.count() == overlap:
-                    sprite_list = pygame.sprite.spritecollide(temp, stains.sprites(), False)
-
-                    if sprite_list:
-                        for sprite in sprite_list:
-                            offset = sprite.rect[0] - temp.rect[0], sprite.rect[1] - temp.rect[1]
-                            if temp.mask.overlap(sprite.mask, offset): 
-                                temp = None
-                                break
-                    
-                    if temp:
-                        temp.image = self.pallete_swap(temp.image, (0, 0, 0, 0))
-                        temp.image = self.pallete_swap(temp.image, (170, 117 ,34), None)
-                        temp.image.set_colorkey((0, 0, 0))
-                        self.image, self.rect, self.mask = temp.image, temp.rect, temp.mask
-                        break
+            offset = platerect[0] - temp.rect[0], platerect[1] - temp.rect[1]
+            overlap = temp.mask.overlap_area(platemask, offset)
+            if temp.mask.count() == overlap:
+                sprite_list = pygame.sprite.spritecollide(temp, stains.sprites(), False)
+                if sprite_list:
+                    for sprite in sprite_list:
+                        offset = sprite.rect[0] - temp.rect[0], sprite.rect[1] - temp.rect[1]
+                        if temp.mask.overlap(sprite.mask, offset): 
+                            temp = None
+                            break
+                
+                if temp:
+                    temp.image = self.pallete_swap(temp.image, (0, 0, 0, 0))
+                    temp.image = self.pallete_swap(temp.image, (170, 117 ,34), None)
+                    temp.image.set_colorkey((1, 1, 1))
+                    self.image, self.rect, self.mask = temp.image, temp.rect, temp.mask
+                    break
 
     def update(self, mouse_X, mouse_Y):
         if self.rect.collidepoint(mouse_X, mouse_Y): self.kill()    # Delete sprite when clicked
 
-    def pallete_swap(self, surf, old_colour, new_colour = (0, 0, 0)):
+    def pallete_swap(self, surf, old_colour, new_colour = (1, 1, 1)):
         # Randomize the colour of stain image
         image = pygame.Surface(surf.get_size())
-
         if not new_colour:  new_colour = (randint(130, 210), randint(100, 160), randint(5, 65))
-
         image.fill(new_colour)
         surf.set_colorkey(old_colour)
         image.blit(surf, (0, 0))
-
         return image
