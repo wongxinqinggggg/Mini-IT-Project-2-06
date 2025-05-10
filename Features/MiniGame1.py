@@ -18,45 +18,47 @@ class MG1():
         self.update()
 
     def eventhandler(self, E, mg_state):
+        global countdown
         if E.type == pygame.MOUSEBUTTONDOWN:
-            mouse_x, mouse_y = E.pos
             if mg_state == "mainpage":
                 if self.var_dict['msg']: self.var_dict['msg'] = None
-                elif self.exitbtnrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = None
-                elif self.instrucbtnrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = "instruc"
-                elif self.startbtnrect.collidepoint(mouse_x, mouse_y): 
+                elif self.exitbtnrect.collidepoint(E.pos): self.var_dict['mg_state'] = None
+                elif self.instrucbtnrect.collidepoint(E.pos): self.var_dict['mg_state'] = "instruc"
+                elif self.startbtnrect.collidepoint(E.pos): 
                     if self.var_dict['hp'] >= STATS['hp']:
                         statschange['hpc'] = (-STATS['hp'])
-                        self.var_dict['mg_state'] = "game"
+                        self.var_dict['mg_state'] = "countdown"
                         self.var_dict['new_plate'] = True
                         self.var_dict['time_passed'] = 0
+                        countdown = 4
 
                     else: self.var_dict['msg'] = msg[2]
 
             elif mg_state == "instruc":
-                if self.instrucbackrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = "mainpage"
+                if self.instrucbackrect.collidepoint(E.pos): self.var_dict['mg_state'] = "mainpage"
         
             elif mg_state == "game": 
-                if self.menubtnrect.collidepoint(mouse_x, mouse_y): 
+                if self.menubtnrect.collidepoint(E.pos): 
                     self.var_dict['mg_state'] = "menu"
                     self.var_dict['time_passed'] = self.time_passed
 
-                else: self.stains.update(mouse_x, mouse_y)
+                else: self.stains.update(E.pos)
 
             elif self.var_dict['mg_state'] == "displaymsg": self.var_dict['mg_state'] = "mainpage"
 
             elif self.var_dict['mg_state'] == "menu":
-                if self.resumebtnrect.collidepoint(mouse_x, mouse_y): 
+                if self.resumebtnrect.collidepoint(E.pos): 
                     self.var_dict['mg_state'] = "game"
 
-                elif self.restartbtnrect.collidepoint(mouse_x, mouse_y): 
-                    self.var_dict['mg_state'] = "game"
+                elif self.restartbtnrect.collidepoint(E.pos): 
+                    self.var_dict['mg_state'] = "countdown"
                     self.var_dict['new_plate'] = True
                     self.var_dict['time_passed'] = 0
+                    countdown = 4
 
-                elif self.quitbtnrect.collidepoint(mouse_x, mouse_y): self.var_dict['mg_state'] = None
+                elif self.quitbtnrect.collidepoint(E.pos): self.var_dict['mg_state'] = None
 
-                elif self.audiobtnrect.collidepoint(mouse_x, mouse_y): 
+                elif self.audiobtnrect.collidepoint(E.pos): 
                     # Toggle on and off the audio btn
                     if pygame.mixer.music.get_busy(): pygame.mixer.music.pause()
                     else: 
@@ -64,14 +66,13 @@ class MG1():
                         # Set volume to .33 if its initially zero
                         if not pygame.mixer.music.get_volume(): pygame.mixer.music.set_volume(0.33)
 
-                elif self.audiosliderrect.collidepoint(mouse_x, mouse_y):
+                elif self.audiosliderrect.collidepoint(E.pos):
                     self.var_dict['dragging'] = True     # To detect dragging of audio slider
  
         elif E.type == pygame.MOUSEMOTION:
-            mouse_x, mouse_y = E.pos
             if self.var_dict['dragging']:
                 # Update volume by using position of mouse
-                pygame.mixer.music.set_volume(min(max((mouse_x - audiobarxpos[0]) / (audiobarxpos[1] - audiobarxpos[0]), 0), 1))
+                pygame.mixer.music.set_volume(min(max((E.pos[0] - audiobarxpos[0]) / (audiobarxpos[1] - audiobarxpos[0]), 0), 1))
                 if not pygame.mixer.music.get_busy(): pygame.mixer.music.unpause()
 
         elif E.type == pygame.MOUSEBUTTONUP:
@@ -96,6 +97,9 @@ class MG1():
             pygame.mouse.set_cursor((50, 50), sponge)
         elif mg_state == "menu": 
             self.menu(S, W, H)
+            pygame.mouse.set_cursor()
+        elif mg_state == "countdown": 
+            self.countdown(S, W, H, C, self.var_dict['Lfont'])
             pygame.mouse.set_cursor()
 
     def mainpage(self, S, W, H, Lfont):
@@ -146,7 +150,7 @@ class MG1():
     def game(self, S, H, W, plates, new_plate, Lfont, C):
         self.stains, self.time_passed = self.var_dict['stains'], self.var_dict['time_passed']
         self.time_passed += C.get_time()/1000
-
+        
         if self.time_passed >= time_limit: 
             self.var_dict['mg_state'], self.var_dict['msg'] = "mainpage", msg[0]
             self.var_dict['stains'], self.var_dict['plates'] = None, 0
@@ -235,6 +239,20 @@ class MG1():
         pygame.draw.rect(S, 'Black', box_rect, 3)
         S.blit(self.Lfont.render(self.msg, True, 'Black'), (xpos, ypos))
 
+    def countdown(self, S, W, H, C, Lfont):
+        global countdown
+        countdownbox = pygame.Rect(0, 200, W, 200)
+        pygame.draw.rect(S, (255, 0, 0, 0), countdownbox, 200)
+        if countdown >= 1 :
+            S.blit(Lfont.render(str(int(countdown)), True, 'Black'), (W/2, H/2))
+            countdown -= C.get_time()/1000
+            return
+        elif countdown >= 0:
+            S.blit(Lfont.render('START!', True, 'Black'), (W/2 - 70, H/2))
+            countdown -= C.get_time()/1000
+            return
+        else: self.var_dict['mg_state'] = "game"
+
 class Stains(pygame.sprite.Sprite):
     def __init__(self, platerect, platemask, stains):
         super().__init__()
@@ -268,8 +286,8 @@ class Stains(pygame.sprite.Sprite):
                     self.image, self.rect, self.mask = temp.image, temp.rect, temp.mask
                     break
 
-    def update(self, mouse_X, mouse_Y):
-        if self.rect.collidepoint(mouse_X, mouse_Y): self.kill()    # Delete sprite when clicked
+    def update(self, pos):
+        if self.rect.collidepoint(pos): self.kill()    # Delete sprite when clicked
 
     def pallete_swap(self, surf, old_colour, new_colour = (1, 1, 1)):
         # Randomize the colour of stain image

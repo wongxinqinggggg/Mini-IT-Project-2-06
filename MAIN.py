@@ -3,6 +3,7 @@ import json
 import time
 import random
 import os
+from Features import MiniGame1
 
 # === SETUP ===
 pygame.init()
@@ -14,13 +15,16 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No Money, No Life")
 
 # === FONTS ===
-font = pygame.font.Font("PressStart2P.ttf", 20)
-small_font = pygame.font.Font("PressStart2P.ttf", 14)
+font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 20)
+small_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 14)
 FONT = pygame.font.SysFont("arial", 20)
 BIG_FONT = pygame.font.SysFont("arial", 26)
+large_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
+middle_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 26)
+xsmall_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 8)
 
 # === MUSIC ===
-pygame.mixer.music.load("background.mp3")
+pygame.mixer.music.load("Assets/Audio/background.mp3")
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
 
@@ -34,8 +38,8 @@ WARNING_COLOR = (255, 0, 0)
 BUTTON_COLOR = (220, 220, 220)
 
 # === IMAGES ===
-bg_img = pygame.transform.scale(pygame.image.load("main.png").convert(), (WIDTH, HEIGHT))
-map_img = pygame.image.load("final_map.png").convert()
+bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
+map_img = pygame.image.load("Assets/Images/final_map.png").convert()
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
 
 # === TILEMAP BLOCKING ===
@@ -91,6 +95,13 @@ show_intro_message = True
 typing_done = False
 running = True
 
+MAXHP, MAXMP = 999999, 999999
+hp, mp = 100, 899
+mg_var_dict = {}
+mg1_var_dict = {'mg_state': "mainpage", 'plates': 0, 'stains': None, 'new_plate': True, 
+                'time_passed': 0, 'msg': None, 'dragging': None,
+                'Lfont': large_font, 'Mfont': middle_font, 'hpc': None, 'mpc': None}
+
 # CURSOR
 cursor_visible = True
 cursor_timer = 0
@@ -112,27 +123,27 @@ def load_player_images(character_folder):
     path = character_paths[character_folder]
     return {
         "idle": {
-            "w": pygame.image.load(path + f"{character_folder}_idle_up.png").convert_alpha(),
-            "s": pygame.image.load(path + f"{character_folder}_idle_down.png").convert_alpha(),
-            "a": pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha(),
-            "d": pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+            "w": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_up.png").convert_alpha(),
+            "s": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_down.png").convert_alpha(),
+            "a": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha(),
+            "d": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
         },
         "walk": {
             "w": [
-                pygame.image.load(path + f"{character_folder}_walk_up_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_walk_up_2.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_2.png").convert_alpha()
             ],
             "s": [
-                pygame.image.load(path + f"{character_folder}_walk_down_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_walk_down_2.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_2.png").convert_alpha()
             ],
             "a": [
-                pygame.image.load(path + f"{character_folder}_walk_left_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_left_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha()
             ],
             "d": [
-                pygame.image.load(path + f"{character_folder}_walk_right_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_right_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
             ]
         }
     }
@@ -187,40 +198,56 @@ def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255),
         popup_surface.blit(text_surf, (padding, y_offset))
         y_offset += line_height
 
-    # Finally blit to main screen (overlapping everything)
+    # Finally blit to Assets/Images/main screen (overlapping everything)
     screen.blit(popup_surface, (box_x, box_y))
+
+def update_stats(hpchange = None, mpchange = None):
+    global hp, mp
+    if hpchange:    hp = min(max(hp + hpchange, 0), MAXHP)
+    if mpchange:    mp = min(max(mp + mpchange, 0), MAXMP)
+
+# === Function to display hp and mp ===
+def display_stats():    
+    statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
+    hpsurf = large_font.render(str(hp).zfill(6), False, 'Black')
+    hprect = pygame.Rect(90, 30, 80, 50)
+    mpsurf = large_font.render(str(mp).zfill(6), False, 'Black')
+    mprect = pygame.Rect(90, 105, 80, 50)
+    screen.blit(statsbar, (13, 13))
+    screen.blit(hpsurf, hprect)
+    screen.blit(mpsurf, mprect)
 
 characters = [
     {
-        "img": pygame.transform.scale(pygame.image.load("restaurant.png"), (80, 80)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Sprites/npc/restaurant.png"), (80, 80)),
         "x": 770,
         "y": 130,
         "description": "Welcome to the restaurant, where the scent of sizzling meals meets the sound of scrubbing dishes. "
                        "Ready to roll up your sleeves? Take on the washing challenge and earn some well-deserved money."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("grocerry.png"), (100, 100)),  
+        "img": pygame.transform.scale(pygame.image.load("Assets/Sprites/npc/grocerry.png"), (100, 100)),  
         "x": 600,
         "y": 660,
         "description": "Bustling with customers and chaos. But today, you are not shopping — you are working. "
                        "Step behind the counter and become the cashier of the day."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("cyber_cafe.png"), (80, 80)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Sprites/npc/cyber_cafe.png"), (80, 80)),
         "x": 90,
         "y": 665,
         "description": "This is the teenagers' zone, and the only way to win here is to type like lightning. "
                        "Put your speed and accuracy to the test and rake in digital dough with each correct keystroke."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("Food_stall.png"), (65, 65)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Sprites/npc/Food_stall.png"), (65, 65)),
         "x": 750,
         "y": 353,
         "description": "Ready to bring you back to life. Choose your meal, sit back, and recover the energy you need to keep going. "
                        "After all, a hardworking spirit needs fuel to thrive."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("lazapee.png"), (80, 80)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Sprites/npc/lazapee.png"), (80, 80)),
         "x": 60,
         "y": 170,
         "description": "This is not just another shop — it is a gateway to passive income. "
@@ -230,7 +257,7 @@ characters = [
 ]
 
 # === NPC ===
-npc_img = pygame.image.load("female/female_idle_left.png").convert_alpha()
+npc_img = pygame.image.load("Assets/Sprites/female/female_idle_left.png").convert_alpha()
 npc_img = pygame.transform.scale(npc_img, (80, 80))
 class NPC:
     def __init__(self, x, y, dialogue):
@@ -308,6 +335,8 @@ while running:
     dt = clock.tick(60)
     screen.fill(WHITE)
     cursor_timer += dt
+
+    if not pygame.mixer.music.get_volume(): pygame.mixer.music.pause()
     if cursor_timer >= cursor_interval:
         cursor_visible = not cursor_visible
         cursor_timer = 0
@@ -372,7 +401,7 @@ while running:
         new_x, new_y = player_x, player_y  # New position after moving
 
 
-    # 获取按键
+        # 获取按键
         keys = pygame.key.get_pressed()
         moving = False
         new_x, new_y = player_x, player_y  # 
@@ -447,9 +476,21 @@ while running:
         for char in characters:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
 
+        display_stats()
+
+    # == Lanching Mini game 1 ==
+    elif game_state == "mg1":
+        mg_var_dict['hp'], mg_var_dict['mp'] = hp, mp
+        MG1 = MiniGame1.MG1(screen, WIDTH, HEIGHT, mg_var_dict, C=clock)
+        mg_var_dict = MG1.var_dict
+        if mg_var_dict['mg_state'] != "game": 
+            if mg_var_dict['mg_state'] != "instruc": 
+                if mg_var_dict['mg_state'] != "countdown": 
+                    if mg_var_dict['mg_state'] != "menu": display_stats()
+        update_stats(mpchange = mg_var_dict['mpc'])
+
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+        if event.type == pygame.QUIT: running = False
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "intro":
@@ -517,6 +558,24 @@ while running:
                                 npc.talking = False
                         if event.key == pygame.K_ESCAPE:
                             npc.talking = False
+
+                # Placeholder for launching minigames
+                elif event.key == pygame.K_1: 
+                    game_state, mg_var_dict = "mg1", mg1_var_dict.copy()
+                    break
+
+
+        if game_state == "mg1":   
+            MG1.__init__(screen, WIDTH, HEIGHT, mg_var_dict, event)
+            mg_var_dict = MG1.var_dict
+            update_stats(mg_var_dict['hpc'], mg_var_dict['mpc'])
+
+    if mg_var_dict: 
+        if not mg_var_dict['mg_state']:
+            game_state = "game"
+            mg_var_dict.clear()
+            pygame.mouse.set_cursor()
+
     pygame.display.flip()
 
 pygame.quit()
