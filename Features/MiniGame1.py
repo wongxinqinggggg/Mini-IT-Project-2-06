@@ -11,12 +11,16 @@ class MG1():
         self.audiobarxpos = [447, 649]
         self.statschange = {'hpc': None, 'mpc': None}
 
+        self.btnsound = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
+        self.successsound = pygame.mixer.Sound("Assets/Audio/success.mp3")
+        self.failsound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
+        pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
+        pygame.mixer.music.play(-1)
+
         self.base = pygame.transform.scale(pygame.image.load("Assets/Images/MG1_Base.png").convert(), (W, H))
         self.title = pygame.image.load("Assets/Images/MG1_Title.png").convert_alpha()
         self.startbtn = pygame.image.load("Assets/Images/MGE_Startbtn.png").convert_alpha()
         self.startbtnrect = self.startbtn.get_rect(center = (W/2, 490))
-        self.exitbtn = pygame.image.load("Assets/Images/MGE_Exitbtn.png").convert_alpha()
-        self.exitbtnrect = self.exitbtn.get_rect(center = (W/2, 490))
         self.instrucbtn = pygame.image.load("Assets/Images/MGE_Instrucbtn.png").convert_alpha()
         self.instrucbtnrect = self.instrucbtn.get_rect(center = (W/2, 390))
         self.instrucback = pygame.image.load("Assets/Images/MGE_Instrucback.png").convert_alpha()
@@ -39,7 +43,7 @@ class MG1():
         self.horiplate = pygame.image.load("Assets/Images/horiplate5x.png").convert_alpha()
         self.spongecursor = pygame.image.load("Assets/Images/MG1_Sponge.png").convert_alpha()
 
-        self.btnrectlist = {'mainpage': [self.startbtnrect, self.instrucbtnrect, self.exitbtnrect], 
+        self.btnrectlist = {'mainpage': [self.startbtnrect, self.instrucbtnrect, self.menubtnrect], 
                             'instruc': [self.instrucbackrect], 'game': [self.menubtnrect], 'countdown': None,
                             'menu': [self.resumebtnrect, self.restartbtnrect, self.quitbtnrect, self.audiobtnrect, self.audiosliderrect]}
 
@@ -64,8 +68,10 @@ class MG1():
                 if self.instrucbackrect.collidepoint(E.pos): self.var_dict['mg_state'] = "mainpage"
         
             elif mg_state == "game": 
-                if self.exitbtnrect.collidepoint(E.pos): 
-                    self.var_dict['mg_state'] = None
+                if self.menubtnrect.collidepoint(E.pos): 
+                    self.var_dict['prev_state'] = self.var_dict['mg_state'] 
+                    self.var_dict['mg_state'] = "menu"
+                    self.var_dict['time_passed'] = self.time_passed
 
                 else: self.stains.update(E.pos)
 
@@ -79,6 +85,7 @@ class MG1():
                 elif self.restartbtnrect.collidepoint(E.pos): self.newgame(self.var_dict['hp'])
 
                 elif self.quitbtnrect.collidepoint(E.pos):
+                    pygame.mixer.music.unload()
                     self.var_dict['mg_state'] = None
 
                 elif self.audiobtnrect.collidepoint(E.pos): 
@@ -92,6 +99,11 @@ class MG1():
                 elif self.audiosliderrect.collidepoint(E.pos):
                     self.var_dict['dragging'] = True     # To detect dragging of audio slider
         
+            if self.var_dict['btnrectlist']:
+                for rect in self.var_dict['btnrectlist']:
+                    if rect.collidepoint(E.pos):
+                        self.btnsound.play()
+
         elif E.type == pygame.MOUSEMOTION:
             global cursorcollide
             cursorcollide = False
@@ -130,6 +142,9 @@ class MG1():
             if self.time_passed >= self.time_limit:
                 self.var_dict['mg_state'], self.var_dict['msg'] = "mainpage", self.msg[0]
                 self.var_dict['stains'], self.var_dict['plates'] = None, 0
+                self.failsound.play()
+                pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
+                pygame.mixer.music.play(-1)
                 return
 
             self.horiplatestack = pygame.Surface((225, 500), pygame.SRCALPHA)
@@ -150,6 +165,9 @@ class MG1():
                     self.var_dict['msg'], self.statschange['mpc'] = self.msg[1], self.STATS['mp']
                     self.var_dict['stains'], self.var_dict['plates'] = None, 0
                     self.var_dict['mg_state'] = "mainpage"
+                    self.successsound.play(maxtime=2500)
+                    pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
+                    pygame.mixer.music.play(-1)
                     return
 
             self.var_dict['stains'], self.var_dict['time_passed'] = self.stains, self.time_passed
