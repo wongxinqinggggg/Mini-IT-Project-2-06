@@ -19,6 +19,7 @@ font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 20)
 small_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 14)
 FONT = pygame.font.SysFont("arial", 20)
 BIG_FONT = pygame.font.SysFont("arial", 26)
+xlarge_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 38)
 large_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
 middle_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 26)
 xsmall_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 8)
@@ -98,9 +99,9 @@ running = True
 MAXHP, MAXMP = 999999, 999999
 hp, mp = 100, 899
 mg_var_dict = {}
-mg1_var_dict = {'mg_state': "mainpage", 'plates': 0, 'stains': None, 'new_plate': True, 
-                'time_passed': 0, 'msg': None, 'dragging': None,
-                'Lfont': large_font, 'Mfont': middle_font, 'hpc': None, 'mpc': None}
+mg1_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'plates': 0, 'stains': None, 'new_plate': True, 
+                'time_passed': 0, 'msg': None, 'dragging': None, 'Lfont': large_font, 'Mfont': middle_font, 
+                'XLfont': xlarge_font, 'btnrectlist': [], 'prev_state': None,}
 
 # CURSOR
 cursor_visible = True
@@ -330,6 +331,27 @@ walk_timer = 0
 walk_delay = 200
 player_imgs = load_player_images("male")
 
+statemanager = None
+class StateManager():
+    def __init__(self, state, var_dict):
+        self.state, self.var_dict = state, var_dict
+        self.var_dict['hp'],  self.var_dict['mp'] = hp, mp
+
+    def eventhandler(self, E):
+        self.state.eventhandler(E, self.var_dict)
+
+    def update(self):
+        global hp, mp, game_state, statemanager
+        self.state.update(self.var_dict['mg_state'], clock, self.var_dict)
+        update_stats(self.var_dict['hp'], self.var_dict['mp'])
+        if not self.var_dict['mg_state']:
+            game_state = "game"
+            statemanager, self = None, None
+
+    def draw(self):
+        self.state.draw(screen, WIDTH, HEIGHT, self.var_dict['mg_state'], clock, self.var_dict)
+        display_stats()
+
 clock = pygame.time.Clock()
 while running:
     dt = clock.tick(60)
@@ -478,16 +500,8 @@ while running:
 
         display_stats()
 
-    # == Lanching Mini game 1 ==
-    elif game_state == "mg1":
-        mg_var_dict['hp'], mg_var_dict['mp'] = hp, mp
-        MG1 = MiniGame1.MG1(screen, WIDTH, HEIGHT, mg_var_dict, C=clock)
-        mg_var_dict = MG1.var_dict
-        if mg_var_dict['mg_state'] != "game": 
-            if mg_var_dict['mg_state'] != "instruc": 
-                if mg_var_dict['mg_state'] != "countdown": 
-                    if mg_var_dict['mg_state'] != "menu": display_stats()
-        update_stats(mpchange = mg_var_dict['mpc'])
+    # == Lanching Mini Games ==
+    if statemanager: statemanager.draw()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT: running = False
@@ -560,21 +574,13 @@ while running:
                             npc.talking = False
 
                 # Placeholder for launching minigames
-                elif event.key == pygame.K_1: 
-                    game_state, mg_var_dict = "mg1", mg1_var_dict.copy()
-                    break
+                if event.key == pygame.K_1: 
+                    statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT), mg1_var_dict.copy())
+                    game_state = "mg1"
 
+        if statemanager: statemanager.eventhandler(event)
 
-        if game_state == "mg1":   
-            MG1.__init__(screen, WIDTH, HEIGHT, mg_var_dict, event)
-            mg_var_dict = MG1.var_dict
-            update_stats(mg_var_dict['hpc'], mg_var_dict['mpc'])
-
-    if mg_var_dict: 
-        if not mg_var_dict['mg_state']:
-            game_state = "game"
-            mg_var_dict.clear()
-            pygame.mouse.set_cursor()
+    if statemanager: statemanager.update()
 
     pygame.display.flip()
 
