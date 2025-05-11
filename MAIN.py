@@ -3,7 +3,7 @@ import json
 import time
 import random
 import os
-from Features import MiniGame1
+from Features import Functions, MiniGame1
 
 # === SETUP ===
 pygame.init()
@@ -96,12 +96,12 @@ show_intro_message = True
 typing_done = False
 running = True
 
-MAXHP, MAXMP = 999999, 999999
 hp, mp = 100, 899
+displaystats = True
 mg_var_dict = {}
 mg1_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'plates': 0, 'stains': None, 'new_plate': True, 
                 'time_passed': 0, 'msg': None, 'dragging': None, 'Lfont': large_font, 'Mfont': middle_font, 
-                'XLfont': xlarge_font, 'btnrectlist': [], 'prev_state': None,}
+                'XLfont': xlarge_font, 'btnrectlist': [], 'prev_state': None, 'display_stats': True, 'fade': None}
 
 # CURSOR
 cursor_visible = True
@@ -201,22 +201,6 @@ def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255),
 
     # Finally blit to Assets/Images/main screen (overlapping everything)
     screen.blit(popup_surface, (box_x, box_y))
-
-def update_stats(hpchange = None, mpchange = None):
-    global hp, mp
-    if hpchange:    hp = min(max(hp + hpchange, 0), MAXHP)
-    if mpchange:    mp = min(max(mp + mpchange, 0), MAXMP)
-
-# === Function to display hp and mp ===
-def display_stats():    
-    statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
-    hpsurf = large_font.render(str(hp).zfill(6), False, 'Black')
-    hprect = pygame.Rect(90, 30, 80, 50)
-    mpsurf = large_font.render(str(mp).zfill(6), False, 'Black')
-    mprect = pygame.Rect(90, 105, 80, 50)
-    screen.blit(statsbar, (13, 13))
-    screen.blit(hpsurf, hprect)
-    screen.blit(mpsurf, mprect)
 
 characters = [
     {
@@ -341,16 +325,20 @@ class StateManager():
         self.state.eventhandler(E, self.var_dict)
 
     def update(self):
-        global hp, mp, game_state, statemanager
+        global hp, mp, game_state, statemanager, displaystats
         self.state.update(self.var_dict['mg_state'], clock, self.var_dict)
-        update_stats(self.var_dict['hp'], self.var_dict['mp'])
+        hp, mp, displaystats = self.var_dict['hp'], self.var_dict['mp'], self.var_dict['displaystats']
         if not self.var_dict['mg_state']:
             game_state = "game"
-            statemanager, self = None, None
+            statemanager, self, displaystats = None, None, True
+            pygame.mixer.music.load("Assets/Audio/background.mp3")
+            pygame.mixer.music.play(-1)
 
     def draw(self):
         self.state.draw(screen, WIDTH, HEIGHT, self.var_dict['mg_state'], clock, self.var_dict)
-        display_stats()
+        if displaystats: 
+            Functions.display_stats(screen, hp, mp, large_font)
+        if self.var_dict['fade']: screen.blit(self.var_dict['fade'], (0, 0))
 
 clock = pygame.time.Clock()
 while running:
@@ -498,7 +486,7 @@ while running:
         for char in characters:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
 
-        display_stats()
+        Functions.display_stats(screen, hp, mp, large_font)
 
     # == Lanching Mini Games ==
     if statemanager: statemanager.draw()

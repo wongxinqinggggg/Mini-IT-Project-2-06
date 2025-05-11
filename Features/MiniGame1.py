@@ -1,4 +1,5 @@
 import pygame
+from Features import Functions
 from random import randint, choice, uniform
 
 class MG1():
@@ -132,7 +133,9 @@ class MG1():
 
     def update(self, mg_state, C, var_dict):
         self.var_dict = var_dict
-        self.var_dict['hp'], self.var_dict['mp'] = self.statschange['hpc'], self.statschange['mpc']
+        self.var_dict['hp'], self.var_dict['mp'] = Functions.update_stats(self.var_dict['hp'], self.var_dict['mp'], self.statschange['hpc'], self.statschange['mpc'])
+        if self.statschange['hpc']: Functions.add_floating_text(f"{self.statschange['hpc']}", 'hp', (128, 128, 128))
+        if self.statschange['mpc']: Functions.add_floating_text(f"+{self.statschange['mpc']}", 'mp', (128, 128, 128))
         self.statschange['hpc'], self.statschange['mpc'] = None, None
 
         if mg_state == "game":
@@ -199,6 +202,7 @@ class MG1():
         S.blit(self.startbtn, self.startbtnrect)
         S.blit(self.instrucbtn, self.instrucbtnrect)
         S.blit(self.menubtn, self.menubtnrect)
+        Functions.draw_floating_texts(S, self.var_dict['Mfont'])
         if self.var_dict['msg']: self.displaymsg(S, W, self.var_dict['msg'][0], self.var_dict['msg'][1], Lfont)
 
     def instruc(self, S, W, H, Mfont):
@@ -292,6 +296,11 @@ class MG1():
     def countdown(self, S, W, H, C, XLfont):
         if self.statschangetimer >= 0:
             self.mainpage(S, W, XLfont)
+            Functions.draw_floating_texts(S, self.var_dict['Mfont'])
+            self.fadesurf = pygame.Surface((W, H), pygame.SRCALPHA)
+            pygame.draw.rect(self.fadesurf, (0, 0, 0, self.fadealpha), pygame.rect.Rect(0, 0, W, H))
+            self.var_dict['fade'] = self.fadesurf
+            self.fadealpha = min(self.fadealpha + (C.get_time()/1000)/2 * 255, 255)
             self.statschangetimer -= C.get_time()/1000
             return
         else: self.var_dict['fade'] = None
