@@ -45,11 +45,11 @@ paragraphs = [
     "The library was quiet except for the soft rustle of pages turning. Rows of books stretched across the room, each filled with knowledge and adventure. A young girl sat at a corner table, her eyes glued to a story about dragons and hidden treasure.",
     "A dog barked in the distance as the wind rustled the trees. Leaves danced across the sidewalk, crunching under every step. Autumn had truly arrived.",
     "He tied his shoes, grabbed his backpack, and headed out the door. School was only a few blocks away, but he enjoyed the fresh morning air during the walk.",
-    "Exploring the depths of the ocean is as challenging as exploring outer space, with its vast, uncharted territories and hidden ecosystems. Deep-sea expeditions reveal species and phenomena that remain largely unknown, highlighting the mysteries of our planet's most inaccessible environments.",
+    "Exploring the depths of the ocean is as challenging as exploring outer space, with its vast, uncharted territories and hidden ecosystems. Deep-sea expeditions reveal species that remain largely unknown.",
     "At the edge of the forest stood an old cabin, half-covered in ivy. No one had lived there in years, but something about it still felt alive. Leaves rustled in the wind, and every now and then, a bird landed on the roof. It was quiet, but not empty.",
     "She took a deep breath and stepped on stage. Her heart was racing, but she remembered all her lines. The spotlight was bright, and the audience waited in silence.",
     "The boy threw a stone into the lake and watched the ripples spread. It was a calm day, with clouds drifting slowly above. Everything felt peaceful and quiet.",
-    "The human brain is one of the most complex and least understood organs in the body, with over 100 billion neurons communicating through trillions of synapses. Despite decades of research, many aspects of brain function remain a mystery, fueling ongoing investigations into neurological disorders."
+    "The human brain is one of the most complex and least understood organs in the body, with over 100 billion neurons communicating through trillions of synapses. Many aspects of brain function remain a mystery, fueling ongoing investigations into neurological disorders."
 ]
 
 # High score functions
@@ -100,10 +100,10 @@ def draw_floating_texts():
 
 font = pygame.font.SysFont('PressStart2P.ttf', 28, bold=True)
 floating_font = pygame.font.Font("PressStart2P.ttf", 30)  
+custom_font = pygame.font.Font("MiniGame3/Asset/Font/PressStart2P.ttf", 25)
 
 # UI Rects
 question_button_rect = pygame.Rect(710, 100, 315,294)
-exit_button_rect = pygame.Rect(30, 30, 100, 50)
 back_button_rect = pygame.Rect(460, 400, 120, 50)
 start_button_rect = pygame.Rect(450, 350, 150, 60)
 retry_button_rect = pygame.Rect(450, 460, 120, 50)
@@ -113,9 +113,8 @@ restart_button_rect = pygame.Rect(380, 300, 270, 80)
 quit_button_rect = pygame.Rect(380, 400, 270, 80)
 resume_button_rect = pygame.Rect(390, 195, 270, 80)
 
-
 # Set Energy etc
-energy = 120
+energy = 20
 money = 100
 total_energy_spent = 0
 total_money_earned = 0
@@ -152,7 +151,6 @@ def wrap_typed_text(text, font, max_width):
 
 def full_map_screen():
     global total_energy_spent, total_money_earned
-    custom_font = pygame.font.Font("MiniGame3/Asset/Font/PressStart2P.ttf", 33)
 
     # Transfer final post-game floating texts
     if total_energy_spent > 0:
@@ -173,21 +171,22 @@ def full_map_screen():
         screen.blit(full_map_image, (0, 0))
         screen.blit(mge_statsbar_image, (0, 0))
 
-        energy_text = custom_font.render(f"{energy:>3}", True, (0, 0, 0)) 
-        money_text = custom_font.render(f"{money:>3}", True, (0, 0, 0))
-        screen.blit(energy_text, (120, 28))
-        screen.blit(money_text, (123, 105))
+        energy_text = custom_font.render(f"{energy:06}", True, (0, 0, 0))
+        money_text = custom_font.render(f"{money:06}", True, (0, 0, 0))
+        screen.blit(energy_text, (80, 28))
+        screen.blit(money_text, (80, 105))
         
         draw_floating_texts()
         pygame.display.flip()
 
 def mg3_menu():
-    global inside_menu_active  # Ensure inside_menu_active is accessed globally
+    global inside_menu_active  
     error_display_time = 0
     error_duration = 2
+    result = None  
 
     while True:
-        screen.fill((0, 0, 0))  # Clear screen for every loop iteration
+        screen.fill((0, 0, 0))  
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -197,9 +196,6 @@ def mg3_menu():
                 if question_button_rect.collidepoint(event.pos):
                     button_click.play()
                     return "instruction"
-                elif exit_button_rect.collidepoint(event.pos):
-                    button_click.play()
-                    return "full_map"
                 elif start_button_rect.collidepoint(event.pos):
                     if energy < 20:
                         button_click.play()
@@ -207,34 +203,44 @@ def mg3_menu():
                     else:
                         button_click.play()
                         return "mg3_base"
-                elif menu_button_menu_screen_rect.collidepoint(event.pos):  # Menu button click event
+                elif menu_button_menu_screen_rect.collidepoint(event.pos):  
                     button_click.play()
-                    inside_menu_active = not inside_menu_active  # Toggle inside menu visibility
-                    print(f"Inside menu active state toggled: {inside_menu_active}")  # Debug print
+                    inside_menu_active = not inside_menu_active  
+                    print(f"Inside menu active state toggled: {inside_menu_active}")  
 
         # Show the background of the main menu
         screen.blit(mg3_menu_image, (0, 0))
-        screen.blit(Menu_image, (720, 0))  # Menu button
-        screen.blit(mg3_question_image, (710, 100))  # Question button
+        screen.blit(Menu_image, (720, 0))  
+        screen.blit(mg3_question_image, (710, 100))  
+        screen.blit(mge_statsbar_image, (0, 0))
+
+        # Display font
+        energy_text = custom_font.render(f"{energy:06}", True, (0, 0, 0))
+        money_text = custom_font.render(f"{money:06}", True, (0, 0, 0))
+        screen.blit(energy_text, (80, 28))
+        screen.blit(money_text, (80, 105))
 
         # Display the inside menu if it's active
         if inside_menu_active:
-            result = inside_menu_screen()
+            result = inside_menu_screen()  
             if result == "resume":
-                inside_menu_active = False  # Close menu, return to main menu
+                inside_menu_active = False  
             elif result == "restart":
+                inside_menu_active = False  
                 return "mg3_base"
             elif result == "full_map":
+                inside_menu_active = False  
                 return "full_map"
             elif result == "quit":
+                inside_menu_active = False  
                 return "quit"
 
         # Handle the error message if the energy is insufficient
         if time.time() - error_display_time < error_duration:
             error_font = pygame.font.SysFont(None, 36)
             error_text = error_font.render("Error: Insufficient HP", True, (255, 0, 0))
-            screen.blit(error_text, (360, 450))
-    
+            screen.blit(error_text, (380, 450))
+
         pygame.display.flip()
 
 def inside_menu_screen():
@@ -296,6 +302,7 @@ def mg3_instruction():
                     button_click.play()
                     return "mg3_menu"
         screen.blit(mg3_instruction_image, (0, 0))
+
         draw_floating_texts()
         pygame.display.flip()
 
@@ -319,7 +326,6 @@ def mg3_base():
     high_score = load_high_score()
     new_high = False
     wpm = 0
-    exit_mg3_base_rect = pygame.Rect(30, 30, 100, 50)
 
     while True:
         dt = clock.tick(60) / 1000
@@ -354,17 +360,13 @@ def mg3_base():
                         button_click.play()
                         result_message = "Not enough energy to retry."
 
-                elif exit_mg3_base_rect.collidepoint(event.pos):
-                    success_sound.stop()
-                    fail_sound.stop()
-                    button_click.play()
-                    return "full_map"
-
                 elif menu_button_base_screen.collidepoint(event.pos):
                     result = inside_menu_screen()
                     if result == "resume":
+                        inside_menu_active = False  
                         continue
                     elif result == "restart":
+                        inside_menu_active = False
                         if energy >= 20:
                             energy -= 20
                             total_energy_spent += 20
@@ -380,6 +382,7 @@ def mg3_base():
                             result_message = "Not enough energy to restart."
                         continue
                     elif result == "full_map":
+                        inside_menu_active = False
                         success_sound.stop()
                         fail_sound.stop()
                         return "full_map"
@@ -396,12 +399,9 @@ def mg3_base():
 
         screen.blit(mg3_base_image, (0, 0))
         screen.blit(Menu_image, (720, 50))
+        screen.blit(mge_statsbar_image, (0, 0))
 
-        pygame.draw.rect(screen, (128, 0, 0), exit_mg3_base_rect)
-        exit_text = font.render("Exit", True, (255, 255, 255))
-        screen.blit(exit_text, (exit_mg3_base_rect.x + 25, exit_mg3_base_rect.y + 15))
-
-        y = 150
+        y = 200
         for line in wrap_text(paragraph, font, 800):
             screen.blit(font.render(line, True, (0, 0, 0)), (100, y))
             y += 30
@@ -458,6 +458,22 @@ def mg3_base():
             retry_text_rect = retry_text.get_rect(center=retry_button_rect.center)
             screen.blit(retry_text, retry_text_rect)
 
+        # Display font
+        energy_text = custom_font.render(f"{energy:06}", True, (0, 0, 0))
+        money_text = custom_font.render(f"{money:06}", True, (0, 0, 0))
+        screen.blit(energy_text, (80, 28))
+        screen.blit(money_text, (80, 105))
+
+        # Transfer final post-game floating texts
+        if total_energy_spent > 0:
+            add_floating_text(f"-{total_energy_spent}", 250, 28, (128, 128, 128))
+            total_energy_spent = 0
+
+        if total_money_earned > 0:
+            add_floating_text(f"+{total_money_earned}", 250, 110, (128, 128, 128))
+            total_money_earned = 0
+
+        draw_floating_texts()
         pygame.display.flip()
 
 # Game loop
