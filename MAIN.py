@@ -3,7 +3,7 @@ import json
 import time
 import random
 import os
-from Features import Functions, MiniGame1
+from Features import Functions, MiniGame1, MiniGame4, Store
 
 # === SETUP ===
 pygame.init()
@@ -97,11 +97,10 @@ typing_done = False
 running = True
 
 hp, mp = 100, 899
-displaystats = True
 mg_var_dict = {}
-mg1_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'plates': 0, 'stains': None, 'new_plate': True, 
-                'time_passed': 0, 'msg': None, 'dragging': None, 'Lfont': large_font, 'Mfont': middle_font, 
-                'XLfont': xlarge_font, 'btnrectlist': [], 'prev_state': None, 'display_stats': True, 'fade': None}
+mg1_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'time_passed': 0, 'msg': None, 
+                'new_plate': True, 'plates': 0, 'stains': None, 'dragging': None, 'Lfont': large_font, 
+                'Mfont': middle_font, 'XLfont': xlarge_font, 'prev_state': None, 'fade': None}
 
 # CURSOR
 cursor_visible = True
@@ -322,23 +321,25 @@ class StateManager():
         self.var_dict['hp'],  self.var_dict['mp'] = hp, mp
 
     def eventhandler(self, E):
-        self.state.eventhandler(E, self.var_dict)
+        self.state.eventhandler(self.var_dict['mg_state'], E)
 
     def update(self):
-        global hp, mp, game_state, statemanager, displaystats
-        self.state.update(self.var_dict['mg_state'], clock, self.var_dict)
-        hp, mp, displaystats = self.var_dict['hp'], self.var_dict['mp'], self.var_dict['displaystats']
+        global hp, mp, game_state, statemanager, vm_level 
+        self.var_dict['hp'], self.var_dict['mp'] = hp, mp
+        self.state.update(self.var_dict['mg_state'], self.var_dict)
+        hp, mp = self.var_dict['hp'], self.var_dict['mp']
+
+        if self.var_dict.get('vm_level'): vm_level = self.var_dict['vm_level']
         if not self.var_dict['mg_state']:
             game_state = "game"
-            statemanager, self, displaystats = None, None, True
+            statemanager, self, Functions.displaystat = None, None, True
             pygame.mixer.music.load("Assets/Audio/background.mp3")
             pygame.mixer.music.play(-1)
 
     def draw(self):
-        self.state.draw(screen, WIDTH, HEIGHT, self.var_dict['mg_state'], clock, self.var_dict)
-        if displaystats: 
-            Functions.display_stats(screen, hp, mp, large_font)
-        if self.var_dict['fade']: screen.blit(self.var_dict['fade'], (0, 0))
+        self.state.draw(screen, self.var_dict['mg_state'])
+        Functions.display_stats(screen, hp, mp)
+        if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
 clock = pygame.time.Clock()
 while running:
@@ -486,15 +487,15 @@ while running:
         for char in characters:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
 
-        Functions.display_stats(screen, hp, mp, large_font)
+        Functions.display_stats(screen, hp, mp)
 
-    # == Lanching Mini Games ==
+    # == Lanching Mini Game  ==
     if statemanager: statemanager.draw()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT: running = False
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "intro":
                 active_input = True
                 if male_box.collidepoint(event.pos): selected_character = 'male'
@@ -531,7 +532,7 @@ while running:
             elif game_state == "game" and show_intro_message and typing_done:
                 show_intro_message = False
 
-        if event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN:
             if game_state == "intro":
                 if event.key == pygame.K_BACKSPACE:
                     player_name = player_name[:-1]
@@ -562,10 +563,10 @@ while running:
                             npc.talking = False
 
                 # Placeholder for launching minigames
-                if event.key == pygame.K_1: 
-                    statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT), mg1_var_dict.copy())
+                elif event.key == pygame.K_1: 
+                    statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT, clock), mg1_var_dict.copy())
                     game_state = "mg1"
-
+        
         if statemanager: statemanager.eventhandler(event)
 
     if statemanager: statemanager.update()

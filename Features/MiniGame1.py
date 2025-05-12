@@ -3,18 +3,15 @@ from Features import Functions
 from random import randint, choice, uniform
 
 class MG1():
-    def __init__(self, W, H):
-        self.W, self.H = W, H 
+    def __init__(self, W, H, C):
+        self.W, self.H, self.C = W, H, C
         self.STATS = {'hp': 10, 'mp': 10}
-        self.time_limit, self.plate_requirement = 20, 10
+        self.menu = Functions.Menu(W)
+        self.time_limit, self.plate_requirement = 20, 3
         self.msg = [["YOU LOSE!", 380], ["YOU WIN!", 400], ["INSUFFICIENT ENERGY!", 190]]
         menubtnpos = (975, 50)
-        self.audiobarxpos = [447, 649]
         self.statschange = {'hpc': None, 'mpc': None}
 
-        self.btnsound = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
-        self.successsound = pygame.mixer.Sound("Assets/Audio/success.mp3")
-        self.failsound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
         pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
         pygame.mixer.music.play(-1)
 
@@ -28,31 +25,17 @@ class MG1():
         self.instrucbackrect = self.instrucback.get_rect(center = (W/2, 450))
         self.menubtn = pygame.image.load("Assets/Images/MAIN_Menubtn.png").convert_alpha()
         self.menubtnrect = self.menubtn.get_rect(center = menubtnpos)
-        self.menupage = pygame.image.load("Assets/Images/MENU_Menu.png").convert_alpha()
-        self.resumebtn = pygame.image.load("Assets/Images/MENU_Resumebtn.png").convert_alpha()
-        self.resumebtnrect = self.resumebtn.get_rect(center = (W/2, 235))
-        self.restartbtn = pygame.image.load("Assets/Images/MENU_Restartbtn.png").convert_alpha()
-        self.restartbtnrect = self.restartbtn.get_rect(center = (W/2, 335))
-        self.quitbtn = pygame.image.load("Assets/Images/MENU_Quitbtn.png").convert_alpha()
-        self.quitbtnrect = self.quitbtn.get_rect(center = (W/2, 435))
-        self.audioslider = pygame.image.load("Assets/Images/MENU_Audioslider.png").convert_alpha()
-        self.audiosliderrect = self.audioslider.get_rect(center = (0, 132))
-        audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
-        self.audiobtnrect = audiobtn.get_rect(center = (400, 132))
-        self.plate = pygame.image.load("Assets/Images/plate10x.png").convert_alpha()
+        self.plate = pygame.image.load("Assets/Images/MG1_Plate.png").convert_alpha()
         self.platerect = self.plate.get_rect(center = (W/2 + 100, H/2))
-        self.horiplate = pygame.image.load("Assets/Images/horiplate5x.png").convert_alpha()
+        self.horiplate = pygame.image.load("Assets/Images/MG1_Horiplate.png").convert_alpha()
         self.spongecursor = pygame.image.load("Assets/Images/MG1_Sponge.png").convert_alpha()
 
-        self.btnrectlist = {'mainpage': [self.startbtnrect, self.instrucbtnrect, self.menubtnrect], 
-                            'instruc': [self.instrucbackrect], 'game': [self.menubtnrect], 'countdown': None,
-                            'menu': [self.resumebtnrect, self.restartbtnrect, self.quitbtnrect, self.audiobtnrect, self.audiosliderrect]}
-
-    def eventhandler(self, E, var_dict):
-        self.var_dict = var_dict
-        mg_state = self.var_dict['mg_state']
-
+        self.btnrectdict = {'mainpage': [self.startbtnrect, self.instrucbtnrect, self.menubtnrect], 
+                            'instruc': [self.instrucbackrect], 'game': [self.menubtnrect]}
+        
+    def eventhandler(self, mg_state, E):
         if E.type == pygame.MOUSEBUTTONDOWN:
+            cursorclicked = False
             if mg_state == "mainpage":
                 if self.var_dict['msg']: self.var_dict['msg'] = None
 
@@ -70,7 +53,7 @@ class MG1():
         
             elif mg_state == "game": 
                 if self.menubtnrect.collidepoint(E.pos): 
-                    self.var_dict['prev_state'] = self.var_dict['mg_state'] 
+                    self.var_dict['prev_state'] = self.var_dict['mg_state']
                     self.var_dict['mg_state'] = "menu"
                     self.var_dict['time_passed'] = self.time_passed
 
@@ -79,59 +62,38 @@ class MG1():
             elif self.var_dict['mg_state'] == "displaymsg": self.var_dict['mg_state'] = "mainpage"
 
             elif self.var_dict['mg_state'] == "menu":
-                if self.resumebtnrect.collidepoint(E.pos): 
-                        self.var_dict['mg_state'] = self.var_dict['prev_state']
-                        self.var_dict['prev_state'] = None
+                self.var_dict, cursorclicked = self.menu.eventhandler(E, self.var_dict)
+                if self.var_dict['mg_state'] == "restart": self.newgame(self.var_dict['hp'])
 
-                elif self.restartbtnrect.collidepoint(E.pos): self.newgame(self.var_dict['hp'])
-
-                elif self.quitbtnrect.collidepoint(E.pos):
-                    pygame.mixer.music.unload()
-                    self.var_dict['mg_state'] = None
-
-                elif self.audiobtnrect.collidepoint(E.pos): 
-                    # Toggle on and off the audio btn
-                    if pygame.mixer.music.get_busy(): pygame.mixer.music.pause()
-                    else: 
-                        pygame.mixer.music.unpause()
-                        # Set volume to .33 if its initially zero
-                        if not pygame.mixer.music.get_volume(): pygame.mixer.music.set_volume(0.33)
-
-                elif self.audiosliderrect.collidepoint(E.pos):
-                    self.var_dict['dragging'] = True     # To detect dragging of audio slider
+            if self.btnrectdict.get(mg_state):
+                for rect in self.btnrectdict[mg_state]:
+                    if rect.collidepoint(E.pos) or cursorclicked:
+                        Functions.playsound("btnclicked")
+                        break
         
-            if self.var_dict['btnrectlist']:
-                for rect in self.var_dict['btnrectlist']:
-                    if rect.collidepoint(E.pos):
-                        self.btnsound.play()
-
         elif E.type == pygame.MOUSEMOTION:
             global cursorcollide
             cursorcollide = False
 
-            if self.var_dict['mg_state'] == "game": 
+            if mg_state == "game": 
                 pygame.mouse.set_cursor((50, 50), self.spongecursor)
                 cursorcollide = True
 
-            if self.var_dict['btnrectlist']:
-                for rect in self.var_dict['btnrectlist']:
+            elif mg_state == "menu":
+                self.var_dict, cursorcollide = self.menu.eventhandler(E, self.var_dict)
+
+            if self.btnrectdict.get(mg_state):
+                for rect in self.btnrectdict[mg_state]:
                     if rect.collidepoint(E.pos):
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
                         cursorcollide = True
                         break
 
-            if self.var_dict['dragging']:
-                # Update volume by using position of mouse
-                pygame.mixer.music.set_volume(min(max((E.pos[0] - self.audiobarxpos[0]) / (self.audiobarxpos[1] - self.audiobarxpos[0]), 0), 1))
-                if not pygame.mixer.music.get_busy(): pygame.mixer.music.unpause()
+            if not cursorcollide: pygame.mouse.set_cursor()
 
-            if not cursorcollide: 
-                pygame.mouse.set_cursor()
+        elif E.type == pygame.MOUSEBUTTONUP: self.var_dict['dragging'] = False
 
-        elif E.type == pygame.MOUSEBUTTONUP:
-            self.var_dict['dragging'] = False
-
-    def update(self, mg_state, C, var_dict):
+    def update(self, mg_state, var_dict):
         self.var_dict = var_dict
         self.var_dict['hp'], self.var_dict['mp'] = Functions.update_stats(self.var_dict['hp'], self.var_dict['mp'], self.statschange['hpc'], self.statschange['mpc'])
         if self.statschange['hpc']: Functions.add_floating_text(f"{self.statschange['hpc']}", 'hp', (128, 128, 128))
@@ -140,12 +102,13 @@ class MG1():
 
         if mg_state == "game":
             self.stains, self.time_passed = self.var_dict['stains'], self.var_dict['time_passed']
-            self.time_passed += C.get_time()/1000
+            self.time_passed += self.C.get_time()/1000
 
             if self.time_passed >= self.time_limit:
                 self.var_dict['mg_state'], self.var_dict['msg'] = "mainpage", self.msg[0]
                 self.var_dict['stains'], self.var_dict['plates'] = None, 0
-                self.failsound.play()
+                Functions.playsound("fail")
+                pygame.mixer.music.unload()
                 pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
                 pygame.mixer.music.play(-1)
                 return
@@ -168,41 +131,41 @@ class MG1():
                     self.var_dict['msg'], self.statschange['mpc'] = self.msg[1], self.STATS['mp']
                     self.var_dict['stains'], self.var_dict['plates'] = None, 0
                     self.var_dict['mg_state'] = "mainpage"
-                    self.successsound.play(maxtime=2500)
+                    Functions.playsound("success")
+                    pygame.mixer.music.unload()
                     pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
                     pygame.mixer.music.play(-1)
                     return
 
             self.var_dict['stains'], self.var_dict['time_passed'] = self.stains, self.time_passed
 
+        elif mg_state == "menu": self.menu.update()
+
         if mg_state: 
-            self.var_dict['btnrectlist'] = self.btnrectlist[f'{mg_state}']
-
             if mg_state == "mainpage" or (mg_state == "countdown" and self.statschangetimer >= 0):
-                self.var_dict['displaystats'] = True
-            else: self.var_dict['displaystats'] = False
+                Functions.displaystat = True
+            else: Functions.displaystat = False
 
-    def draw(self, S, W, H, mg_state, C, var_dict):
-        self.var_dict = var_dict
+    def draw(self, S, mg_state):
         S.blit(self.base, (0, 0))
 
         if mg_state == "mainpage": 
-            self.mainpage(S, W, self.var_dict['Lfont'])
+            self.mainpage(S, self.W, self.var_dict['Lfont'])
         elif mg_state == "instruc": 
-            self.instruc(S, W, H, self.var_dict['Mfont'])
+            self.instruc(S,self. W, self.H, self.var_dict['Mfont'])
         elif mg_state == "game": 
             self.game(S, self.var_dict['plates'], self.var_dict['Lfont'])
         elif mg_state == "menu": 
-            self.menu(S)
+            self.menu.draw(S)
         elif mg_state == "countdown":
-            self.countdown(S, W, H, C, self.var_dict['XLfont']) 
+            self.countdown(S, self.W, self.H, self.C, self.var_dict['XLfont']) 
 
     def mainpage(self, S, W, Lfont):
         S.blit(self.title, self.title.get_rect(center = (W/2, 240)))
         S.blit(self.startbtn, self.startbtnrect)
         S.blit(self.instrucbtn, self.instrucbtnrect)
         S.blit(self.menubtn, self.menubtnrect)
-        Functions.draw_floating_texts(S, self.var_dict['Mfont'])
+        Functions.draw_floating_texts(S)
         if self.var_dict['msg']: self.displaymsg(S, W, self.var_dict['msg'][0], self.var_dict['msg'][1], Lfont)
 
     def instruc(self, S, W, H, Mfont):
@@ -240,22 +203,6 @@ class MG1():
         self.displayscore(S, plates, (self.time_limit - self.var_dict['time_passed']), Lfont)
         self.var_dict['stains'].draw(S)
 
-    def menu(self, S):
-        # Get pos of audio slider based on volume
-        audiosliderxpos = self.audiobarxpos[0] + pygame.mixer.music.get_volume() * (self.audiobarxpos[1] - self.audiobarxpos[0])
-        self.audiosliderrect.center = (audiosliderxpos, 132)
-
-        # Load audio btn if music playing, load muted btn otherwise
-        if pygame.mixer.music.get_busy(): audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
-        else: audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn2.png").convert_alpha()
-
-        S.blit(self.menupage, (0,0))
-        S.blit(self.resumebtn, self.resumebtnrect)
-        S.blit(self.restartbtn, self.restartbtnrect)
-        S.blit(self.quitbtn, self.quitbtnrect)
-        S.blit(audiobtn, self.audiobtnrect)
-        S.blit(self.audioslider, self.audiosliderrect)
-
     def displayscore(self, S, plates, time_left, Lfont):
         # Display no of self.var_dict['plates'] and time left
         time_left = (str(format(time_left, '.2f')) + 's').zfill(6)
@@ -268,19 +215,20 @@ class MG1():
         pygame.draw.rect(S, 'Dark Green', platesrect)
         S.blit(time_leftsurf, (time_leftect.x + 40, time_leftect.y + 22))
         S.blit(platessurf, (platesrect.x + 22, platesrect.y + 22))
-
+        
     def displaymsg(self, S, W, msg, xpos, Lfont, ypos = 480):
         box_rect = pygame.Rect(30, 400, W-60, 180)
         pygame.draw.rect(S, 'White', box_rect)
         pygame.draw.rect(S, 'Black', box_rect, 3)
         S.blit(Lfont.render(msg, True, 'Black'), (xpos, ypos))
-    
+
     def newgame(self, hp):
         if hp < self.STATS['hp']:
             self.var_dict['msg'] = self.msg[2]
             self.var_dict['mg_state'] = "mainpage"
             return
         
+        pygame.mixer.music.unload()
         pygame.mixer.music.load("Assets/Audio/Arcade-Beat (NoCopyrightSound633).mp3")
         pygame.mixer.music.play(-1)
         self.statschange['hpc'] = (-self.STATS['hp'])
@@ -296,7 +244,6 @@ class MG1():
     def countdown(self, S, W, H, C, XLfont):
         if self.statschangetimer >= 0:
             self.mainpage(S, W, XLfont)
-            Functions.draw_floating_texts(S, self.var_dict['Mfont'])
             self.fadesurf = pygame.Surface((W, H), pygame.SRCALPHA)
             pygame.draw.rect(self.fadesurf, (0, 0, 0, self.fadealpha), pygame.rect.Rect(0, 0, W, H))
             self.var_dict['fade'] = self.fadesurf
@@ -315,7 +262,7 @@ class MG1():
         
         else:
             self.var_dict['mg_state'] = "game"
-            self.update(self.var_dict['mg_state'], C, self.var_dict)
+            self.update(self.var_dict['mg_state'], self.var_dict)
 
 class Stains(pygame.sprite.Sprite):
     def __init__(self, platerect, platemask, stains):
