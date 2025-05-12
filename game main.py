@@ -1,5 +1,5 @@
 import pygame
-from Features import MiniGame1, MiniGame4, Store
+from Features import Store, Functions
 
 # === Setup ===
 pygame.init()
