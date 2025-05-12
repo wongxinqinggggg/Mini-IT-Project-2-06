@@ -101,10 +101,10 @@ vm_level = [0, 0]   # Vending machine level for Mini Game 4
 vm_income = [[1, 2, 3], [5, 6, 7]]
 vmbuyingprices = [[300, 400, 500], [800, 900, 1000]]
 VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
-displaystats, displaynoti = True, True
 mg_var_dict = {}
-mg4_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'vm_level': vm_level, 'vm_income': vm_income, 
-                'VM_EVENT': [VM1, VM2], 'Mfont': middle_font, 'Sfont': small_font, 'displaystats': True}
+mg4_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'vm_level': vm_level, 
+                'vm_income': vm_income, 'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 
+                'XSfont': xsmall_font, 'prev_state': None, 'dragging': None}
 
 # CURSOR
 cursor_visible = True
@@ -325,25 +325,25 @@ class StateManager():
         self.var_dict['hp'],  self.var_dict['mp'] = hp, mp
 
     def eventhandler(self, E):
-        self.state.eventhandler(E, self.var_dict)
+        self.state.eventhandler(self.var_dict['mg_state'], E)
 
     def update(self):
-        global hp, mp, game_state, statemanager, displaystats, vm_level
+        global hp, mp, game_state, statemanager, vm_level 
+        self.var_dict['hp'], self.var_dict['mp'] = hp, mp
         self.state.update(self.var_dict['mg_state'], self.var_dict)
-        hp, mp, displaystats = self.var_dict['hp'], self.var_dict['mp'], self.var_dict['displaystats']
+        hp, mp = self.var_dict['hp'], self.var_dict['mp']
 
-        if self.var_dict.get('vm_level'): vm_level = self.var_dict.get('vm_level')
+        if self.var_dict.get('vm_level'): vm_level = self.var_dict['vm_level']
         if not self.var_dict['mg_state']:
             game_state = "game"
-            statemanager, self, displaystats = None, None, True
+            statemanager, self, Functions.displaystat = None, None, True
             pygame.mixer.music.load("Assets/Audio/background.mp3")
             pygame.mixer.music.play(-1)
 
     def draw(self):
         self.state.draw(screen, self.var_dict['mg_state'])
-        if displaystats: 
-            Functions.display_stats(screen, hp, mp, large_font)
-            if displaynoti: Functions.display_notifications(screen, mp, vm_level, vmbuyingprices)
+        Functions.display_stats(screen, hp, mp)
+        Functions.display_notifications(screen, mp, vm_level, vmbuyingprices)
         if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
 clock = pygame.time.Clock()
@@ -492,7 +492,7 @@ while running:
         for char in characters:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
 
-        Functions.display_stats(screen, hp, mp, large_font)
+        Functions.display_stats(screen, hp, mp)
         Functions.display_notifications(screen, mp, vm_level, vmbuyingprices)
 
     # == Lanching Mini Game  ==
@@ -501,7 +501,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: running = False
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "intro":
                 active_input = True
                 if male_box.collidepoint(event.pos): selected_character = 'male'
@@ -538,7 +538,7 @@ while running:
             elif game_state == "game" and show_intro_message and typing_done:
                 show_intro_message = False
 
-        if event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN:
             if game_state == "intro":
                 if event.key == pygame.K_BACKSPACE:
                     player_name = player_name[:-1]
@@ -568,15 +568,15 @@ while running:
                         if event.key == pygame.K_ESCAPE:
                             npc.talking = False
 
-                # Placeholder for launching minigames            
+                # Placeholder for launching minigames
                 elif event.key == pygame.K_4: 
                     statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT), mg4_var_dict.copy())
                     game_state = "mg4"
 
         # == EVENTS for passive income from Mini Game 4 ==
-        elif event.type == VM1: hp, mp = Functions.update_stats(hp, mp, mpchange = vm_income[0][vm_level[0] - 1])
-        elif event.type == VM2: hp, mp = Functions.update_stats(hp, mp, mpchange = vm_income[1][vm_level[1] - 1])
-
+        elif event.type == VM1: hp, mp  = Functions.update_stats(hp, mp, mpchange=vm_income[0][vm_level[0] - 1])
+        elif event.type == VM2: hp, mp = Functions.update_stats(hp, mp, mpchange=vm_income[1][vm_level[1] - 1])
+        
         if statemanager: statemanager.eventhandler(event)
 
     if statemanager: statemanager.update()
