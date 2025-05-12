@@ -3,10 +3,12 @@ import json
 import time
 import random
 import os
+from MG3.MG_3 import run_MG3
 
 # === SETUP ===
 pygame.init()
 pygame.mixer.init()
+floating_texts = [] 
 
 # === SCREEN ===
 WIDTH, HEIGHT = 1024, 576
@@ -14,13 +16,16 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No Money, No Life")
 
 # === FONTS ===
-font = pygame.font.Font("PressStart2P.ttf", 20)
-small_font = pygame.font.Font("PressStart2P.ttf", 14)
+font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 20)
+small_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 14)
 FONT = pygame.font.SysFont("arial", 20)
 BIG_FONT = pygame.font.SysFont("arial", 26)
+custom_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 25)
+font_1 = pygame.font.SysFont('Assets/Font/PressStart2P.ttf', 28, bold=True)
+floating_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 30)  
 
 # === MUSIC ===
-pygame.mixer.music.load("background.mp3")
+pygame.mixer.music.load("Assets/Song/background.mp3")
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
 
@@ -34,8 +39,11 @@ WARNING_COLOR = (255, 0, 0)
 BUTTON_COLOR = (220, 220, 220)
 
 # === IMAGES ===
-bg_img = pygame.transform.scale(pygame.image.load("main.png").convert(), (WIDTH, HEIGHT))
-map_img = pygame.image.load("final_map.png").convert()
+bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
+mge_statsbar_image = pygame.image.load("Assets/Images/MGE_Statsbar.png").convert_alpha()
+Menu_image = pygame.image.load("Assets/Images/Menu-button.png").convert_alpha()
+Inside_menu_image = pygame.image.load("Assets/Images/Menu-2.png").convert_alpha()
+map_img = pygame.image.load("Assets/Images/final_map.png").convert()
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
 
 # === TILEMAP BLOCKING ===
@@ -169,58 +177,68 @@ def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255),
             line = word + ' '
     lines.append(line.strip())
 
-    # Transparent background surface
     popup_surface = pygame.Surface((box_width, box_height))
-    popup_surface.set_alpha(230)  # Adjust transparency
+    popup_surface.set_alpha(230)
     popup_surface.fill(bg_color)
-
-    # Border
     pygame.draw.rect(popup_surface, border_color, popup_surface.get_rect(), 4)
 
-    # Draw text
     line_height = font.get_height() + line_spacing
     y_offset = padding
     for l in lines:
-        if y_offset + line_height > box_height - padding:
+        if y_offset + line_height > box_height - padding - 40:
             break
         text_surf = font.render(l, True, color)
         popup_surface.blit(text_surf, (padding, y_offset))
         y_offset += line_height
 
-    # Finally blit to main screen (overlapping everything)
+    # Draw "ENTER" button
+    button_width, button_height = 100, 30
+    button_x = (box_width - button_width) // 2
+    button_y = box_height - button_height - padding
+    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+    pygame.draw.rect(popup_surface, (180, 180, 180), button_rect)
+    pygame.draw.rect(popup_surface, border_color, button_rect, 2)
+
+    text_surf = font.render("ENTER", True, color)
+    text_rect = text_surf.get_rect(center=button_rect.center)
+    popup_surface.blit(text_surf, text_rect)
+
     screen.blit(popup_surface, (box_x, box_y))
+
+    # Return absolute screen coordinates of the button
+    return pygame.Rect(box_x + button_x, box_y + button_y, button_width, button_height)
 
 characters = [
     {
-        "img": pygame.transform.scale(pygame.image.load("restaurant.png"), (80, 80)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Characters/restaurant.png"), (80, 80)),
         "x": 770,
         "y": 130,
         "description": "Welcome to the restaurant, where the scent of sizzling meals meets the sound of scrubbing dishes. "
                        "Ready to roll up your sleeves? Take on the washing challenge and earn some well-deserved money."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("grocerry.png"), (100, 100)),  
+        "img": pygame.transform.scale(pygame.image.load("Assets/Characters/grocerry.png"), (100, 100)),  
         "x": 600,
         "y": 660,
         "description": "Bustling with customers and chaos. But today, you are not shopping — you are working. "
                        "Step behind the counter and become the cashier of the day."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("cyber_cafe.png"), (80, 80)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Characters/cyber_cafe.png"), (80, 80)),
         "x": 90,
         "y": 665,
         "description": "This is the teenagers' zone, and the only way to win here is to type like lightning. "
                        "Put your speed and accuracy to the test and rake in digital dough with each correct keystroke."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("Food_stall.png"), (65, 65)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Characters/Food_stall.png"), (65, 65)),
         "x": 750,
         "y": 353,
         "description": "Ready to bring you back to life. Choose your meal, sit back, and recover the energy you need to keep going. "
                        "After all, a hardworking spirit needs fuel to thrive."
     },
     {
-        "img": pygame.transform.scale(pygame.image.load("lazapee.png"), (80, 80)),
+        "img": pygame.transform.scale(pygame.image.load("Assets/Characters/lazapee.png"), (80, 80)),
         "x": 60,
         "y": 170,
         "description": "This is not just another shop — it is a gateway to passive income. "
@@ -287,11 +305,53 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
         line_surface = font.render(l.strip(), True, color)
         surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
 
+# Set Energy etc
+energy = 120
+money = 100
+total_energy_spent = 0
+total_money_earned = 0
+
+# Floating text
+def add_floating_text(text, x, y, color):
+    floating_texts.append({"text": text, "x": x, "y": y, "start_time": pygame.time.get_ticks(), "color": color})
+
+def draw_floating_texts():
+    current_time = pygame.time.get_ticks()
+    texts_to_remove = []
+    for ft in floating_texts[:]:
+        elapsed = (current_time - ft["start_time"]) / 1000
+        if elapsed > 1.5:
+            texts_to_remove.append(ft)
+            continue
+
+        offset_y = int(30 * elapsed)
+        alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
+
+        # Create the text surface
+        text_surface = floating_font.render(ft["text"], True, ft["color"])
+        text_surface.set_alpha(alpha)
+
+        # Create an outline by drawing black text slightly shifted
+        outline_color = (50, 50, 50)  
+        for dx in [-2, 0, 2]:
+            for dy in [-2, 0, 2]:
+                if dx != 0 or dy != 0:
+                    outline_surface = floating_font.render(ft["text"], True, outline_color)
+                    outline_surface.set_alpha(alpha)
+                    screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
+    
+        screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
+
+    for ft in texts_to_remove:
+        floating_texts.remove(ft)
+
+
 # === GAME LOOP ===
 dialogue_lines = ["Hi! Welcome to the store!", "DON'T COME BACK", "BYE", "[MENU]"]
 npc = NPC(300, 300 , dialogue_lines)
 menu_options = ["🛒 Shop", "📜 Quest"]
 selected_option = 0
+
 
 # 初始位置
 player_x = 500
@@ -439,13 +499,27 @@ while running:
             else:
                 screen.blit(FONT.render(current_line, True, WHITE), (60, HEIGHT - 130))
 
-        for character in characters:
-            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
-            if is_near(player_x, player_y, character["x"], character["y"]):
-                draw_popup(screen, character["description"], font)
-
         for char in characters:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
+
+            popup_button_rect = None
+            for character in characters:
+                screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
+
+        # Only show popup for the first nearby character
+        for character in characters:
+            if is_near(player_x, player_y, character["x"], character["y"]):
+                popup_button_rect = draw_popup(screen, character["description"], small_font)
+                break  # Only one popup at a time
+
+        if not show_intro_message:
+            screen.blit(mge_statsbar_image, (0, 0))
+            energy_text = custom_font.render(f"{energy:06}", True, (0, 0, 0))
+            money_text = custom_font.render(f"{money:06}", True, (0, 0, 0))
+            screen.blit(energy_text, (80, 28))
+            screen.blit(money_text, (80, 105))
+            draw_floating_texts()
+    pygame.display.flip()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -487,6 +561,35 @@ while running:
                 if reset_button.collidepoint(event.pos): reset_game()
             elif game_state == "game" and show_intro_message and typing_done:
                 show_intro_message = False
+            elif game_state == "game":
+                if popup_button_rect and popup_button_rect.collidepoint(event.pos):
+                    print("ENTER button clicked!")
+                    pygame.mixer.music.stop()
+        
+                    # PAUSE MAIN GAME LOOP while MG3 runs
+                    pygame.mixer.music.stop()
+
+                    # Create a new screen surface for MG3 and pass it
+                    mg3_screen = pygame.display.set_mode((1024, 576))
+                    result = run_MG3(mg3_screen)
+
+                    # After MG3 finishes, re-create the main screen
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+                    # Recreate screen and pass it into MG3
+                    pygame.display.set_mode((WIDTH, HEIGHT))
+        
+                    if result:
+                        energy -= result["energy_spent"]
+                        money += result["money_earned"]
+                        add_floating_text(f"-{result['energy_spent']}", 250, 28, (128, 128, 128))
+                        add_floating_text(f"+{result['money_earned']}", 250, 110, (128, 128, 128))
+
+                        pygame.mixer.music.load("Assets/Song/background.mp3")
+                        pygame.mixer.music.set_volume(0.5)
+                        pygame.mixer.music.play(-1)
+
+                        # Force a redraw after MG3 ends
+                        pygame.display.set_mode((WIDTH, HEIGHT))
 
         if event.type == pygame.KEYDOWN:
             if game_state == "intro":
@@ -517,6 +620,7 @@ while running:
                                 npc.talking = False
                         if event.key == pygame.K_ESCAPE:
                             npc.talking = False
-    pygame.display.flip()
-
+        
+draw_floating_texts()
+pygame.display.flip()
 pygame.quit()
