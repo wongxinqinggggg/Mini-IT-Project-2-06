@@ -13,6 +13,7 @@ pygame.mixer.init()
 WIDTH, HEIGHT = 1024, 576
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No Money, No Life")
+clock = pygame.time.Clock()
 
 # === FONTS ===
 font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 20)
@@ -96,7 +97,14 @@ show_intro_message = True
 typing_done = False
 running = True
 
-hp, mp = 100, 899
+hp, mp = 100, 99999
+vm_level = [0, 0]   # Vending machine level for Mini Game 4
+vm_income = [[1, 2, 3], [5, 6, 7]]
+vm_buyingprices = [[300, 400, 500], [800, 900, 1000]]
+VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
+NOTI = Functions.Notifications(screen, vm_buyingprices, vm_income)
+INVENTORY = Functions.Inventory(screen, clock)
+mg_var_dict = {}
 store_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 
                   'prev_state': None, 'dragging': None}
 
@@ -305,7 +313,9 @@ selected_option = 0
 # 初始位置
 player_x = 500
 player_y = 400
-player_speed = 1.5
+speedlist = [1.5, 3]
+player_speed = speedlist[0]
+sprinttimer = 0
 player_direction = "s"
 walk_frame = 0
 walk_timer = 0
@@ -337,9 +347,9 @@ class StateManager():
     def draw(self):
         self.state.draw(screen, self.var_dict['mg_state'])
         Functions.display_stats(screen, hp, mp)
+        NOTI.displayicon(mp, vm_level, xsmall_font)
         if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
-clock = pygame.time.Clock()
 while running:
     dt = clock.tick(60)
     screen.fill(WHITE)
@@ -386,6 +396,8 @@ while running:
             screen.blit(font.render(warning_message, True, WARNING_COLOR), (180, 530))
 
     elif game_state == "game":
+        player_speed = speedlist[1] if Functions.sprinttime > 0 else speedlist[0]
+
         camera_x, camera_y = get_camera_offset()
         screen.fill((0, 0, 0))
         screen.blit(map_img, (0 - camera_x, 0 - camera_y))  # Apply camera offset # Apply camera offset here
@@ -485,7 +497,16 @@ while running:
         for char in characters:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
 
+        inventoryrect = INVENTORY.bag.get_rect(center = (940, 500)) 
+        screen.blit(INVENTORY.bag, inventoryrect)        # PLACEHOLDER
         Functions.display_stats(screen, hp, mp)
+        NOTI.displayicon(mp, vm_level, xsmall_font)
+        Functions.draw_floating_texts(screen)
+
+    elif game_state == "inventory":
+        INVENTORY.draw(xsmall_font, font)
+        Functions.display_stats(screen, hp, mp)
+        NOTI.displayicon(mp, vm_level, xsmall_font)
 
     # == Lanching Mini Game  ==
     if statemanager: statemanager.draw()
@@ -527,8 +548,10 @@ while running:
                     else:
                         warning_message = "No saved game found!"
                 if reset_button.collidepoint(event.pos): reset_game()
-            elif game_state == "game" and show_intro_message and typing_done:
-                show_intro_message = False
+            elif game_state == "game":
+                if show_intro_message and typing_done: show_intro_message = False
+                if inventoryrect.collidepoint(event.pos):
+                    game_state = "inventory"
 
         elif event.type == pygame.KEYDOWN:
             if game_state == "intro":
@@ -561,13 +584,22 @@ while running:
                             npc.talking = False
 
                 # Placeholder for launching minigames
-                elif event.key == pygame.K_5:
-                    statemanager = StateManager(Store.STORE(WIDTH, HEIGHT), store_var_dict.copy())
+                elif event.key == pygame.K_p:
+                    statemanager = StateManager(Store.STORE(WIDTH, HEIGHT, INVENTORY), store_var_dict.copy())
                     game_state = "store"
+                    break
 
+        # == EVENTS for passive income from Mini Game 4 ==
+        elif event.type == VM1: hp, mp  = Functions.update_stats(hp, mp, mpchange=vm_income[0][vm_level[0] - 1])
+        elif event.type == VM2: hp, mp = Functions.update_stats(hp, mp, mpchange=vm_income[1][vm_level[1] - 1])
+        
         if statemanager: statemanager.eventhandler(event)
+        elif game_state == "game": INVENTORY.eventhandler(mp, event, False)
+        elif game_state == "inventory": game_state = "game" if INVENTORY.eventhandler(mp, event) else "inventory"
+        NOTI.updatetip(vm_level, event)
 
     if statemanager: statemanager.update()
+    hp, mp = INVENTORY.update(hp, mp)
 
     pygame.display.flip()
 

@@ -2,15 +2,14 @@ import pygame
 from Features import Functions
 
 class STORE():
-    def __init__(self, W, H):
-        global statschange 
-        self.menu = Functions.Menu(W)
-        self.hplist = [20, 65, 150, 500]
+    def __init__(self, W, H, Inventory):
+        global mpchange 
+        self.Menu, self.Inventory = Functions.Menu(W), Inventory
         self.pricelist = [10, 25, 50, 120]
         self.btnpos = [(465, 190), (755, 190), (475, 400), (750, 395)]
         itemcenter = [(350, 245), (630, 245), (320, 446), (620, 470)]
         menubtnpos = (975, 50)
-        statschange = {'hpc': None, 'mpc': None}
+        mpchange = None
 
         pygame.mixer.music.load("Assets/Audio/Retro-Game-Music (moodmode).mp3")
         pygame.mixer.music.play(-1)
@@ -40,10 +39,10 @@ class STORE():
                     self.var_dict['prev_state'] = self.var_dict['mg_state']
                     self.var_dict['mg_state'] = "menu"
 
-                else: self.buttons.update(E)
+                else: self.buttons.update(E, Inventory=self.Inventory)
 
             elif mg_state == "menu":
-                self.var_dict, cursorclicked = self.menu.eventhandler(E, self.var_dict)
+                self.var_dict, cursorclicked = self.Menu.eventhandler(E, self.var_dict)
 
             if self.btnrectdict.get(mg_state): 
                 for rect in self.btnrectdict[mg_state]:
@@ -56,7 +55,7 @@ class STORE():
             cursorcollide = False
 
             if mg_state == "menu":
-                self.var_dict, cursorcollide = self.menu.eventhandler(E, self.var_dict)
+                self.var_dict, cursorcollide = self.Menu.eventhandler(E, self.var_dict)
 
             if self.btnrectdict.get(mg_state): 
                 for rect in self.btnrectdict[mg_state]:
@@ -65,38 +64,38 @@ class STORE():
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
                         break
                 
-                if mg_state == "mainpage": self.buttons.update(E, True)
+                if mg_state == "mainpage": self.buttons.update(E, updatecursor=True)
 
             if not cursorcollide: pygame.mouse.set_cursor()
 
         elif E.type == pygame.MOUSEBUTTONUP: self.var_dict['dragging'] = False
 
     def update(self, mg_state, var_dict):
-        global statschange
+        global mpchange
         self.var_dict = var_dict
-        self.var_dict['hp'], self.var_dict['mp'] = Functions.update_stats(self.var_dict['hp'], self.var_dict['mp'], statschange['hpc'], statschange['mpc'])
-        if statschange['hpc']: Functions.add_floating_text(f"+{statschange['hpc']}", 'hp', (128, 128, 128))
-        if statschange['mpc']: Functions.add_floating_text(f"{statschange['mpc']}", 'mp', (128, 128, 128))
-        statschange['hpc'], statschange['mpc'] = None, None
+        if mpchange: 
+            self.var_dict['hp'], self.var_dict['mp'] = Functions.update_stats(self.var_dict['hp'], self.var_dict['mp'], mpchange=mpchange)
+            Functions.add_floating_text(f"{mpchange}", 'mp', (128, 128, 128))
+            mpchange = None
 
         if mg_state == "mainpage":
             Functions.displaystat = True
             mp =  self.var_dict['mp']
             self.buttons = pygame.sprite.Group()
             for i in range(len(self.pricelist)): 
-                self.buttons.add(Buttons(i, mp, self.hplist, self.pricelist, self.btnpos))
+                self.buttons.add(Buttons(i, mp, self.pricelist, self.btnpos))
                 if mp < self.pricelist[i]:
                     self.itemlist[i][0] = pygame.transform.grayscale(self.itemsurflist[i])
                 else: self.itemlist[i][0] = self.itemsurflist[i]
 
         elif mg_state == "menu": 
             Functions.displaystat = False
-            self.menu.update()
+            self.Menu.update()
     
     def draw(self, S, mg_state):
         S.blit(self.base, (0, 0))
         if mg_state == "mainpage": self.mainpage(S)
-        elif mg_state == "menu": self.menu.draw(S)
+        elif mg_state == "menu": self.Menu.draw(S)
         
     def mainpage(self, S):
         S.blit(self.mainbase, (0, 0))
@@ -106,7 +105,7 @@ class STORE():
         Functions.draw_floating_texts(S)
     
 class Buttons(pygame.sprite.Sprite):
-    def __init__(self, id, mp, hplist, pricelist, btnpos):
+    def __init__(self, id, mp, pricelist, btnpos):
         super().__init__()
         self.image = pygame.image.load("Assets/Images/MGE_Buybtn.png").convert_alpha()
         if mp < pricelist[id]: 
@@ -116,20 +115,24 @@ class Buttons(pygame.sprite.Sprite):
         else: self.clickable = True
 
         self.rect = self.image.get_rect(center = (btnpos[id]))
-        self.hpc = hplist[id]
         self.mpc = (-pricelist[id])
+        self.item_id = id + 1
                                                                  
-    def update(self, E, updatecursor=False):
+    def update(self, E, Inventory=None, updatecursor=False):
         if updatecursor:
             self.updatecursor(E)
             return
 
-        global statschange
+        global mpchange
+        soundtype = None
         if self.rect.collidepoint(E.pos):
             if self.clickable: 
-                statschange['hpc'], statschange['mpc'] = self.hpc, self.mpc
-                soundtype = "transaction"
-            else: soundtype = "btnclicked"
+                item_id = self.item_id
+                if Inventory.additem(item_id):
+                    mpchange = self.mpc 
+                    soundtype = "transaction"
+
+            soundtype = "btnclicked" if not soundtype else soundtype
             Functions.playsound(soundtype)
 
     def updatecursor(self, E):
