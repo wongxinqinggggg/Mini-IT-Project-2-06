@@ -99,8 +99,9 @@ running = True
 hp, mp = 100, 899
 vm_level = [0, 0]   # Vending machine level for Mini Game 4
 vm_income = [[1, 2, 3], [5, 6, 7]]
-vmbuyingprices = [[300, 400, 500], [800, 900, 1000]]
+vm_buyingprices = [[300, 400, 500], [800, 900, 1000]]
 VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
+NOTI = Functions.Notifications(screen, vm_buyingprices, vm_income)
 mg_var_dict = {}
 mg4_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'vm_level': vm_level, 
                 'vm_income': vm_income, 'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 
@@ -343,7 +344,7 @@ class StateManager():
     def draw(self):
         self.state.draw(screen, self.var_dict['mg_state'])
         Functions.display_stats(screen, hp, mp)
-        Functions.display_notifications(screen, mp, vm_level, vmbuyingprices)
+        NOTI.displayicon(mp, vm_level, xsmall_font)
         if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
 clock = pygame.time.Clock()
@@ -493,7 +494,7 @@ while running:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
 
         Functions.display_stats(screen, hp, mp)
-        Functions.display_notifications(screen, mp, vm_level, vmbuyingprices)
+        NOTI.displayicon(mp, vm_level, xsmall_font)
 
     # == Lanching Mini Game  ==
     if statemanager: statemanager.draw()
@@ -576,6 +577,7 @@ while running:
         # == EVENTS for passive income from Mini Game 4 ==
         elif event.type == VM1: hp, mp  = Functions.update_stats(hp, mp, mpchange=vm_income[0][vm_level[0] - 1])
         elif event.type == VM2: hp, mp = Functions.update_stats(hp, mp, mpchange=vm_income[1][vm_level[1] - 1])
+        NOTI.updatetip(vm_level, event)
         
         if statemanager: statemanager.eventhandler(event)
 

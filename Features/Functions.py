@@ -2,11 +2,6 @@ import pygame
 
 MAXHP, MAXMP = 999999, 999999
 displaystat = True
-displaynoti = [True, True]
-counter = 0
-anglecounter = 0
-alertcenter = [(51, 159), (91, 159)]
-angles = [0, 0, 25, -25, 25, -25]
 floating_texts = [] 
 floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110}}
 
@@ -28,34 +23,78 @@ def display_stats(S, hp, mp):
     S.blit(hpsurf, hprect)
     S.blit(mpsurf, mprect)
 
-def display_notifications(S, mp, vm_level, vmbuyingprices):
-    global counter, anglecounter
-    if not displaystat: return
-    elif not displaynoti[0] and not displaynoti[1]: return
+class Notifications():
+    def __init__(self, S, vm_buyingprices, vm_income):
+        self.S, self.vm_buyingprices, self.vm_income = S, vm_buyingprices, vm_income
+        self.displaynoti = [True, True]
+        self.counter = 0
+        self.anglecounter = 0
+        self.alertcenter = [(51, 159), (91, 159)]
+        self.angles = [0, 0, 25, -25, 25, -25]
+        self.hovering = False
 
-    vm1noti = pygame.image.load("Assets/Images/VM1noti.png").convert_alpha()
-    vm2noti = pygame.image.load("Assets/Images/VM2noti.png").convert_alpha()
-    alertbtn = pygame.image.load("Assets/Images/MAIN_Alertbtn.png").convert_alpha()
-    vmnotis = [{'surf': vm1noti, 'rect': vm1noti.get_rect(center=(38, 170))}, 
-               {'surf': vm2noti, 'rect': vm2noti.get_rect(center=(78, 170))}]
-    counter += 1
-    if counter % 30 == 0:
-        if anglecounter < (len(angles) - 1): anglecounter += 1
-        else:anglecounter = 0
-    notialert = pygame.transform.rotate(alertbtn, angles[anglecounter])
+        vm1noti = pygame.image.load("Assets/Images/VM1noti.png").convert_alpha()
+        vm1notirect = vm1noti.get_rect(center=(38, 170))
+        vm2noti = pygame.image.load("Assets/Images/VM2noti.png").convert_alpha()
+        vm2notirect = vm2noti.get_rect(center=(78, 170))
+        sprint = pygame.image.load("Assets/Images/Sprintnoti.png").convert_alpha()
+        sprintrect = sprint.get_rect(center=(118, 170))
+        self.alertbtn = pygame.image.load("Assets/Images/MAIN_Alertbtn.png").convert_alpha()
 
-    for i in range(len(vm_level)):
-        if displaynoti[i]:
-            if not vm_level[i]:
-                surf = pygame.transform.grayscale(vmnotis[i]['surf'])
-            else: surf = vmnotis[i]['surf']
+        self.notis = [{'surf': vm1noti, 'rect': vm1notirect}, 
+                      {'surf': vm2noti, 'rect': vm2notirect},
+                      {'surf': sprint, 'rect': sprintrect}]
+    
+    def displayicon(self, mp, vm_level, xsfont):
+        if not displaystat: return
+        elif not self.displaynoti[0] and not self.displaynoti[1]: return
 
-            S.blit(surf, vmnotis[i]['rect'])
-            if vm_level[i] < 3 and mp >= vmbuyingprices[i][vm_level[i]]:
-                S.blit(notialert, notialert.get_rect(center=(alertcenter[i])))
-            elif vm_level[i]:
-                pygame.draw.circle(S, 'Green', (alertcenter[i]), 6, 6)
-                pygame.draw.circle(S, 'Black', (alertcenter[i]), 6, 1)
+        self.counter += 1
+        if self.counter % 30 == 0:
+            if self.anglecounter < (len(self.angles) - 1): self.anglecounter += 1
+            else:self.anglecounter = 0
+        notialert = pygame.transform.rotate(self.alertbtn, self.angles[self.anglecounter])
+
+        for i in range(len(vm_level)):
+            if self.displaynoti[i]:
+                if not vm_level[i]:
+                    surf = pygame.transform.grayscale(self.notis[i]['surf'])
+                else: surf = self.notis[i]['surf']
+
+                self.S.blit(surf, self.notis[i]['rect'])
+                if vm_level[i] < 3 and mp >= self.vm_buyingprices[i][vm_level[i]]:
+                    self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[i])))
+                elif vm_level[i]:
+                    pygame.draw.circle(self.S, 'Green', (self.alertcenter[i]), 6)
+                    pygame.draw.circle(self.S, 'Black', (self.alertcenter[i]), 6, 1)
+        
+        if self.hovering: self.displaytip(vm_level, xsfont)
+
+    def updatetip(self, vm_level, E):
+        if E.type == pygame.MOUSEMOTION: 
+            for i in range(len(vm_level)):
+                if self.displaynoti[i] and (self.notis[i]['rect']).collidepoint(E.pos):
+                    self.tippos = E.pos
+                    self.hovering = True
+                    break
+                else: self.hovering = False
+
+    def displaytip(self, vm_level, xsfont):
+        for i in range(len(vm_level)):
+            if self.displaynoti[i] and (self.notis[i]['rect']).collidepoint(pygame.mouse.get_pos()):
+                if not vm_level[i]: 
+                    lvltxt, incometxt = '', '(Not Owned)'
+                else:
+                    lvltxt = f'(Lv{vm_level[i]})' if vm_level[i] <= 2 else '(Maxed)'
+                    incometxt = f'income:{self.vm_income[i][vm_level[i]-1]}$/s'
+
+                tipsurfs = [xsfont.render((f'VM{i + 1} ' + lvltxt).center(12), False, 'Black'), 
+                           xsfont.render(incometxt, False, 'Black')]
+                tiprect = pygame.Rect(self.tippos[0] + 10, self.tippos[1] + 10, 100, 30)
+                pygame.draw.rect(self.S, 'White', tiprect)
+                pygame.draw.rect(self.S, 'Black', tiprect, 2)
+                for i in range(len(tipsurfs)):
+                    self.S.blit(tipsurfs[i], (tiprect.x + 6, tiprect.y + 5 + i * 12))
 
 def add_floating_text(text, id, color):
     floating_texts.append({"text": text, "x": floating_texts_pos[id]['x'], "y": floating_texts_pos[id]['y'], "start_time": pygame.time.get_ticks(), "color": color})
