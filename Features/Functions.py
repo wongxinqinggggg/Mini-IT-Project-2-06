@@ -7,19 +7,24 @@ floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110},
                       'inventoryE': {'x': 250, 'y': 500}, 'inventoryF': {'x': 350, 'y': 500}}
 sprinttime = 0
 
-def update_stats(hp, mp, hpchange = None, mpchange = None):
-    if hpchange:    hp = min(max(hp + hpchange, 0), MAXHP)
-    if mpchange:    mp = min(max(mp + mpchange, 0), MAXMP)
-    return hp, mp
+def initialize_stats(hp=100, mp=100):
+    global energy, money
+    energy, money = hp, mp
+
+def update_stats(hpchange = None, mpchange = None):
+    global energy, money
+    if hpchange: energy = min(max(energy + hpchange, 0), MAXHP)
+    if mpchange: money = min(max(money + mpchange, 0), MAXMP)
 
 # === Function to display hp and mp ===
-def display_stats(S, hp, mp):    
+def display_stats(S):    
+    global energy, money 
     Lfont = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
     if not displaystat: return
     statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
-    hpsurf = Lfont.render(str(hp).zfill(6), False, 'Black')
+    hpsurf = Lfont.render(str(energy).zfill(6), False, 'Black')
     hprect = pygame.Rect(90, 30, 80, 50)
-    mpsurf = Lfont.render(str(mp).zfill(6), False, 'Black')
+    mpsurf = Lfont.render(str(money).zfill(6), False, 'Black')
     mprect = pygame.Rect(90, 105, 80, 50)
     S.blit(statsbar, (13, 13))
     S.blit(hpsurf, hprect)
@@ -183,7 +188,7 @@ class Notifications():
                       {'surf': vm2noti, 'rect': vm2notirect},
                       {'surf': sprint, 'rect': sprintrect}]
     
-    def displayicon(self, mp, vm_level, xsfont):
+    def displayicon(self, vm_level, xsfont):
         if not displaystat: return
         elif not self.displaynoti[0] and not self.displaynoti[1]: return
 
@@ -200,7 +205,7 @@ class Notifications():
                 else: surf = self.notis[i]['surf']
 
                 self.S.blit(surf, self.notis[i]['rect'])
-                if vm_level[i] < 3 and mp >= self.vm_buyingprices[i][vm_level[i]]:
+                if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]:
                     self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[i])))
                 elif vm_level[i]:
                     pygame.draw.circle(self.S, 'Green', (self.alertcenter[i]), 6)
@@ -286,12 +291,12 @@ class Inventory():
             
         for i in range(9): self.rectcenter.append(((475 + int(i % 3) * 170, 135 + int(i / 3) * 170)))
 
-    def eventhandler(self, mp, E, inventorypage=True):
+    def eventhandler(self, E, inventorypage=True):
         global sprinttime
         if E.type == pygame.MOUSEBUTTONDOWN and inventorypage:
             soundtype = None
             if self.btnrect.collidepoint(E.pos):
-                if self.baglvl < 3 and mp >= (-self.bagprices[self.baglvl - 1]):
+                if self.baglvl < 3 and money >= (-self.bagprices[self.baglvl - 1]):
                     self.statschange['mp'] = self.bagprices[self.baglvl - 1]
                     self.baglvl += 1
                     soundtype = 'transaction'
@@ -316,7 +321,7 @@ class Inventory():
             if self.inventories.get(key): 
                 selectedcell = self.inventories[key]
                 if selectedcell['id'] and selectedcell['no']:
-                    self.hpchange, self.usedcell = self.hpchanges[selectedcell['id'] - 1], key
+                    self.statschange['hp'], self.usedcell = self.hpchanges[selectedcell['id'] - 1], key
                     if selectedcell['id'] == 2: 
                         sprinttime = 10
 
@@ -324,9 +329,9 @@ class Inventory():
 
         return
             
-    def update(self, hp, mp):
+    def update(self):
         global sprinttime
-        hp, mp = update_stats(hp, mp, self.statschange['hp'], self.statschange['mp'])
+        update_stats(self.statschange['hp'], self.statschange['mp'])
         if self.statschange['hp']: add_floating_text(f"+{self.statschange['hp']}", 'hp')
         if self.statschange['mp']: add_floating_text(f"{self.statschange['mp']}", 'mp')
         self.statschange['hp'], self.statschange['mp'] = None, None
@@ -349,13 +354,12 @@ class Inventory():
             i += 1
 
         if self.baglvl < 3:
-            if mp >= (-self.bagprices[self.baglvl - 1]): self.bagbtn = self.upgradebtn 
+            if money >= (-self.bagprices[self.baglvl - 1]): self.bagbtn = self.upgradebtn 
             else: self.bagbtn = pygame.transform.grayscale(self.upgradebtn)
         else: self.bagbtn = self.maxbtn
 
         self.bag = self.baglist[self.baglvl - 1]
         sprinttime = max(0, sprinttime - self.C.get_time()/1000 )
-        return hp, mp
 
     def draw(self, xsfont, font):
         self.S.fill((71, 59, 120))
@@ -375,7 +379,7 @@ class Inventory():
             if self.inventories['c' + str(i + 1)]['id']:
                 pygame.draw.circle(self.S, 'Grey', ((543  + dx), (68 + dy)), 15)
                 pygame.draw.circle(self.S, 'Black', ((543 + dx), (68 + dy)), 15, 1)
-                notext = xsfont.render(f'{self.inventories['c' + str(i + 1)]['no']}/{self.itemmax}', True, 'Black')
+                notext = xsfont.render(f"{self.inventories['c' + str(i + 1)]['no']}/{self.itemmax}", True, 'Black')
                 self.S.blit(notext, ((531 + dx), (65 + dy)))
 
         for i in range(len(self.surflist)):
