@@ -3,6 +3,8 @@ import json
 import time
 import random
 import os
+from MG3.MG_3 import run_MG3
+from Features import Functions, MiniGame1, MiniGame4, Store
 
 # === SETUP ===
 pygame.init()
@@ -19,6 +21,10 @@ font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 20)
 small_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 14)
 FONT = pygame.font.SysFont("arial", 20)
 BIG_FONT = pygame.font.SysFont("arial", 26)
+xlarge_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 38)
+large_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
+middle_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 26)
+xsmall_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 8)
 custom_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 25)
 font_1 = pygame.font.SysFont('Assets/Font/PressStart2P.ttf', 28, bold=True)
 floating_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 30)  
@@ -38,9 +44,9 @@ WARNING_COLOR = (255, 0, 0)
 BUTTON_COLOR = (220, 220, 220)
 
 # === IMAGES ===
-bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
+bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
 mge_statsbar_image = pygame.image.load("Assets/Images/MGE_Statsbar.png").convert_alpha()
-Menu_image = pygame.image.load("Assets/Images/Menu-button.png").convert_alpha()
+Menu_image = pygame.image.load("Assets/Images/Assets/Images/Menu-button.png").convert_alpha()
 Inside_menu_image = pygame.image.load("Assets/Images/Menu-2.png").convert_alpha()
 map_img = pygame.image.load("Assets/Images/final_map.png").convert()
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
@@ -98,6 +104,12 @@ show_intro_message = True
 typing_done = False
 running = True
 
+hp, mp = 100, 899
+mg_var_dict = {}
+mg1_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'time_passed': 0, 'msg': None, 
+                'new_plate': True, 'plates': 0, 'stains': None, 'dragging': None, 'Lfont': large_font, 
+                'Mfont': middle_font, 'XLfont': xlarge_font, 'prev_state': None, 'fade': None}
+
 # CURSOR
 cursor_visible = True
 cursor_timer = 0
@@ -119,27 +131,27 @@ def load_player_images(character_folder):
     path = character_paths[character_folder]
     return {
         "idle": {
-            "w": pygame.image.load(path + f"{character_folder}_idle_up.png").convert_alpha(),
-            "s": pygame.image.load(path + f"{character_folder}_idle_down.png").convert_alpha(),
-            "a": pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha(),
-            "d": pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+            "w": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_up.png").convert_alpha(),
+            "s": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_down.png").convert_alpha(),
+            "a": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha(),
+            "d": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
         },
         "walk": {
             "w": [
-                pygame.image.load(path + f"{character_folder}_walk_up_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_walk_up_2.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_2.png").convert_alpha()
             ],
             "s": [
-                pygame.image.load(path + f"{character_folder}_walk_down_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_walk_down_2.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_2.png").convert_alpha()
             ],
             "a": [
-                pygame.image.load(path + f"{character_folder}_walk_left_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_idle_left.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_left_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha()
             ],
             "d": [
-                pygame.image.load(path + f"{character_folder}_walk_right_1.png").convert_alpha(),
-                pygame.image.load(path + f"{character_folder}_idle_right.png").convert_alpha()
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_right_1.png").convert_alpha(),
+                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
             ]
         }
     }
@@ -247,7 +259,7 @@ characters = [
 ]
 
 # === NPC ===
-npc_img = pygame.image.load("female/female_idle_left.png").convert_alpha()
+npc_img = pygame.image.load("Assets/Sprites/female/female_idle_left.png").convert_alpha()
 npc_img = pygame.transform.scale(npc_img, (80, 80))
 class NPC:
     def __init__(self, x, y, dialogue):
@@ -362,11 +374,40 @@ walk_timer = 0
 walk_delay = 200
 player_imgs = load_player_images("male")
 
+statemanager = None
+class StateManager():
+    def __init__(self, state, var_dict):
+        self.state, self.var_dict = state, var_dict
+        self.var_dict['hp'],  self.var_dict['mp'] = hp, mp
+
+    def eventhandler(self, E):
+        self.state.eventhandler(self.var_dict['mg_state'], E)
+
+    def update(self):
+        global hp, mp, game_state, statemanager, vm_level 
+        self.var_dict['hp'], self.var_dict['mp'] = hp, mp
+        self.state.update(self.var_dict['mg_state'], self.var_dict)
+        hp, mp = self.var_dict['hp'], self.var_dict['mp']
+
+        if self.var_dict.get('vm_level'): vm_level = self.var_dict['vm_level']
+        if not self.var_dict['mg_state']:
+            game_state = "game"
+            statemanager, self, Functions.displaystat = None, None, True
+            pygame.mixer.music.load("Assets/Audio/background.mp3")
+            pygame.mixer.music.play(-1)
+
+    def draw(self):
+        self.state.draw(screen, self.var_dict['mg_state'])
+        Functions.display_stats(screen, hp, mp)
+        if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
+
 clock = pygame.time.Clock()
 while running:
     dt = clock.tick(60)
     screen.fill(WHITE)
     cursor_timer += dt
+
+    if not pygame.mixer.music.get_volume(): pygame.mixer.music.pause()
     if cursor_timer >= cursor_interval:
         cursor_visible = not cursor_visible
         cursor_timer = 0
@@ -431,7 +472,7 @@ while running:
         new_x, new_y = player_x, player_y  # New position after moving
 
 
-    # 获取按键
+        # 获取按键
         keys = pygame.key.get_pressed()
         moving = False
         new_x, new_y = player_x, player_y  # 
@@ -518,13 +559,18 @@ while running:
             screen.blit(energy_text, (80, 28))
             screen.blit(money_text, (80, 105))
             draw_floating_texts()
+
+        Functions.display_stats(screen, hp, mp)
+
+    # == Lanching Mini Game  ==
+    if statemanager: statemanager.draw()
+
     pygame.display.flip()
 
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+        if event.type == pygame.QUIT: running = False
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "intro":
                 active_input = True
                 if male_box.collidepoint(event.pos): selected_character = 'male'
@@ -590,7 +636,7 @@ while running:
                         # Force a redraw after MG3 ends
                         pygame.display.set_mode((WIDTH, HEIGHT))
 
-        if event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN:
             if game_state == "intro":
                 if event.key == pygame.K_BACKSPACE:
                     player_name = player_name[:-1]
@@ -619,6 +665,16 @@ while running:
                                 npc.talking = False
                         if event.key == pygame.K_ESCAPE:
                             npc.talking = False
+
+                # Placeholder for launching minigames
+                elif event.key == pygame.K_1: 
+                    statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT, clock), mg1_var_dict.copy())
+                    game_state = "mg1"
+        
+        if statemanager: statemanager.eventhandler(event)
+
+    if statemanager: statemanager.update()
+
         
 draw_floating_texts()
 pygame.display.flip()
