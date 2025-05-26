@@ -8,6 +8,7 @@ from Features import Functions, Store
 # === SETUP ===
 pygame.init()
 pygame.mixer.init()
+floating_texts = [] 
 
 # === SCREEN ===
 WIDTH, HEIGHT = 1024, 576
@@ -185,26 +186,36 @@ def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255),
             line = word + ' '
     lines.append(line.strip())
 
-    # Transparent background surface
     popup_surface = pygame.Surface((box_width, box_height))
-    popup_surface.set_alpha(230)  # Adjust transparency
+    popup_surface.set_alpha(230)
     popup_surface.fill(bg_color)
-
-    # Border
     pygame.draw.rect(popup_surface, border_color, popup_surface.get_rect(), 4)
 
-    # Draw text
     line_height = font.get_height() + line_spacing
     y_offset = padding
     for l in lines:
-        if y_offset + line_height > box_height - padding:
+        if y_offset + line_height > box_height - padding - 40:
             break
         text_surf = font.render(l, True, color)
         popup_surface.blit(text_surf, (padding, y_offset))
         y_offset += line_height
 
-    # Finally blit to Assets/Images/main screen (overlapping everything)
+    # Draw "ENTER" button
+    button_width, button_height = 100, 30
+    button_x = (box_width - button_width) // 2
+    button_y = box_height - button_height - padding
+    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+    pygame.draw.rect(popup_surface, (180, 180, 180), button_rect)
+    pygame.draw.rect(popup_surface, border_color, button_rect, 2)
+
+    text_surf = font.render("ENTER", True, color)
+    text_rect = text_surf.get_rect(center=button_rect.center)
+    popup_surface.blit(text_surf, text_rect)
+
     screen.blit(popup_surface, (box_x, box_y))
+
+    # Return absolute screen coordinates of the button
+    return pygame.Rect(box_x + button_x, box_y + button_y, button_width, button_height)
 
 characters = [
     {
@@ -303,11 +314,53 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
         line_surface = font.render(l.strip(), True, color)
         surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
 
+# Set Energy etc
+energy = 120
+money = 100
+total_energy_spent = 0
+total_money_earned = 0
+
+# Floating text
+def add_floating_text(text, x, y, color):
+    floating_texts.append({"text": text, "x": x, "y": y, "start_time": pygame.time.get_ticks(), "color": color})
+
+def draw_floating_texts():
+    current_time = pygame.time.get_ticks()
+    texts_to_remove = []
+    for ft in floating_texts[:]:
+        elapsed = (current_time - ft["start_time"]) / 1000
+        if elapsed > 1.5:
+            texts_to_remove.append(ft)
+            continue
+
+        offset_y = int(30 * elapsed)
+        alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
+
+        # Create the text surface
+        text_surface = floating_font.render(ft["text"], True, ft["color"])
+        text_surface.set_alpha(alpha)
+
+        # Create an outline by drawing black text slightly shifted
+        outline_color = (50, 50, 50)  
+        for dx in [-2, 0, 2]:
+            for dy in [-2, 0, 2]:
+                if dx != 0 or dy != 0:
+                    outline_surface = floating_font.render(ft["text"], True, outline_color)
+                    outline_surface.set_alpha(alpha)
+                    screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
+    
+        screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
+
+    for ft in texts_to_remove:
+        floating_texts.remove(ft)
+
+
 # === GAME LOOP ===
 dialogue_lines = ["Hi! Welcome to the store!", "DON'T COME BACK", "BYE", "[MENU]"]
 npc = NPC(300, 300 , dialogue_lines)
 menu_options = ["🛒 Shop", "📜 Quest"]
 selected_option = 0
+
 
 # 初始位置
 player_x = 500
@@ -483,13 +536,12 @@ while running:
             else:
                 screen.blit(FONT.render(current_line, True, WHITE), (60, HEIGHT - 130))
 
+        popup_button_rect = None
         for character in characters:
             screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
             if is_near(player_x, player_y, character["x"], character["y"]):
-                draw_popup(screen, character["description"], font)
-
-        for char in characters:
-            screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
+                popup_button_rect = draw_popup(screen, character["description"], small_font)
+                break  # Only one popup at a time
 
         inventoryrect = INVENTORY.bag.get_rect(center = (940, 500)) 
         screen.blit(INVENTORY.bag, inventoryrect)        # PLACEHOLDER
@@ -544,6 +596,34 @@ while running:
                 if reset_button.collidepoint(event.pos): reset_game()
             elif game_state == "game":
                 if show_intro_message and typing_done: show_intro_message = False
+                if popup_button_rect and popup_button_rect.collidepoint(event.pos):
+                    print("ENTER button clicked!")
+                    pygame.mixer.music.stop()
+        
+                    # PAUSE MAIN GAME LOOP while MG3 runs
+                    pygame.mixer.music.stop()
+
+                    # Create a new screen surface for MG3 and pass it
+                    mg3_screen = pygame.display.set_mode((1024, 576))
+                    result = run_MG3(mg3_screen)
+
+                    # After MG3 finishes, re-create the main screen
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+                    # Recreate screen and pass it into MG3
+                    pygame.display.set_mode((WIDTH, HEIGHT))
+        
+                    if result:
+                        energy -= result["energy_spent"]
+                        money += result["money_earned"]
+                        add_floating_text(f"-{result['energy_spent']}", 250, 28, (128, 128, 128))
+                        add_floating_text(f"+{result['money_earned']}", 250, 110, (128, 128, 128))
+
+                        pygame.mixer.music.load("Assets/Song/background.mp3")
+                        pygame.mixer.music.set_volume(0.5)
+                        pygame.mixer.music.play(-1)
+
+                        # Force a redraw after MG3 ends
+                        pygame.display.set_mode((WIDTH, HEIGHT))
                 if inventoryrect.collidepoint(event.pos):
                     game_state = "inventory"
 
