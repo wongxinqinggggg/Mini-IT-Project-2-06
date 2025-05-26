@@ -314,47 +314,6 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
         line_surface = font.render(l.strip(), True, color)
         surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
 
-# Set Energy etc
-energy = 120
-money = 100
-total_energy_spent = 0
-total_money_earned = 0
-
-# Floating text
-def add_floating_text(text, x, y, color):
-    floating_texts.append({"text": text, "x": x, "y": y, "start_time": pygame.time.get_ticks(), "color": color})
-
-def draw_floating_texts():
-    current_time = pygame.time.get_ticks()
-    texts_to_remove = []
-    for ft in floating_texts[:]:
-        elapsed = (current_time - ft["start_time"]) / 1000
-        if elapsed > 1.5:
-            texts_to_remove.append(ft)
-            continue
-
-        offset_y = int(30 * elapsed)
-        alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
-
-        # Create the text surface
-        text_surface = floating_font.render(ft["text"], True, ft["color"])
-        text_surface.set_alpha(alpha)
-
-        # Create an outline by drawing black text slightly shifted
-        outline_color = (50, 50, 50)  
-        for dx in [-2, 0, 2]:
-            for dy in [-2, 0, 2]:
-                if dx != 0 or dy != 0:
-                    outline_surface = floating_font.render(ft["text"], True, outline_color)
-                    outline_surface.set_alpha(alpha)
-                    screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
-    
-        screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
-
-    for ft in texts_to_remove:
-        floating_texts.remove(ft)
-
-
 # === GAME LOOP ===
 dialogue_lines = ["Hi! Welcome to the store!", "DON'T COME BACK", "BYE", "[MENU]"]
 npc = NPC(300, 300 , dialogue_lines)
