@@ -18,8 +18,7 @@ class MG4():
                     "f\"({vm_income[i][vm_level[i]]}$/s)\"",
                     "f\"({self.sellingprices[i][vm_level[i] - 1]}$)\""]
         
-        pygame.mixer.music.load("Assets/Audio/Retro-Game-Arcade (moodmode).mp3")
-        pygame.mixer.music.play(-1)
+        Functions.play_music("Retro-Game-Arcade (moodmode)")
 
         self.title = pygame.image.load("Assets/Images/MG4_Title.png").convert_alpha()
         vmsheet = pygame.image.load("Assets/Images/MG4_VMsheet.png").convert_alpha()

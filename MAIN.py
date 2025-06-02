@@ -353,8 +353,7 @@ class StateManager():
         if not self.var_dict['mg_state']:
             game_state = "game"
             statemanager, self, Functions.displaystat = None, None, True
-            pygame.mixer.music.load("Assets/Audio/background.mp3")
-            pygame.mixer.music.play(-1)
+            Functions.play_music("background")
 
     def draw(self):
         self.state.draw(screen, self.var_dict['mg_state'])
@@ -426,46 +425,71 @@ while running:
             dialog_box_rect = pygame.Rect(110, 380, 800, 180)
             draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
 
+        # 更新NPC和绘制玩家
+        npc.move_random()
+        npc.draw(screen, camera_x, camera_y)
+        move_distance = player_speed
+
         # Player movement 
         keys = pygame.key.get_pressed()
         moving = False
         new_x, new_y = player_x, player_y  # New position after moving
         
-        if keys[pygame.K_w]:
-            new_y -= player_speed
-            player_direction = "w"
-            moving = True
-        if keys[pygame.K_s]:
-            new_y += player_speed
-            player_direction = "s"
-            moving = True
-        if keys[pygame.K_a]:
-            new_x -= player_speed
-            player_direction = "a"
-            moving = True
-        if keys[pygame.K_d]:
-            new_x += player_speed
-            player_direction = "d"
-            moving = True
+        if ((keys[pygame.K_w] and keys[pygame.K_s]) or 
+            (keys[pygame.K_a] and keys[pygame.K_d])): 
+            moving = False
+        else:
+            # Calculate distance for diagonal movement so that total displacement is = speed 
+            if ((keys[pygame.K_w] or keys[pygame.K_s]) and 
+                (keys[pygame.K_a] or keys[pygame.K_d])):
+                move_distance = ((player_speed**2)/2)**0.5  
+
+            if keys[pygame.K_w]:
+                new_y -= move_distance
+                player_direction = "w"
+            elif keys[pygame.K_s]:
+                new_y += move_distance
+                player_direction = "s"
+            if keys[pygame.K_a]:
+                new_x -= move_distance
+                player_direction = "a"
+            elif keys[pygame.K_d]:
+                new_x += move_distance
+                player_direction = "d"
 
         # 创建玩家的目标矩形，用来检查碰撞
-        player_rect = pygame.Rect(new_x, new_y, player_imgs["idle"][player_direction].get_width(), player_imgs["idle"][player_direction].get_height())
-        for rect in collision_rects:
-            if player_rect.colliderect(rect):
-                moving = False  # Stop movement on collision
-                break
-
-        # 如果没有发生碰撞，更新玩家位置
-        if moving:
+        if player_x != new_x:
+            player_rect = pygame.Rect(new_x, player_y, sprite_width, sprite_height/2)
+            for rect in collision_rects:
+                if player_rect.colliderect(rect):
+                    x_distance = abs(player_x + sprite_width/2 - rect.center[0]) - (sprite_width/2 + rect.width/2)
+                    if not x_distance: new_x = player_x  # Stop movement on collision
+                    else: 
+                        if keys[pygame.K_a]: new_x = player_x - x_distance
+                        elif keys[pygame.K_d]: new_x = player_x + x_distance
+                    break
+                        
+        if player_y != new_y:
+            player_rect = pygame.Rect(player_x, new_y, sprite_width, sprite_height/2)
+            for rect in collision_rects:
+                if player_rect.colliderect(rect):
+                    y_distance = abs(player_y + sprite_height/4 - rect.center[1]) - (sprite_height/4 + rect.height/2)
+                    if not y_distance: new_y = player_y  # Stop movement on collision
+                    else: 
+                        if keys[pygame.K_w]: new_y = player_y - y_distance
+                        elif keys[pygame.K_s]: new_y = player_y + y_distance
+                    break
+                    
+        # 如果没有发生碰撞，更新玩家位置, 更新动画帧
+        if (player_x != new_x) or (player_y != new_y): 
+            moving = True
             player_x, player_y = new_x, new_y
             if pygame.time.get_ticks() - walk_timer > walk_delay:
-                walk_frame = (walk_frame + 1) % len(player_imgs["walk"][player_direction])
+                walk_frame += 1
+                if walk_frame >= len(player_imgs["walk"][player_direction]): walk_frame = 0
                 walk_timer = pygame.time.get_ticks()
+        
         else: walk_frame = 0
-
-        # 更新NPC和绘制玩家
-        npc.move_random()
-        npc.draw(screen, camera_x, camera_y)
 
         current_img = player_imgs["walk"][player_direction][walk_frame] if moving else player_imgs["idle"][player_direction]
         screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
@@ -577,9 +601,7 @@ while running:
                         Functions.add_floating_text(f"-{result['energy_spent']}", 250, 28, (128, 128, 128))
                         Functions.add_floating_text(f"+{result['money_earned']}", 250, 110, (128, 128, 128))
 
-                        pygame.mixer.music.load("Assets/Song/background.mp3")
-                        pygame.mixer.music.set_volume(0.5)
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("background")
 
                         # Force a redraw after MG3 ends
                         pygame.display.set_mode((WIDTH, HEIGHT))

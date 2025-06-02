@@ -11,9 +11,7 @@ class MG1():
         self.msg = [["YOU LOSE!", 380], ["YOU WIN!", 400], ["INSUFFICIENT ENERGY!", 190]]
         menubtnpos = (975, 50)
         self.statschange = {'hpc': None, 'mpc': None}
-
-        pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
-        pygame.mixer.music.play(-1)
+        Functions.play_music("Puzzle-Game (Cyberwave-Orchestra)")
 
         self.base = pygame.transform.scale(pygame.image.load("Assets/Images/MG1_Base.png").convert(), (W, H))
         self.title = pygame.image.load("Assets/Images/MG1_Title.png").convert_alpha()
@@ -108,9 +106,7 @@ class MG1():
                 self.var_dict['mg_state'], self.var_dict['msg'] = "mainpage", self.msg[0]
                 self.var_dict['stains'], self.var_dict['plates'] = None, 0
                 Functions.playsound("fail")
-                pygame.mixer.music.unload()
-                pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
-                pygame.mixer.music.play(-1)
+                Functions.play_music("Puzzle-Game (Cyberwave-Orchestra)")
                 return
 
             self.horiplatestack = pygame.Surface((225, 500), pygame.SRCALPHA)
@@ -132,9 +128,7 @@ class MG1():
                     self.var_dict['stains'], self.var_dict['plates'] = None, 0
                     self.var_dict['mg_state'] = "mainpage"
                     Functions.playsound("success")
-                    pygame.mixer.music.unload()
-                    pygame.mixer.music.load("Assets/Audio/Puzzle-Game (Cyberwave-Orchestra).mp3")
-                    pygame.mixer.music.play(-1)
+                    Functions.play_music("Puzzle-Game (Cyberwave-Orchestra)")
                     return
 
             self.var_dict['stains'], self.var_dict['time_passed'] = self.stains, self.time_passed
@@ -230,9 +224,7 @@ class MG1():
             self.var_dict['mg_state'] = "mainpage"
             return
         
-        pygame.mixer.music.unload()
-        pygame.mixer.music.load("Assets/Audio/Arcade-Beat (NoCopyrightSound633).mp3")
-        pygame.mixer.music.play(-1)
+        Functions.play_music("Arcade-Beat (NoCopyrightSound633)")
         self.statschange['hpc'] = (-self.STATS['hp'])
         self.var_dict['mg_state'] = "countdown"
         self.var_dict['new_plate'] = True

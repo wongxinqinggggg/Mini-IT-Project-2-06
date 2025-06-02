@@ -92,6 +92,11 @@ def playsound(soundtype):
     elif soundtype == "transaction":
         pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3").play(fade_ms=800)
 
+def play_music(path):
+    pygame.mixer.music.unload()
+    pygame.mixer.music.load(f"Assets/Audio/{path}.mp3")
+    pygame.mixer.music.play(-1)
+
 class Menu():
     def __init__(self, W):
         self.muted = False
