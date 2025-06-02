@@ -4,7 +4,7 @@ import time
 import random
 import os
 from MG3.MG_3 import run_MG3
-from Features import Functions, MiniGame1, MiniGame4, Store
+from Features import Functions, MiniGame1, MiniGame4
 
 # === SETUP ===
 pygame.init()
@@ -25,9 +25,6 @@ xlarge_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 38)
 large_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
 middle_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 26)
 xsmall_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 8)
-custom_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 25)
-font_1 = pygame.font.SysFont('Assets/Font/PressStart2P.ttf', 28, bold=True)
-floating_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 30)  
 
 # === MUSIC ===
 pygame.mixer.music.load("Assets/Song/background.mp3")
@@ -45,9 +42,6 @@ BUTTON_COLOR = (220, 220, 220)
 
 # === IMAGES ===
 bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
-mge_statsbar_image = pygame.image.load("Assets/Images/MGE_Statsbar.png").convert_alpha()
-Menu_image = pygame.image.load("Assets/Images/Assets/Images/Menu-button.png").convert_alpha()
-Inside_menu_image = pygame.image.load("Assets/Images/Menu-2.png").convert_alpha()
 map_img = pygame.image.load("Assets/Images/final_map.png").convert()
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
 
@@ -61,7 +55,7 @@ def load_tilemap(filename):
     return tilemap
 
 tilemap = load_tilemap("map_tiled.txt")
-blocking_tiles = [1]
+blocking_tiles = [1, 2]
 TILE_SIZE = 16
 collision_rects = []
 for y, row in enumerate(tilemap):
@@ -133,36 +127,25 @@ typed_message = ""
 typing_index = 0
 
 # === PLAYER ===
-character_paths = {"male": "male/", "female": "female/"}
+sprite_width, sprite_height = 32, 64
+def get_sprite(x, y):
+    spritesheet = pygame.image.load("Assets/Sprites/spritesheet.png").convert_alpha()
+    uppersurf = pygame.Surface((sprite_width, sprite_height/2), pygame.SRCALPHA).convert_alpha()
+    uppersurf.blit(spritesheet, (0,0), (x*sprite_width, y*sprite_height, sprite_width, sprite_height/2))
+    lowersurf = pygame.Surface((sprite_width, sprite_height/2), pygame.SRCALPHA).convert_alpha()
+    lowersurf.blit(spritesheet, (0,0), (x*sprite_width, y*sprite_height+sprite_height/2, sprite_width, sprite_height/2))
+    return [uppersurf, lowersurf]
 
-def load_player_images(character_folder):
-    path = character_paths[character_folder]
-    return {
-        "idle": {
-            "w": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_up.png").convert_alpha(),
-            "s": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_down.png").convert_alpha(),
-            "a": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha(),
-            "d": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
-        },
-        "walk": {
-            "w": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_2.png").convert_alpha()
-            ],
-            "s": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_2.png").convert_alpha()
-            ],
-            "a": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_left_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha()
-            ],
-            "d": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_right_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
-            ]
-        }
-    }
+
+def load_player_images(character):
+    if character == "female": y = 0
+    elif character == "male": y = 1
+    return {"idle": {"w": get_sprite(3, y), "s": get_sprite(0, y), 
+                     "a": get_sprite(1, y), "d": get_sprite(2, y)},
+            "walk": {"w": [get_sprite(8, y), get_sprite(9, y)],
+                     "s": [get_sprite(4, y), get_sprite(5, y)],
+                     "a": [get_sprite(6, y), get_sprite(1, y)],
+                     "d": [get_sprite(7, y), get_sprite(2, y)]}}
 
 # === CAMERA ===
 def get_camera_offset():
@@ -172,6 +155,8 @@ def get_camera_offset():
 
 # Load and scale character images, and define their positions
 def is_near(player_x, player_y, npc_x, npc_y, distance=50):
+    npc_x += img.get_width()/2
+    npc_y += img.get_height()/2
     return abs(player_x - npc_x) < distance and abs(player_y - npc_y) < distance
 
 def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255), border_color=(0, 0, 0), padding=20, line_spacing=5):
@@ -293,6 +278,18 @@ class NPC:
         if self.direction == "s": self.y += 1
         if self.direction == "d": self.x += 1
 
+# === Obstacles and buildings ===
+buildingsurflist = Functions.get_sprite(224, 160, pygame.image.load("Assets/Images/Buildingsheet.png").convert_alpha())
+obstaclesurflist = Functions.get_sprite(96, 64, pygame.image.load("Assets/Images/Obstaclesheet.png").convert_alpha())
+obstaclelist = [(1, 0, 0, 0), (18, 0, 0, 0), (40, 2, 0, 0), (57, 10.2, 0, 0), (57, 6.73, 0, 0), 
+                (57, 3.3, 0, 0), (57, 0, 0, 0), (61.5, 10.2, 0, 0), (61.5, 6.73, 0, 0), 
+                (61.5, 3.3, 0, 0), (61.5, 0, 0, 0), (26.5, 6, 0, 0), (16.5, 10, 0, 0), 
+                (38, 10, 0, 0), (31.5, 17, 0, 0), (3, 19, 0, 0), (12, 19, 0, 0), (10.5, 24, 0, 0), 
+                (55, 23, 0, 0), (4, 32, 0, 0), (57, 33, 0, 0), (34, 38, 0, 0), (26, 38, 0, 0), 
+                (57, 42, 0, 0), (44.5, 3, 0, 0), (16, 24, 0, 0), (46, 40, 1, 0), (40.5, 23.5, 1, 0.7),
+                (18, 37.3, 2, 0)]
+buildinglist = [(2.5, 3.2), (47.4, 1.5), (19.9, 17.15), (42, 18.15), (4.85, 35.5), (37.8, 34.54)]
+
 # FUNCTION TO GENERATE INTRO MESSAGE
 def generate_intro_message(name):
     return (
@@ -333,6 +330,7 @@ selected_option = 0
 # 初始位置
 player_x = 500
 player_y = 400
+moving = False
 player_speed = 1.5
 player_direction = "s"
 walk_frame = 0
@@ -429,16 +427,9 @@ while running:
             draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
 
         # Player movement 
-        old_x, old_y = player_x, player_y
         keys = pygame.key.get_pressed()
         moving = False
         new_x, new_y = player_x, player_y  # New position after moving
-
-
-        # 获取按键
-        keys = pygame.key.get_pressed()
-        moving = False
-        new_x, new_y = player_x, player_y  # 
         
         if keys[pygame.K_w]:
             new_y -= player_speed
@@ -464,31 +455,36 @@ while running:
                 moving = False  # Stop movement on collision
                 break
 
-        # 检查碰撞
-        for rect in collision_rects:
-            if player_rect.colliderect(rect):
-                moving = False  # 如果发生碰撞，则不允许移动
-                break
-
         # 如果没有发生碰撞，更新玩家位置
         if moving:
             player_x, player_y = new_x, new_y
-
-        # 更新动画帧
-        if moving:
             if pygame.time.get_ticks() - walk_timer > walk_delay:
                 walk_frame = (walk_frame + 1) % len(player_imgs["walk"][player_direction])
                 walk_timer = pygame.time.get_ticks()
-        else:
-            walk_frame = 0
+        else: walk_frame = 0
 
         # 更新NPC和绘制玩家
         npc.move_random()
         npc.draw(screen, camera_x, camera_y)
+
         current_img = player_imgs["walk"][player_direction][walk_frame] if moving else player_imgs["idle"][player_direction]
-        screen.blit(current_img, (player_x - camera_x, player_y - camera_y))
-        # for rect in collision_rects:
-            # pygame.draw.rect(screen, (255, 0, 0), (rect.x - camera_x, rect.y - camera_y, rect.width, rect.height), 1)
+        screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
+
+        for i in range(len(buildinglist)): 
+            xpos, ypos = buildinglist[i][0]*TILE_SIZE - camera_x, buildinglist[i][1]*TILE_SIZE - camera_y
+            if (-224 <= xpos <= WIDTH) and (-160 <= ypos <= HEIGHT):
+                screen.blit(buildingsurflist[i], (xpos, ypos))
+
+        for x, y, surfid, scale in obstaclelist:
+            surf = obstaclesurflist[surfid]
+            xpos, ypos = x*TILE_SIZE - camera_x, y*TILE_SIZE - camera_y
+            if (-96 <= xpos <= WIDTH) and (-64 <= ypos <= HEIGHT):
+                if scale: surf = pygame.transform.scale_by(surf, scale)
+                screen.blit(surf, (xpos, ypos))
+
+        upper_rect = pygame.Rect(0, 0, sprite_width, sprite_height/2)
+        upper_rect.bottomleft = (player_x - camera_x, player_y - camera_y)
+        screen.blit(current_img[0], upper_rect)
 
         if npc.talking:
             pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 160, WIDTH - 100, 110))
@@ -502,15 +498,10 @@ while running:
             else:
                 screen.blit(FONT.render(current_line, True, WHITE), (60, HEIGHT - 130))
 
-        for char in characters:
-            screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
-
-            popup_button_rect = None
-            for character in characters:
-                screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
-
         # Only show popup for the first nearby character
+        popup_button_rect = None
         for character in characters:
+            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
             if is_near(player_x, player_y, character["x"], character["y"]):
                 popup_button_rect = draw_popup(screen, character["description"], small_font)
                 break  # Only one popup at a time
