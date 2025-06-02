@@ -116,7 +116,7 @@ class Menu():
     
     def eventhandler(self, E, var_dict):
         cursor = False
-        restartable = False if var_dict['prev_state'] == "mainpage" else True
+        restartable = True if var_dict['prev_state'] == "game" else False
 
         if E.type == pygame.MOUSEBUTTONDOWN:
             if self.resumebtnrect.collidepoint(E.pos): 
