@@ -1,38 +1,47 @@
 import pygame
 import random
-import sys
+from Features import Functions
 
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((1024, 576))
-pygame.display.set_caption("Bedroom")
+
+# === Cursors ===
 default_cursor = pygame.SYSTEM_CURSOR_ARROW
 error_cursor = pygame.SYSTEM_CURSOR_NO
+bed_cursor = pygame.SYSTEM_CURSOR_HAND
+
+# === Clock ===
 clock = pygame.time.Clock()
 FPS = 60
 
-# Volume & slider
-slider_x = 450
-slider_y = 150
-slider_width = 200
-slider_height = 8
+# === Volume & Slider ===
+slider_x, slider_y = 450, 150
+slider_width, slider_height = 200, 8
 knob_radius = 12
 volume = 0.5
 slider_dragging = False
 
-# Load assets
-full_map_image = pygame.image.load("Assets/Images/map.png").convert()
+# === Load Assets ===
+def load_and_scale(path, scale_factor=0.1):
+    img = pygame.image.load(path).convert_alpha()
+    new_size = (int(img.get_width() * scale_factor), int(img.get_height() * scale_factor))
+    return pygame.transform.smoothscale(img, new_size)
 Bedroom_image = pygame.image.load("Assets/Images/Bedroom.png").convert()
 inside_menu_image = pygame.image.load("Assets/Images/Bedroom_Menu2.png").convert_alpha()
 statsbar_image = pygame.image.load("Assets/Images/Bedroom_Statsbar.png").convert_alpha()
 Menu_button = pygame.image.load("Assets/Images/Bedroom_Menubutton.png").convert_alpha()
+brush_img = load_and_scale("Assets/Images/Bedroom_brush.png", 0.1)
+towel_img = load_and_scale("Assets/Images/Bedroom_towel.png", 0.1)
+mirror_img = load_and_scale("Assets/Images/Bedroom_mirror.png", 0.1)
 
-# Sounds
+# === Sounds ===
 button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
 energy_increase = pygame.mixer.Sound("Assets/Audio/energy_increase.mp3")
-pygame.mixer.music.set_volume(volume)
+correct_click = pygame.mixer.Sound("Assets/Audio/correct_sound.mp3")
+error_click = pygame.mixer.Sound("Assets/Audio/error_sound.mp3")
 
-# Music switching
+# === Music ===
 def play_background_music():
     pygame.mixer.music.load("Assets/Audio/background.mp3")
     pygame.mixer.music.set_volume(volume)
@@ -48,40 +57,38 @@ def play_sleep_start():
     pygame.mixer.music.set_volume(volume)
     pygame.mixer.music.play(-1)
 
-# Fonts
-xs_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 15)
-s_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 28)
-m_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 30)
-custom_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 25)
+# === Fonts ===
+xs_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 15)
+s_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 28)
+m_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 30)
+custom_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 25)
 slash_font = pygame.font.SysFont("Arial", 80)
 
-# Rects
+# === Rects ===
 menu_button_rect = pygame.Rect(920, 20, 80, 80)
 resume_button_rect = pygame.Rect(390, 195, 270, 80)
 restart_button_rect = pygame.Rect(380, 300, 270, 80)
 quit_button_rect = pygame.Rect(380, 400, 270, 80)
-bed_rect = pygame.Rect(100, 350, 300, 150)
+bed_rect = pygame.Rect(50, 350, 280, 100)
 
-# Cursors
-bed_cursor = pygame.SYSTEM_CURSOR_HAND
-
-# Game State
-game_state = "full_map"
+# === Game State ===
+game_state = "bedroom"
+sleep_duration = 10
 inside_menu_active = False
-show_sleep_popup = False
+show_sleep_popup = True
 sleeping = False
 sleep_start_time = 0
-sleep_duration = 10 # in seconds
-slept_once= False
+slept_once = False
 already_slept_popup = False
 popup_timer = 0
+interacted_items = set()
+interacted_items_popup = False
+bedroom_objects_initialized = False
+previous_game_state = None
 
-# Stats
-energy = 20
-money = 100
+# === Stats ===
 floating_texts = []
 
-# Start with map music
 play_background_music()
 
 def add_floating_text(text, x, y, color):
@@ -98,7 +105,6 @@ def draw_floating_texts():
         alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
         text_surface = xs_font.render(ft["text"], True, ft["color"])
         text_surface.set_alpha(alpha)
-        # Draw outline
         for dx in [-2, 0, 2]:
             for dy in [-2, 0, 2]:
                 if dx != 0 or dy != 0:
@@ -107,15 +113,33 @@ def draw_floating_texts():
                     screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
         screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
 
+spawn_points = [(100, 380),  (300, 320),  (500, 400),  (700, 350),  (850, 420),  (600, 200),  (400, 150), (470, 280), (10, 280), (340, 160) ]
+
+def get_random_position():
+    return random.choice(spawn_points)
+brush_rect = brush_img.get_rect(topleft=(0,0))
+towel_rect = towel_img.get_rect(topleft=(0,0))
+mirror_rect = mirror_img.get_rect(topleft=(0,0))
+
+def reset_bedroom_objects():
+    positions = spawn_points.copy()
+    random.shuffle(positions)
+    brush_rect.topleft = positions[0]
+    towel_rect.topleft = positions[1]
+    mirror_rect.topleft = positions[2]
+
 def draw_stats():
     screen.blit(statsbar_image, (0, 0))
-    energy_text = custom_font.render(f"{energy:06}", True, (0, 0, 0))
-    money_text = custom_font.render(f"{money:06}", True, (0, 0, 0))
+    energy_text = custom_font.render(f"{Functions.energy:06}", True, (0, 0, 0))
+    money_text = custom_font.render(f"{Functions.money:06}", True, (0, 0, 0))
     screen.blit(energy_text, (80, 28))
     screen.blit(money_text, (80, 105))
+    screen.blit(brush_img, brush_rect)
+    screen.blit(towel_img, towel_rect)
+    screen.blit(mirror_img, mirror_rect)
 
 def handle_inside_menu_events(event):
-    global inside_menu_active, slider_dragging, volume
+    global inside_menu_active, slider_dragging, volume, game_state
     if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
         inside_menu_active = False
     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -123,12 +147,11 @@ def handle_inside_menu_events(event):
             button_click.play()
             inside_menu_active = False
         elif restart_button_rect.collidepoint(event.pos):
-            pygame.mouse.set_cursor(error_cursor)  
+            pygame.mouse.set_cursor(error_cursor)
         elif quit_button_rect.collidepoint(event.pos):
             button_click.play()
             inside_menu_active = False
-            global game_state
-            game_state = "full_map"
+            game_state = "game"
             play_background_music()
         knob_x = slider_x + int(volume * slider_width)
         if (event.pos[0] - knob_x) ** 2 + (event.pos[1] - (slider_y + slider_height // 2)) ** 2 <= knob_radius ** 2:
@@ -153,36 +176,29 @@ def draw_sleep_popup():
     popup_rect = pygame.Rect(150, 200, 700, 220)
     pygame.draw.rect(screen, (220, 220, 220), popup_rect)
     pygame.draw.rect(screen, (0, 0, 0), popup_rect, 3)
-
     lines = [
-        "   Find out how to sleep in the bedroom.",
-        "   You can only sleep for a limited time.",
-        "   You will be woken up after 20 seconds.",
-        "   Press ENTER to close this message."
+        " Find out your sleep routine in the bedroom.",
+        " You can only sleep for a limited time.",
+        " You will be woken up after 20 seconds.",
+        " Press ENTER to close this message."
     ]
     for i, line in enumerate(lines):
         text_surf = xs_font.render(line, True, (0, 0, 0))
-        screen.blit(text_surf, (popup_rect.x + 30, popup_rect.y + 30 + i * 40)) 
+        screen.blit(text_surf, (popup_rect.x + 30, popup_rect.y + 30 + i * 40))
 
 def draw_sleep_overlay():
-    elapsed=(pygame.time.get_ticks()-sleep_start_time)/1000
-    remaining=max(0,sleep_duration-elapsed)
-    # Darken
-    overlay=pygame.Surface(screen.get_size(),pygame.SRCALPHA); overlay.fill((0,0,0,150))
-    screen.blit(overlay,(0,0))
-    # Timer box auto-sized & centred
-    text  = m_font.render(f"{remaining:04.2f}", True,(0,0,0))
-    box   = text.get_rect(center=(512,288)).inflate(100,50)
-    pygame.draw.rect(screen,(0,255,0),box); pygame.draw.rect(screen,(0,0,0),box,2)
+    elapsed = (pygame.time.get_ticks() - sleep_start_time) / 1000
+    remaining = max(0, sleep_duration - elapsed)
+    overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 150))
+    screen.blit(overlay, (0, 0))
+    text = m_font.render(f"{remaining:04.2f}", True, (0, 0, 0))
+    box = text.get_rect(center=(512, 288)).inflate(100, 50)
+    pygame.draw.rect(screen, (0, 255, 0), box)
+    pygame.draw.rect(screen, (0, 0, 0), box, 2)
     screen.blit(text, text.get_rect(center=box.center))
 
-def full_map_screen():
-    screen.blit(full_map_image, (0, 0))
-    draw_stats()
-    draw_floating_texts()
-
 def bedroom_screen():
-    global already_slept_popup  
     screen.blit(Bedroom_image, (0, 0))
     draw_stats()
     screen.blit(Menu_button, (720, 0))
@@ -193,101 +209,114 @@ def bedroom_screen():
     draw_floating_texts()
     if sleeping:
         draw_sleep_overlay()
-    if already_slept_popup:
-        if pygame.time.get_ticks() - popup_timer > 3000:
-            already_slept_popup = False
-        else:
-            message = "You can only sleep once per visit!"
-            text_surf = xs_font.render(message, True, (255, 0, 0))
-            text_rect = text_surf.get_rect(center=(screen.get_width() // 2, screen.get_height() - 280))
-            padding = 10
-            box_rect = text_rect.inflate(padding * 2, padding * 2)
-            pygame.draw.rect(screen, (255, 255, 255), box_rect)
-            pygame.draw.rect(screen, (255, 0, 0), box_rect, 2)
-            screen.blit(text_surf, text_rect)
+    if already_slept_popup and pygame.time.get_ticks():
+        message = "You can only sleep once per entry, GO AND WORK NOW!"
+        text_surf = xs_font.render(message, True, (255, 0, 0))
+        text_rect = text_surf.get_rect(center=(screen.get_width() // 2, screen.get_height() - 280))
+        box_rect = text_rect.inflate(20, 20)
+        pygame.draw.rect(screen, (255, 255, 255), box_rect)
+        pygame.draw.rect(screen, (255, 0, 0), box_rect, 2)
+        screen.blit(text_surf, text_rect)
+    if interacted_items_popup and pygame.time.get_ticks():
+        message = "You must have 4 routines before sleeping! Don't be dirty!"
+        text_surf = xs_font.render(message, True, (255, 140, 0))  
+        text_rect = text_surf.get_rect(center=(screen.get_width() // 2, screen.get_height() - 240))
+        box_rect = text_rect.inflate(20, 20)
+        pygame.draw.rect(screen, (255, 255, 255), box_rect)
+        pygame.draw.rect(screen, (255, 140, 0), box_rect, 2)
+        screen.blit(text_surf, text_rect)
 
-# Game loop
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if game_state == "full_map":
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
-                game_state = "bedroom"
-                play_bedroom_music()
-                show_sleep_popup = True
-                sleeping = False
-                slept_once = False
+# === Main Function ===
+def run():
+    global sleeping, game_state, show_sleep_popup, already_slept_popup, interacted_items_popup
+    global slept_once, sleep_start_time, inside_menu_active, popup_timer, bedroom_objects_initialized, previous_game_state
 
-        elif game_state == "bedroom":
-            if already_slept_popup:
-                if event.type == pygame.KEYDOWN and (event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER):
-                    already_slept_popup = False
-                continue
-            if sleeping:
-                if event.type == pygame.QUIT:
-                    running = False
-                continue 
-            if show_sleep_popup:
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.KEYDOWN and (event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER):
-                    show_sleep_popup = False
-                continue  
-            mouse_pos = pygame.mouse.get_pos()
+    running = True
+    while running:
+        current_time = pygame.time.get_ticks()
+        mouse_pos = pygame.mouse.get_pos()
 
-            # Cursor handling
-            if inside_menu_active:
-                if restart_button_rect.collidepoint(mouse_pos):
-                    pygame.mouse.set_cursor(error_cursor)
-                else:
-                    pygame.mouse.set_cursor(default_cursor)
-            else:
-                if bed_rect.collidepoint(mouse_pos):
-                    pygame.mouse.set_cursor(bed_cursor)
-                else:
-                    pygame.mouse.set_cursor(default_cursor)
+        if game_state == "bedroom" and previous_game_state != "bedroom":
+            reset_bedroom_objects()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "quit"
 
             if inside_menu_active:
                 handle_inside_menu_events(event)
-            else:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        game_state = "full_map"
-                        inside_menu_active = False
-                        play_background_music()
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                continue
+
+            if sleeping:
+                continue
+
+            if show_sleep_popup or already_slept_popup or interacted_items_popup:
+                if event.type == pygame.KEYDOWN and event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
+                    show_sleep_popup = False
+                    already_slept_popup = False
+                    interacted_items_popup = False
+                continue
+
+            if game_state != "bedroom":
+                running = False
+                return
+
+            if game_state == "bedroom":
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if menu_button_rect.collidepoint(event.pos):
                         button_click.play()
                         inside_menu_active = True
-                    elif bed_rect.collidepoint(event.pos) and not show_sleep_popup and not sleeping:
-                        if not slept_once:
-                            button_click.play()
-                            sleeping = True
-                            sleep_start_time = pygame.time.get_ticks()
-                            play_sleep_start()
-                            slept_once = True  
-                        else:
+
+                    elif brush_rect.collidepoint(event.pos):
+                        correct_click.play()
+                        interacted_items.add("brush")
+                        add_floating_text("Brushed teeth!", event.pos[0], event.pos[1], (0, 100, 255))  # Blue
+
+                    elif towel_rect.collidepoint(event.pos):
+                        correct_click.play()
+                        interacted_items.add("towel")
+                        add_floating_text("Wiped face!", event.pos[0], event.pos[1], (0, 180, 0))  # Green
+
+                    elif mirror_rect.collidepoint(event.pos):
+                        correct_click.play()
+                        interacted_items.add("mirror")
+                        add_floating_text("Pretty!", event.pos[0], event.pos[1], (255, 105, 180))  # Pink
+
+                    elif bed_rect.collidepoint(event.pos) and not sleeping:
+                        if slept_once:
                             already_slept_popup = True
-                            popup_timer = pygame.time.get_ticks()
+                            popup_timer = current_time
+                            error_click.play() 
+                        elif {"brush", "towel", "mirror"}.issubset(interacted_items):
+                            correct_click.play()
+                            sleeping = True
+                            sleep_start_time = current_time
+                            slept_once = True
+                            play_sleep_start()
+                        else:
+                            interacted_items_popup = True
+                            popup_timer = current_time
+                            error_click.play() 
 
-    if sleeping:
-        elapsed = (pygame.time.get_ticks() - sleep_start_time) / 1000
-        if elapsed >= 10:
-            energy = min(energy + 30, 999999)  # cap max energy, adjust as needed
-            energy_increase.play()
-            add_floating_text("+30 Energy", 200, 28, (128, 128, 128))
-            sleeping = False
-            play_bedroom_music()
+        if not inside_menu_active:
+            if any(r.collidepoint(mouse_pos) for r in [brush_rect, towel_rect, mirror_rect, bed_rect]):
+                pygame.mouse.set_cursor(bed_cursor)
+            else:
+                pygame.mouse.set_cursor(default_cursor)
 
-    if game_state == "full_map":
-        full_map_screen()
-    elif game_state == "bedroom":
-        bedroom_screen()
+        if sleeping:
+            elapsed = (current_time - sleep_start_time) / 1000
+            if elapsed >= sleep_duration:
+                Functions.update_stats(hpchange=30)
+                energy_increase.play()
+                add_floating_text("+30 Energy", 200, 28, (128, 128, 128))
+                sleeping = False
+                interacted_items.clear()
+                play_bedroom_music()
 
-    pygame.display.flip()
-    clock.tick(FPS)
+        if game_state == "bedroom":
+            bedroom_screen()
 
-pygame.quit()
-sys.exit()
+        previous_game_state = game_state
+        pygame.display.flip()
+        clock.tick(FPS)
