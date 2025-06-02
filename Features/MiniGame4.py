@@ -21,12 +21,12 @@ class MG4():
         pygame.mixer.music.load("Assets/Audio/Retro-Game-Arcade (moodmode).mp3")
         pygame.mixer.music.play(-1)
 
-        self.mg4_base = pygame.transform.scale(pygame.image.load("Assets/Images/MG4_Base.png").convert(), (W, H))
-        self.vm1 = pygame.image.load("Assets/Images/MG4_VM1.png").convert_alpha()
+        self.title = pygame.image.load("Assets/Images/MG4_Title.png").convert_alpha()
+        vmsheet = pygame.image.load("Assets/Images/MG4_VMsheet.png").convert_alpha()
+        self.vm1, self.vm2 = Functions.get_sprite(250, 352, vmsheet)        
         self.vm1rect = self.vm1.get_rect(center = (350, 375))
-        self.vm2 = pygame.image.load("Assets/Images/MG4_VM2.png").convert_alpha()
         self.vm2rect = self.vm2.get_rect(center = (860, 375))
-        self.menubtn = pygame.image.load("Assets/Images/MAIN_Menubtn.png").convert_alpha()
+        self.menubtn = Functions.mainbtnlist[1]
         self.menubtnrect = self.menubtn.get_rect(center = self.menubtnpos)
         noti1, noti2 = pygame.rect.Rect(0, 0, 24, 24), pygame.rect.Rect(0, 0, 24, 24)
         noti1.center, noti2.center = (self.posX[0], self.btnposY[3]), (self.posX[1], self.btnposY[3])
@@ -133,7 +133,8 @@ class MG4():
         elif mg_state == "menu": Functions.displaystat = False
     
     def draw(self, S, mg_state):
-        S.blit(self.mg4_base, (0, 0))
+        S.fill((255, 107, 151))
+        S.blit(self.title, (390, 30))
         if mg_state == "mainpage": self.mainpage(S)
         elif mg_state == "menu": self.menu.draw(S)
 
@@ -157,11 +158,10 @@ class MG4():
 class Buttons(pygame.sprite.Sprite):
     def __init__(self, vm, btnpath, vm_level, posX, btnposY, buyingprices, sellingprices):
         super().__init__()
-        self.id = vm
-        self.image = pygame.image.load(f"Assets/Images/MGE_{btnpath}.png").convert_alpha() 
-        X_pos = posX[self.id]
+        self.id, X_pos = vm, posX[vm]
 
         if btnpath == "Buybtn" or btnpath == "Upgradebtn": 
+            self.image = Functions.tbtnlist[0] if btnpath == "Buybtn" else Functions.tbtnlist[1]
             Y_pos = btnposY[1] if btnpath == "Buybtn" else btnposY[0]
             self.mpc = (-buyingprices[self.id][vm_level])
             self.attribute = 1
@@ -172,11 +172,11 @@ class Buttons(pygame.sprite.Sprite):
             else: self.clickable = True
 
         elif btnpath == "Maxbtn": 
-            self.clickable, Y_pos = False, btnposY[0]
+            self.clickable, self.image, Y_pos = False, Functions.tbtnlist[3], btnposY[0]
 
         elif btnpath == "Sellbtn": 
             self.clickable, self.attribute = True, 0
-            Y_pos = btnposY[2]
+            self.image, Y_pos = Functions.tbtnlist[2], btnposY[2]
             self.mpc = (+sellingprices[self.id][vm_level - 1])
         
         self.rect = self.image.get_rect(center = (X_pos, Y_pos))      

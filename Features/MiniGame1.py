@@ -19,11 +19,11 @@ class MG1():
         self.title = pygame.image.load("Assets/Images/MG1_Title.png").convert_alpha()
         self.startbtn = pygame.image.load("Assets/Images/MGE_Startbtn.png").convert_alpha()
         self.startbtnrect = self.startbtn.get_rect(center = (W/2, 490))
-        self.instrucbtn = pygame.image.load("Assets/Images/MGE_Instrucbtn.png").convert_alpha()
+        self.instrucbtn = Functions.mainbtnlist[0]
         self.instrucbtnrect = self.instrucbtn.get_rect(center = (W/2, 390))
         self.instrucback = pygame.image.load("Assets/Images/MGE_Instrucback.png").convert_alpha()
         self.instrucbackrect = self.instrucback.get_rect(center = (W/2, 450))
-        self.menubtn = pygame.image.load("Assets/Images/MAIN_Menubtn.png").convert_alpha()
+        self.menubtn = Functions.mainbtnlist[1]
         self.menubtnrect = self.menubtn.get_rect(center = menubtnpos)
         self.plate = pygame.image.load("Assets/Images/MG1_Plate.png").convert_alpha()
         self.platerect = self.plate.get_rect(center = (W/2 + 100, H/2))
@@ -152,7 +152,7 @@ class MG1():
         if mg_state == "mainpage": 
             self.mainpage(S, self.W, self.var_dict['Lfont'])
         elif mg_state == "instruc": 
-            self.instruc(S,self. W, self.H, self.var_dict['Mfont'])
+            self.instruc(S, self.var_dict['Mfont'], self.var_dict['XLfont'])
         elif mg_state == "game": 
             self.game(S, self.var_dict['plates'], self.var_dict['Lfont'])
         elif mg_state == "menu": 
@@ -168,15 +168,17 @@ class MG1():
         Functions.draw_floating_texts(S)
         if self.var_dict['msg']: self.displaymsg(S, W, self.var_dict['msg'][0], self.var_dict['msg'][1], Lfont)
 
-    def instruc(self, S, W, H, Mfont):
+    def instruc(self, S, Mfont, XLfont):
+        title = XLfont.render("INSTRUCTIONS", False, 'Black')
+        titlerect = pygame.Rect(310, 110, 200, 38)
         instruction = (f"This game cost {self.STATS['hp']} Energy to play. "
                        "Click on the dirty area of the plate to clean it. "
                        f"Clean a total of {self.plate_requirement} plates " 
                        f"in {self.time_limit} seconds to earn {self.STATS['mp']}$.")
-        instrucbox = pygame.image.load("Assets/Images/MGE_Instrucbox.png").convert_alpha()
         instrucrect = pygame.Rect(200, 180, 710, 400)
 
-        S.blit(instrucbox, instrucbox.get_rect(center = (W/2, H/2)))
+        pygame.draw.rect(S, (230, 230, 200), (171, 83, 716, 413))
+        S.blit(title, titlerect)
         S.blit(self.instrucback, self.instrucbackrect)
         
         words = instruction.split(' ')

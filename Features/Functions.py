@@ -61,6 +61,27 @@ def draw_floating_texts(S):
     for ft in texts_to_remove:
         floating_texts.remove(ft)
 
+def get_sprite(sprite_width, sprite_height, spritesheet):
+    surflist = []
+    for i in range(int(spritesheet.get_height()/sprite_height)):
+        for j in range(int(spritesheet.get_width()/sprite_width)):
+            surf = pygame.Surface((sprite_width, sprite_height), pygame.SRCALPHA).convert_alpha()
+            surf.blit(spritesheet, (0,0), (j*sprite_width, i*sprite_height, sprite_width, sprite_height))
+            surflist.append(surf)
+    return surflist
+
+def load_sprite():
+    global iconlist, mainbtnlist, menubtnlist, tbtnlist
+    iconsheet = pygame.image.load("Assets/Images/Iconsheet.png").convert_alpha()
+    abtnsheet = pygame.image.load("Assets/Images/Mainbtnsheet.png").convert_alpha()
+    ebtnsheet = pygame.image.load("Assets/Images/Menubtnsheet.png").convert_alpha()
+    tbtnsheet = pygame.image.load("Assets/Images/Transactionbtnsheet.png").convert_alpha()
+
+    iconlist = get_sprite(30, 30, iconsheet)
+    mainbtnlist = get_sprite(80, 80, abtnsheet)
+    menubtnlist = get_sprite(271, 81, ebtnsheet)
+    tbtnlist = get_sprite(76, 34, tbtnsheet)
+
 def playsound(soundtype):
     if soundtype == "btnclicked":
         pygame.mixer.Sound("Assets/Audio/button_click.mp3").play()
@@ -73,16 +94,15 @@ def playsound(soundtype):
 
 class Menu():
     def __init__(self, W):
+        self.muted = False
         self.audiobarxpos = [447, 649]
-        self.menupage = pygame.image.load("Assets/Images/MENU_Menu.png").convert_alpha()
-        self.resumebtn = pygame.image.load("Assets/Images/MENU_Resumebtn.png").convert_alpha()
+        self.menubtncenter = [(W/2, 235), (W/2, 335), (W/2, 435)]
+        self.resumebtn, self.restartbtn, self.quitbtn = menubtnlist[0], menubtnlist[1], menubtnlist[2]
         self.resumebtnrect = self.resumebtn.get_rect(center = (W/2, 235))
-        self.restartbtn = pygame.image.load("Assets/Images/MENU_Restartbtn.png").convert_alpha()
         self.restartbtnrect = self.restartbtn.get_rect(center = (W/2, 335))
-        self.quitbtn = pygame.image.load("Assets/Images/MENU_Quitbtn.png").convert_alpha()
         self.quitbtnrect = self.quitbtn.get_rect(center = (W/2, 435))
-        self.audioslider = pygame.image.load("Assets/Images/MENU_Audioslider.png").convert_alpha()
-        self.audiosliderrect = self.audioslider.get_rect(center = (0, 132))
+        self.audiosliderrect = pygame.rect.Rect(0, 0, 20, 20)
+        self.audiosliderrect.center = (0, 132)
         self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
         self.audiobtnrect = self.audiobtn.get_rect(center = (400, 132))
 
@@ -147,17 +167,19 @@ class Menu():
         self.audiosliderrect.center = (audiosliderxpos, 132)
 
         # Load audio btn if music playing, load muted btn otherwise
-        if pygame.mixer.music.get_busy(): self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
-        else: self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn2.png").convert_alpha()
+        if pygame.mixer.music.get_busy(): self.audiobtn = self.muted = False
+        else: self.audiobtn = self.muted = True
 
     def draw(self, S):
-        S.blit(self.menupage, (0,0))
+        pygame.draw.rect(S, (100, 100, 120), (339, 82, 344, 412))
+        pygame.draw.rect(S, 'Black', (339, 82, 344, 412), 1)
         S.blit(self.resumebtn, self.resumebtnrect)
         S.blit(self.restartbtn, self.restartbtnrect)
         S.blit(self.quitbtn, self.quitbtnrect)
         S.blit(self.audiobtn, self.audiobtnrect)
-        S.blit(self.audioslider, self.audiosliderrect)
-
+        if self.muted: pygame.draw.line(S, 'Black', self.audiobtnrect.topleft, self.audiobtnrect.bottomright, 2)
+        pygame.draw.line(S, 'Black', (self.audiobarxpos[0], 130), (self.audiobarxpos[1], 130), 4)
+        pygame.draw.circle(S, 'Black', self.audiosliderrect.center, 10)
 
 class Notifications():
     def __init__(self, S, vm_buyingprices, vm_income):
@@ -169,17 +191,13 @@ class Notifications():
         self.angles = [0, 0, 25, -25, 25, -25]
         self.hovering = False
 
-        vm1noti = pygame.image.load("Assets/Images/VM1noti.png").convert_alpha()
+        vm1noti, vm2noti = iconlist[4], iconlist[5]
         vm1notirect = vm1noti.get_rect(center=(38, 170))
-        vm2noti = pygame.image.load("Assets/Images/VM2noti.png").convert_alpha()
         vm2notirect = vm2noti.get_rect(center=(78, 170))
-        sprint = pygame.image.load("Assets/Images/Sprintnoti.png").convert_alpha()
-        sprintrect = sprint.get_rect(center=(118, 170))
         self.alertbtn = pygame.image.load("Assets/Images/MAIN_Alertbtn.png").convert_alpha()
 
         self.notis = [{'surf': vm1noti, 'rect': vm1notirect}, 
-                      {'surf': vm2noti, 'rect': vm2notirect},
-                      {'surf': sprint, 'rect': sprintrect}]
+                      {'surf': vm2noti, 'rect': vm2notirect}]
     
     def displayicon(self, vm_level, xsfont):
         if not displaystat: return
