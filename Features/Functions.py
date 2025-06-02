@@ -5,25 +5,29 @@ displaystat = True
 floating_texts = [] 
 floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110}}
 
-def update_stats(hp, mp, hpchange = None, mpchange = None):
-    if hpchange:    hp = min(max(hp + hpchange, 0), MAXHP)
-    if mpchange:    mp = min(max(mp + mpchange, 0), MAXMP)
-    return hp, mp
+def initialize_stats(hp=9999, mp=9999):
+    global energy, money, statsbar
+    energy, money = hp, mp
+    statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
 
-# === Function to display hp and mp ===
-def display_stats(S, hp, mp):    
+def update_stats(hpchange = None, mpchange = None):
+    global energy, money
+    if hpchange: energy = min(max(energy + hpchange, 0), MAXHP)
+    if mpchange: money = min(max(money + mpchange, 0), MAXMP)
+
+# === Function to display energy and money ===
+def display_stats(S):    
     Lfont = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
     if not displaystat: return
-    statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
-    hpsurf = Lfont.render(str(hp).zfill(6), False, 'Black')
+    hpsurf = Lfont.render(str(energy).zfill(6), False, 'Black')
     hprect = pygame.Rect(90, 30, 80, 50)
-    mpsurf = Lfont.render(str(mp).zfill(6), False, 'Black')
+    mpsurf = Lfont.render(str(money).zfill(6), False, 'Black')
     mprect = pygame.Rect(90, 105, 80, 50)
     S.blit(statsbar, (13, 13))
     S.blit(hpsurf, hprect)
     S.blit(mpsurf, mprect)
 
-def add_floating_text(text, id, color):
+def add_floating_text(text, id, color=(128,128,128)):
     floating_texts.append({"text": text, "x": floating_texts_pos[id]['x'], "y": floating_texts_pos[id]['y'], "start_time": pygame.time.get_ticks(), "color": color})
 
 def draw_floating_texts(S):
@@ -56,6 +60,16 @@ def draw_floating_texts(S):
 
     for ft in texts_to_remove:
         floating_texts.remove(ft)
+
+def playsound(soundtype):
+    if soundtype == "btnclicked":
+        pygame.mixer.Sound("Assets/Audio/button_click.mp3").play()
+    elif soundtype == "success":
+        pygame.mixer.Sound("Assets/Audio/success.mp3").play(maxtime=2500)
+    elif soundtype == "fail":
+        pygame.mixer.Sound("Assets/Audio/fail.mp3").play()
+    elif soundtype == "transaction":
+        pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3").play(fade_ms=800)
 
 class Menu():
     def __init__(self, W):
@@ -144,20 +158,6 @@ class Menu():
         S.blit(self.audiobtn, self.audiobtnrect)
         S.blit(self.audioslider, self.audiosliderrect)
 
-def playsound(soundtype):
-    btnclicked = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
-    success = pygame.mixer.Sound("Assets/Audio/success.mp3")
-    fail = pygame.mixer.Sound("Assets/Audio/fail.mp3")
-    transaction = pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3")
-
-    if soundtype == "btnclicked":
-        btnclicked.play()
-    elif soundtype == "success":
-        success.play(maxtime=2500)
-    elif soundtype == "fail":
-        fail.play()
-    elif soundtype == "transaction":
-        transaction.play(fade_ms=800)
 
 class Notifications():
     def __init__(self, S, vm_buyingprices, vm_income):
@@ -181,7 +181,7 @@ class Notifications():
                       {'surf': vm2noti, 'rect': vm2notirect},
                       {'surf': sprint, 'rect': sprintrect}]
     
-    def displayicon(self, mp, vm_level, xsfont):
+    def displayicon(self, vm_level, xsfont):
         if not displaystat: return
         elif not self.displaynoti[0] and not self.displaynoti[1]: return
 
@@ -198,7 +198,7 @@ class Notifications():
                 else: surf = self.notis[i]['surf']
 
                 self.S.blit(surf, self.notis[i]['rect'])
-                if vm_level[i] < 3 and mp >= self.vm_buyingprices[i][vm_level[i]]:
+                if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]:
                     self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[i])))
                 elif vm_level[i]:
                     pygame.draw.circle(self.S, 'Green', (self.alertcenter[i]), 6)

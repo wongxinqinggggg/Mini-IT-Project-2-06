@@ -2,12 +2,12 @@ import pygame
 from Features import Functions
 
 class MG4():
-    def __init__(self, W, H):
+    def __init__(self, W, H, vm_buyingprices):
         global temp_vm, mpchange
         temp_vm, mpchange = [], None
         self.menu = Functions.Menu(W)
         self.infolist = []
-        self.buyingprices = [[300, 400, 500], [800, 900, 1000]]
+        self.buyingprices = vm_buyingprices
         self.sellingprices = [[150, 350, 600], [400, 850, 1350]]
         self.menubtnpos = (975, 50)
         self.posX = [130, 630]
@@ -83,7 +83,7 @@ class MG4():
         self.var_dict, temp_vm = var_dict, var_dict['vm_level']
 
         if mg_state == "mainpage":
-            mp, Sfont, XSfont = self.var_dict['mp'], self.var_dict['Sfont'], self.var_dict['XSfont']
+            Sfont, XSfont = self.var_dict['Sfont'], self.var_dict['XSfont']
             vm_level, vm_income = self.var_dict['vm_level'], self.var_dict['vm_income']
             self.buttons, self.infolist = pygame.sprite.Group(), []
             self.vm1surf, self.vm2surf = self.vm1, self.vm2
@@ -95,7 +95,7 @@ class MG4():
                 elif vm_level[i] <= 2: btnpaths = ["Upgradebtn", "Sellbtn"]
                 else: btnpaths = ["Maxbtn", "Sellbtn"]
 
-                for btnpath in btnpaths: self.buttons.add(Buttons(i, btnpath, mp, vm_level[i], self.posX, self.btnposY, self.buyingprices, self.sellingprices))
+                for btnpath in btnpaths: self.buttons.add(Buttons(i, btnpath, vm_level[i], self.posX, self.btnposY, self.buyingprices, self.sellingprices))
 
             for i in range(len(vm_level)):
                 if vm_level[i] <= 2:
@@ -124,9 +124,9 @@ class MG4():
         elif mg_state == "menu": self.menu.update()
 
         if mpchange: 
-            self.var_dict['hp'], self.var_dict['mp'] = Functions.update_stats(self.var_dict['hp'], self.var_dict['mp'], mpchange=mpchange)
-            if mpchange < 0: Functions.add_floating_text(f"{mpchange}", 'mp', (128, 128, 128))
-            else: Functions.add_floating_text(f"+{mpchange}", 'mp', (128, 128, 128))
+            Functions.update_stats(mpchange=mpchange)
+            if mpchange < 0: Functions.add_floating_text(f"{mpchange}", 'mp')
+            else: Functions.add_floating_text(f"+{mpchange}", 'mp')
         mpchange, self.var_dict['vm_level'] = None, temp_vm
 
         if mg_state == "mainpage": Functions.displaystat = True
@@ -155,7 +155,7 @@ class MG4():
             pass
 
 class Buttons(pygame.sprite.Sprite):
-    def __init__(self, vm, btnpath, mp, vm_level, posX, btnposY, buyingprices, sellingprices):
+    def __init__(self, vm, btnpath, vm_level, posX, btnposY, buyingprices, sellingprices):
         super().__init__()
         self.id = vm
         self.image = pygame.image.load(f"Assets/Images/MGE_{btnpath}.png").convert_alpha() 
@@ -165,7 +165,7 @@ class Buttons(pygame.sprite.Sprite):
             Y_pos = btnposY[1] if btnpath == "Buybtn" else btnposY[0]
             self.mpc = (-buyingprices[self.id][vm_level])
             self.attribute = 1
-            if mp < (-self.mpc):
+            if Functions.money < (-self.mpc):
                 self.clickable = False
                 self.image = pygame.transform.grayscale(self.image)
 

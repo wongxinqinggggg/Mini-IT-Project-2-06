@@ -104,19 +104,19 @@ show_intro_message = True
 typing_done = False
 running = True
 
-hp, mp = 100, 899
+Functions.initialize_stats()
 vm_level = [0, 0]   # Vending machine level for Mini Game 4
 vm_income = [[1, 2, 3], [5, 6, 7]]
 vm_buyingprices = [[300, 400, 500], [800, 900, 1000]]
 VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
 NOTI = Functions.Notifications(screen, vm_buyingprices, vm_income)
 mg_var_dict = {}
-mg1_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'time_passed': 0, 'msg': None, 
-                'new_plate': True, 'plates': 0, 'stains': None, 'dragging': None, 'Lfont': large_font, 
-                'Mfont': middle_font, 'XLfont': xlarge_font, 'prev_state': None, 'fade': None}
-mg4_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'vm_level': vm_level, 
-                'vm_income': vm_income, 'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 
-                'XSfont': xsmall_font, 'prev_state': None, 'dragging': None}
+mg1_var_dict = {'mg_state': "mainpage", 'time_passed': 0, 'msg': None, 'new_plate': True, 
+                'plates': 0, 'stains': None, 'dragging': None, 'prev_state': None,
+                'Lfont': large_font, 'Mfont': middle_font, 'XLfont': xlarge_font, 'fade': None}
+mg4_var_dict = {'mg_state': "mainpage", 'vm_level': vm_level, 'vm_income': vm_income, 
+                'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 'XSfont': xsmall_font, 
+                'prev_state': None, 'dragging': None, 'noti': NOTI}
 
 # CURSOR
 cursor_visible = True
@@ -324,53 +324,11 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
         line_surface = font.render(l.strip(), True, color)
         surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
 
-# Set Energy etc
-energy = 120
-money = 100
-total_energy_spent = 0
-total_money_earned = 0
-
-# Floating text
-def add_floating_text(text, x, y, color):
-    floating_texts.append({"text": text, "x": x, "y": y, "start_time": pygame.time.get_ticks(), "color": color})
-
-def draw_floating_texts():
-    current_time = pygame.time.get_ticks()
-    texts_to_remove = []
-    for ft in floating_texts[:]:
-        elapsed = (current_time - ft["start_time"]) / 1000
-        if elapsed > 1.5:
-            texts_to_remove.append(ft)
-            continue
-
-        offset_y = int(30 * elapsed)
-        alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
-
-        # Create the text surface
-        text_surface = floating_font.render(ft["text"], True, ft["color"])
-        text_surface.set_alpha(alpha)
-
-        # Create an outline by drawing black text slightly shifted
-        outline_color = (50, 50, 50)  
-        for dx in [-2, 0, 2]:
-            for dy in [-2, 0, 2]:
-                if dx != 0 or dy != 0:
-                    outline_surface = floating_font.render(ft["text"], True, outline_color)
-                    outline_surface.set_alpha(alpha)
-                    screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
-    
-        screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
-
-    for ft in texts_to_remove:
-        floating_texts.remove(ft)
-
-
 # === GAME LOOP ===
 dialogue_lines = ["Hi! Welcome to the store!", "DON'T COME BACK", "BYE", "[MENU]"]
 npc = NPC(300, 300 , dialogue_lines)
 menu_options = ["🛒 Shop", "📜 Quest"]
 selected_option = 0
-
 
 # 初始位置
 player_x = 500
@@ -386,17 +344,13 @@ statemanager = None
 class StateManager():
     def __init__(self, state, var_dict):
         self.state, self.var_dict = state, var_dict
-        self.var_dict['hp'],  self.var_dict['mp'] = hp, mp
 
     def eventhandler(self, E):
         self.state.eventhandler(self.var_dict['mg_state'], E)
 
     def update(self):
-        global hp, mp, game_state, statemanager, vm_level 
-        self.var_dict['hp'], self.var_dict['mp'] = hp, mp
+        global game_state, statemanager, vm_level 
         self.state.update(self.var_dict['mg_state'], self.var_dict)
-        hp, mp = self.var_dict['hp'], self.var_dict['mp']
-
         if self.var_dict.get('vm_level'): vm_level = self.var_dict['vm_level']
         if not self.var_dict['mg_state']:
             game_state = "game"
@@ -406,8 +360,8 @@ class StateManager():
 
     def draw(self):
         self.state.draw(screen, self.var_dict['mg_state'])
-        Functions.display_stats(screen, hp, mp)
-        NOTI.displayicon(mp, vm_level, xsmall_font)
+        Functions.display_stats(screen)
+        NOTI.displayicon(vm_level, xsmall_font)
         if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
 clock = pygame.time.Clock()
@@ -561,16 +515,9 @@ while running:
                 popup_button_rect = draw_popup(screen, character["description"], small_font)
                 break  # Only one popup at a time
 
-        if not show_intro_message:
-            screen.blit(mge_statsbar_image, (0, 0))
-            energy_text = custom_font.render(f"{energy:06}", True, (0, 0, 0))
-            money_text = custom_font.render(f"{money:06}", True, (0, 0, 0))
-            screen.blit(energy_text, (80, 28))
-            screen.blit(money_text, (80, 105))
-            draw_floating_texts()
-
-        Functions.display_stats(screen, hp, mp)
-        NOTI.displayicon(mp, vm_level, xsmall_font)
+        Functions.display_stats(screen)
+        NOTI.displayicon(vm_level, xsmall_font)
+        Functions.draw_floating_texts(screen)
 
     # == Lanching Mini Game  ==
     if statemanager: statemanager.draw()
@@ -636,8 +583,8 @@ while running:
                     if result:
                         energy -= result["energy_spent"]
                         money += result["money_earned"]
-                        add_floating_text(f"-{result['energy_spent']}", 250, 28, (128, 128, 128))
-                        add_floating_text(f"+{result['money_earned']}", 250, 110, (128, 128, 128))
+                        Functions.add_floating_text(f"-{result['energy_spent']}", 250, 28, (128, 128, 128))
+                        Functions.add_floating_text(f"+{result['money_earned']}", 250, 110, (128, 128, 128))
 
                         pygame.mixer.music.load("Assets/Song/background.mp3")
                         pygame.mixer.music.set_volume(0.5)
@@ -680,18 +627,21 @@ while running:
                 elif event.key == pygame.K_1: 
                     statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT, clock), mg1_var_dict.copy())
                     game_state = "mg1"
+                    break
 
                 # Placeholder for launching minigames
                 elif event.key == pygame.K_4: 
-                    statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT), mg4_var_dict.copy())
+                    statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, vm_buyingprices), mg4_var_dict.copy())
                     game_state = "mg4"
+                    break
 
         # == EVENTS for passive income from Mini Game 4 ==
-        elif event.type == VM1: hp, mp  = Functions.update_stats(hp, mp, mpchange=vm_income[0][vm_level[0] - 1])
-        elif event.type == VM2: hp, mp = Functions.update_stats(hp, mp, mpchange=vm_income[1][vm_level[1] - 1])
+        elif event.type == VM1: Functions.update_stats(mpchange=vm_income[0][vm_level[0] - 1])
+        elif event.type == VM2: Functions.update_stats(mpchange=vm_income[1][vm_level[1] - 1])
         NOTI.updatetip(vm_level, event)
         
         if statemanager: statemanager.eventhandler(event)
+        NOTI.updatetip(vm_level, event)
 
     if statemanager: statemanager.update()
 

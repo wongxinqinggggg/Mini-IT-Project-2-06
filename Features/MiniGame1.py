@@ -46,7 +46,7 @@ class MG1():
                     self.var_dict['mg_state'] = "menu"
 
                 elif self.startbtnrect.collidepoint(E.pos): 
-                    self.newgame(self.var_dict['hp'])
+                    self.newgame()
 
             elif mg_state == "instruc":
                 if self.instrucbackrect.collidepoint(E.pos): self.var_dict['mg_state'] = "mainpage"
@@ -63,7 +63,7 @@ class MG1():
 
             elif self.var_dict['mg_state'] == "menu":
                 self.var_dict, cursorclicked = self.menu.eventhandler(E, self.var_dict)
-                if self.var_dict['mg_state'] == "restart": self.newgame(self.var_dict['hp'])
+                if self.var_dict['mg_state'] == "restart": self.newgame()
 
             if self.btnrectdict.get(mg_state):
                 for rect in self.btnrectdict[mg_state]:
@@ -95,9 +95,9 @@ class MG1():
 
     def update(self, mg_state, var_dict):
         self.var_dict = var_dict
-        self.var_dict['hp'], self.var_dict['mp'] = Functions.update_stats(self.var_dict['hp'], self.var_dict['mp'], self.statschange['hpc'], self.statschange['mpc'])
-        if self.statschange['hpc']: Functions.add_floating_text(f"{self.statschange['hpc']}", 'hp', (128, 128, 128))
-        if self.statschange['mpc']: Functions.add_floating_text(f"+{self.statschange['mpc']}", 'mp', (128, 128, 128))
+        Functions.update_stats(self.statschange['hpc'], self.statschange['mpc'])
+        if self.statschange['hpc']: Functions.add_floating_text(f"{self.statschange['hpc']}", 'hp', )
+        if self.statschange['mpc']: Functions.add_floating_text(f"+{self.statschange['mpc']}", 'mp',)
         self.statschange['hpc'], self.statschange['mpc'] = None, None
 
         if mg_state == "game":
@@ -222,8 +222,8 @@ class MG1():
         pygame.draw.rect(S, 'Black', box_rect, 3)
         S.blit(Lfont.render(msg, True, 'Black'), (xpos, ypos))
 
-    def newgame(self, hp):
-        if hp < self.STATS['hp']:
+    def newgame(self):
+        if Functions.energy < self.STATS['hp']:
             self.var_dict['msg'] = self.msg[2]
             self.var_dict['mg_state'] = "mainpage"
             return
