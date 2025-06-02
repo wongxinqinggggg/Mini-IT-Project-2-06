@@ -1,5 +1,5 @@
 import pygame
-from Features import MiniGame1, MiniGame4, Store
+from Features import MiniGame1
 
 # === Setup ===
 pygame.init()
@@ -46,16 +46,10 @@ show_intro_message = True  # False — intro message will display
 typing_done = False        # Added this flag to control when typing is done
 running = True
 
-vm_level = [0, 0]   # Vending machine level for Mini Game 4
-vm_income = [[1, 2, 3], [5, 6, 7]]
-VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
 mg_var_dict = {}
 mg1_var_dict = {'mg_state': "mainpage", 'plates': 0, 'stains': None, 'new_plate': True, 
                 'time_passed': 0, 'msg': None, 'dragging': None,
                 'Lfont': large_font, 'Mfont': middle_font, 'hpc': None, 'mpc': None}
-mg4_var_dict = {'mg_state': "mainpage", 'mp': mp, 'vm_level': vm_level, 'vm_income': vm_income, 
-                'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 'mpc': None}
-store_var_dict = {'mg_state': "mainpage", 'mp': mp, 'hpc': None, 'mpc': None}
 
 # Cursor blinking
 cursor_visible = True
@@ -197,20 +191,6 @@ while running:
             if mg_var_dict['mg_state'] != "instruc": display_stats()
         update_stats(mpchange = mg_var_dict['mpc'])
 
-    # == Launching Mini Game 4 ==
-    elif game_state == "mg4":
-        mg_var_dict['mp'] = mp
-        MG4 = MiniGame4.MG4(screen, WIDTH, HEIGHT, mg_var_dict)
-        mg_var_dict = MG4.var_dict
-        display_stats()
-
-    # == Lanching Food Store ==
-    elif game_state == "store": 
-        mg_var_dict['hp'], mg_var_dict['mp'] = hp, mp
-        STORE = Store.STORE(screen, WIDTH, HEIGHT, mg_var_dict)
-        mg_var_dict = STORE.var_dict
-        display_stats()
-
     # === Event Handling ===
     for event in pygame.event.get():
         if event.type == pygame.QUIT:   running = False
@@ -249,33 +229,10 @@ while running:
                 game_state, mg_var_dict = "mg1", mg1_var_dict.copy()
                 break
 
-            elif event.key == pygame.K_4: 
-                game_state, mg_var_dict = "mg4", mg4_var_dict.copy()
-                break
-            
-            elif event.key == pygame.K_5:
-                game_state, mg_var_dict = "store", store_var_dict.copy()
-                break
-
-        # == EVENTS for passive income from Mini Game 4 ==
-        elif event.type == VM1: update_stats(mpchange = vm_income[0][vm_level[0] - 1])
-        elif event.type == VM2: update_stats(mpchange = vm_income[1][vm_level[1] - 1])
-
         if game_state == "mg1":   
             MG1.__init__(screen, WIDTH, HEIGHT, mg_var_dict, event)
             mg_var_dict = MG1.var_dict
             update_stats(mg_var_dict['hpc'], mg_var_dict['mpc'])
-    
-        elif game_state == "mg4":
-            MG4.__init__(screen, WIDTH, HEIGHT, mg_var_dict, event)
-            mg_var_dict = MG4.var_dict
-            update_stats(mpchange = mg_var_dict['mpc'])
-            
-        elif game_state == "store":
-            STORE.__init__(screen, WIDTH, HEIGHT, mg_var_dict, event)
-            mg_var_dict = STORE.var_dict
-            update_stats(mg_var_dict['hpc'], mg_var_dict['mpc'])
-
 
     if mg_var_dict: 
         if not mg_var_dict['mg_state']:
