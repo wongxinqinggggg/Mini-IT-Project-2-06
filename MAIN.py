@@ -4,7 +4,7 @@ import time
 import random
 import os
 from MG3.MG_3 import run_MG3
-from Features import Functions, MiniGame1, MiniGame4, Store
+from Features import Functions, MiniGame1, MiniGame4
 
 # === SETUP ===
 pygame.init()
@@ -17,17 +17,14 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No Money, No Life")
 
 # === FONTS ===
-font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 20)
-small_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 14)
+font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 20)
+small_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 14)
 FONT = pygame.font.SysFont("arial", 20)
 BIG_FONT = pygame.font.SysFont("arial", 26)
 xlarge_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 38)
 large_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
 middle_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 26)
 xsmall_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 8)
-custom_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 25)
-font_1 = pygame.font.SysFont('Assets/Font/PressStart2P.ttf', 28, bold=True)
-floating_font = pygame.font.Font("Assets/Font/PressStart2P.ttf", 30)  
 
 # === MUSIC ===
 pygame.mixer.music.load("Assets/Song/background.mp3")
@@ -45,9 +42,6 @@ BUTTON_COLOR = (220, 220, 220)
 
 # === IMAGES ===
 bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
-mge_statsbar_image = pygame.image.load("Assets/Images/MGE_Statsbar.png").convert_alpha()
-Menu_image = pygame.image.load("Assets/Images/Assets/Images/Menu-button.png").convert_alpha()
-Inside_menu_image = pygame.image.load("Assets/Images/Menu-2.png").convert_alpha()
 map_img = pygame.image.load("Assets/Images/final_map.png").convert()
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
 
@@ -61,7 +55,7 @@ def load_tilemap(filename):
     return tilemap
 
 tilemap = load_tilemap("map_tiled.txt")
-blocking_tiles = [1]
+blocking_tiles = [1, 2]
 TILE_SIZE = 16
 collision_rects = []
 for y, row in enumerate(tilemap):
@@ -104,11 +98,19 @@ show_intro_message = True
 typing_done = False
 running = True
 
-hp, mp = 100, 899
+Functions.initialize_stats()
+vm_level = [0, 0]   # Vending machine level for Mini Game 4
+vm_income = [[1, 2, 3], [5, 6, 7]]
+vm_buyingprices = [[300, 400, 500], [800, 900, 1000]]
+VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
+NOTI = Functions.Notifications(screen, vm_buyingprices, vm_income)
 mg_var_dict = {}
-mg1_var_dict = {'mg_state': "mainpage", 'hp': None, 'mp': None, 'time_passed': 0, 'msg': None, 
-                'new_plate': True, 'plates': 0, 'stains': None, 'dragging': None, 'Lfont': large_font, 
-                'Mfont': middle_font, 'XLfont': xlarge_font, 'prev_state': None, 'fade': None}
+mg1_var_dict = {'mg_state': "mainpage", 'time_passed': 0, 'msg': None, 'new_plate': True, 
+                'plates': 0, 'stains': None, 'dragging': None, 'prev_state': None,
+                'Lfont': large_font, 'Mfont': middle_font, 'XLfont': xlarge_font, 'fade': None}
+mg4_var_dict = {'mg_state': "mainpage", 'vm_level': vm_level, 'vm_income': vm_income, 
+                'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 'XSfont': xsmall_font, 
+                'prev_state': None, 'dragging': None, 'noti': NOTI}
 
 # CURSOR
 cursor_visible = True
@@ -125,36 +127,25 @@ typed_message = ""
 typing_index = 0
 
 # === PLAYER ===
-character_paths = {"male": "male/", "female": "female/"}
+sprite_width, sprite_height = 32, 64
+def get_sprite(x, y):
+    spritesheet = pygame.image.load("Assets/Sprites/spritesheet.png").convert_alpha()
+    uppersurf = pygame.Surface((sprite_width, sprite_height/2), pygame.SRCALPHA).convert_alpha()
+    uppersurf.blit(spritesheet, (0,0), (x*sprite_width, y*sprite_height, sprite_width, sprite_height/2))
+    lowersurf = pygame.Surface((sprite_width, sprite_height/2), pygame.SRCALPHA).convert_alpha()
+    lowersurf.blit(spritesheet, (0,0), (x*sprite_width, y*sprite_height+sprite_height/2, sprite_width, sprite_height/2))
+    return [uppersurf, lowersurf]
 
-def load_player_images(character_folder):
-    path = character_paths[character_folder]
-    return {
-        "idle": {
-            "w": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_up.png").convert_alpha(),
-            "s": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_down.png").convert_alpha(),
-            "a": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha(),
-            "d": pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
-        },
-        "walk": {
-            "w": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_up_2.png").convert_alpha()
-            ],
-            "s": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_down_2.png").convert_alpha()
-            ],
-            "a": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_left_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_left.png").convert_alpha()
-            ],
-            "d": [
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_walk_right_1.png").convert_alpha(),
-                pygame.image.load("Assets/Sprites/" + path + f"{character_folder}_idle_right.png").convert_alpha()
-            ]
-        }
-    }
+
+def load_player_images(character):
+    if character == "female": y = 0
+    elif character == "male": y = 1
+    return {"idle": {"w": get_sprite(3, y), "s": get_sprite(0, y), 
+                     "a": get_sprite(1, y), "d": get_sprite(2, y)},
+            "walk": {"w": [get_sprite(8, y), get_sprite(9, y)],
+                     "s": [get_sprite(4, y), get_sprite(5, y)],
+                     "a": [get_sprite(6, y), get_sprite(1, y)],
+                     "d": [get_sprite(7, y), get_sprite(2, y)]}}
 
 # === CAMERA ===
 def get_camera_offset():
@@ -164,6 +155,8 @@ def get_camera_offset():
 
 # Load and scale character images, and define their positions
 def is_near(player_x, player_y, npc_x, npc_y, distance=50):
+    npc_x += img.get_width()/2
+    npc_y += img.get_height()/2
     return abs(player_x - npc_x) < distance and abs(player_y - npc_y) < distance
 
 def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255), border_color=(0, 0, 0), padding=20, line_spacing=5):
@@ -285,6 +278,18 @@ class NPC:
         if self.direction == "s": self.y += 1
         if self.direction == "d": self.x += 1
 
+# === Obstacles and buildings ===
+buildingsurflist = Functions.get_sprite(224, 160, pygame.image.load("Assets/Images/Buildingsheet.png").convert_alpha())
+obstaclesurflist = Functions.get_sprite(96, 64, pygame.image.load("Assets/Images/Obstaclesheet.png").convert_alpha())
+obstaclelist = [(1, 0, 0, 0), (18, 0, 0, 0), (40, 2, 0, 0), (57, 10.2, 0, 0), (57, 6.73, 0, 0), 
+                (57, 3.3, 0, 0), (57, 0, 0, 0), (61.5, 10.2, 0, 0), (61.5, 6.73, 0, 0), 
+                (61.5, 3.3, 0, 0), (61.5, 0, 0, 0), (26.5, 6, 0, 0), (16.5, 10, 0, 0), 
+                (38, 10, 0, 0), (31.5, 17, 0, 0), (3, 19, 0, 0), (12, 19, 0, 0), (10.5, 24, 0, 0), 
+                (55, 23, 0, 0), (4, 32, 0, 0), (57, 33, 0, 0), (34, 38, 0, 0), (26, 38, 0, 0), 
+                (57, 42, 0, 0), (44.5, 3, 0, 0), (16, 24, 0, 0), (46, 40, 1, 0), (40.5, 23.5, 1, 0.7),
+                (18, 37.3, 2, 0)]
+buildinglist = [(2.5, 3.2), (47.4, 1.5), (19.9, 17.15), (42, 18.15), (4.85, 35.5), (37.8, 34.54)]
+
 # FUNCTION TO GENERATE INTRO MESSAGE
 def generate_intro_message(name):
     return (
@@ -316,57 +321,16 @@ def draw_text_box(surface, message, font, color, box_rect, padding=10, line_heig
         line_surface = font.render(l.strip(), True, color)
         surface.blit(line_surface, (box_rect.x + padding, box_rect.y + padding + i * line_height))
 
-# Set Energy etc
-energy = 120
-money = 100
-total_energy_spent = 0
-total_money_earned = 0
-
-# Floating text
-def add_floating_text(text, x, y, color):
-    floating_texts.append({"text": text, "x": x, "y": y, "start_time": pygame.time.get_ticks(), "color": color})
-
-def draw_floating_texts():
-    current_time = pygame.time.get_ticks()
-    texts_to_remove = []
-    for ft in floating_texts[:]:
-        elapsed = (current_time - ft["start_time"]) / 1000
-        if elapsed > 1.5:
-            texts_to_remove.append(ft)
-            continue
-
-        offset_y = int(30 * elapsed)
-        alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
-
-        # Create the text surface
-        text_surface = floating_font.render(ft["text"], True, ft["color"])
-        text_surface.set_alpha(alpha)
-
-        # Create an outline by drawing black text slightly shifted
-        outline_color = (50, 50, 50)  
-        for dx in [-2, 0, 2]:
-            for dy in [-2, 0, 2]:
-                if dx != 0 or dy != 0:
-                    outline_surface = floating_font.render(ft["text"], True, outline_color)
-                    outline_surface.set_alpha(alpha)
-                    screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
-    
-        screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
-
-    for ft in texts_to_remove:
-        floating_texts.remove(ft)
-
-
 # === GAME LOOP ===
 dialogue_lines = ["Hi! Welcome to the store!", "DON'T COME BACK", "BYE", "[MENU]"]
 npc = NPC(300, 300 , dialogue_lines)
 menu_options = ["🛒 Shop", "📜 Quest"]
 selected_option = 0
 
-
 # 初始位置
 player_x = 500
 player_y = 400
+moving = False
 player_speed = 1.5
 player_direction = "s"
 walk_frame = 0
@@ -378,27 +342,23 @@ statemanager = None
 class StateManager():
     def __init__(self, state, var_dict):
         self.state, self.var_dict = state, var_dict
-        self.var_dict['hp'],  self.var_dict['mp'] = hp, mp
 
     def eventhandler(self, E):
         self.state.eventhandler(self.var_dict['mg_state'], E)
 
     def update(self):
-        global hp, mp, game_state, statemanager, vm_level 
-        self.var_dict['hp'], self.var_dict['mp'] = hp, mp
+        global game_state, statemanager, vm_level 
         self.state.update(self.var_dict['mg_state'], self.var_dict)
-        hp, mp = self.var_dict['hp'], self.var_dict['mp']
-
         if self.var_dict.get('vm_level'): vm_level = self.var_dict['vm_level']
         if not self.var_dict['mg_state']:
             game_state = "game"
             statemanager, self, Functions.displaystat = None, None, True
-            pygame.mixer.music.load("Assets/Audio/background.mp3")
-            pygame.mixer.music.play(-1)
+            Functions.play_music("background")
 
     def draw(self):
         self.state.draw(screen, self.var_dict['mg_state'])
-        Functions.display_stats(screen, hp, mp)
+        Functions.display_stats(screen)
+        NOTI.displayicon(vm_level, xsmall_font)
         if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
 clock = pygame.time.Clock()
@@ -465,67 +425,90 @@ while running:
             dialog_box_rect = pygame.Rect(110, 380, 800, 180)
             draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
 
-        # Player movement 
-        old_x, old_y = player_x, player_y
-        keys = pygame.key.get_pressed()
-        moving = False
-        new_x, new_y = player_x, player_y  # New position after moving
-
-
-        # 获取按键
-        keys = pygame.key.get_pressed()
-        moving = False
-        new_x, new_y = player_x, player_y  # 
-        
-        if keys[pygame.K_w]:
-            new_y -= player_speed
-            player_direction = "w"
-            moving = True
-        if keys[pygame.K_s]:
-            new_y += player_speed
-            player_direction = "s"
-            moving = True
-        if keys[pygame.K_a]:
-            new_x -= player_speed
-            player_direction = "a"
-            moving = True
-        if keys[pygame.K_d]:
-            new_x += player_speed
-            player_direction = "d"
-            moving = True
-
-        # 创建玩家的目标矩形，用来检查碰撞
-        player_rect = pygame.Rect(new_x, new_y, player_imgs["idle"][player_direction].get_width(), player_imgs["idle"][player_direction].get_height())
-        for rect in collision_rects:
-            if player_rect.colliderect(rect):
-                moving = False  # Stop movement on collision
-                break
-
-        # 检查碰撞
-        for rect in collision_rects:
-            if player_rect.colliderect(rect):
-                moving = False  # 如果发生碰撞，则不允许移动
-                break
-
-        # 如果没有发生碰撞，更新玩家位置
-        if moving:
-            player_x, player_y = new_x, new_y
-
-        # 更新动画帧
-        if moving:
-            if pygame.time.get_ticks() - walk_timer > walk_delay:
-                walk_frame = (walk_frame + 1) % len(player_imgs["walk"][player_direction])
-                walk_timer = pygame.time.get_ticks()
-        else:
-            walk_frame = 0
-
         # 更新NPC和绘制玩家
         npc.move_random()
         npc.draw(screen, camera_x, camera_y)
+        move_distance = player_speed
+
+        # Player movement 
+        keys = pygame.key.get_pressed()
+        moving = False
+        new_x, new_y = player_x, player_y  # New position after moving
+        
+        if ((keys[pygame.K_w] and keys[pygame.K_s]) or 
+            (keys[pygame.K_a] and keys[pygame.K_d])): 
+            moving = False
+        else:
+            # Calculate distance for diagonal movement so that total displacement is = speed 
+            if ((keys[pygame.K_w] or keys[pygame.K_s]) and 
+                (keys[pygame.K_a] or keys[pygame.K_d])):
+                move_distance = ((player_speed**2)/2)**0.5  
+
+            if keys[pygame.K_w]:
+                new_y -= move_distance
+                player_direction = "w"
+            elif keys[pygame.K_s]:
+                new_y += move_distance
+                player_direction = "s"
+            if keys[pygame.K_a]:
+                new_x -= move_distance
+                player_direction = "a"
+            elif keys[pygame.K_d]:
+                new_x += move_distance
+                player_direction = "d"
+
+        # 创建玩家的目标矩形，用来检查碰撞
+        if player_x != new_x:
+            player_rect = pygame.Rect(new_x, player_y, sprite_width, sprite_height/2)
+            for rect in collision_rects:
+                if player_rect.colliderect(rect):
+                    x_distance = abs(player_x + sprite_width/2 - rect.center[0]) - (sprite_width/2 + rect.width/2)
+                    if not x_distance: new_x = player_x  # Stop movement on collision
+                    else: 
+                        if keys[pygame.K_a]: new_x = player_x - x_distance
+                        elif keys[pygame.K_d]: new_x = player_x + x_distance
+                    break
+                        
+        if player_y != new_y:
+            player_rect = pygame.Rect(player_x, new_y, sprite_width, sprite_height/2)
+            for rect in collision_rects:
+                if player_rect.colliderect(rect):
+                    y_distance = abs(player_y + sprite_height/4 - rect.center[1]) - (sprite_height/4 + rect.height/2)
+                    if not y_distance: new_y = player_y  # Stop movement on collision
+                    else: 
+                        if keys[pygame.K_w]: new_y = player_y - y_distance
+                        elif keys[pygame.K_s]: new_y = player_y + y_distance
+                    break
+                    
+        # 如果没有发生碰撞，更新玩家位置, 更新动画帧
+        if (player_x != new_x) or (player_y != new_y): 
+            moving = True
+            player_x, player_y = new_x, new_y
+            if pygame.time.get_ticks() - walk_timer > walk_delay:
+                walk_frame += 1
+                if walk_frame >= len(player_imgs["walk"][player_direction]): walk_frame = 0
+                walk_timer = pygame.time.get_ticks()
+        
+        else: walk_frame = 0
+
         current_img = player_imgs["walk"][player_direction][walk_frame] if moving else player_imgs["idle"][player_direction]
-        screen.blit(current_img, (player_x - camera_x, player_y - camera_y))
-        # for rect in collision_rects:
-            # pygame.draw.rect(screen, (255, 0, 0), (rect.x - camera_x, rect.y - camera_y, rect.width, rect.height), 1)
+        screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
+
+        for i in range(len(buildinglist)): 
+            xpos, ypos = buildinglist[i][0]*TILE_SIZE - camera_x, buildinglist[i][1]*TILE_SIZE - camera_y
+            if (-224 <= xpos <= WIDTH) and (-160 <= ypos <= HEIGHT):
+                screen.blit(buildingsurflist[i], (xpos, ypos))
+
+        for x, y, surfid, scale in obstaclelist:
+            surf = obstaclesurflist[surfid]
+            xpos, ypos = x*TILE_SIZE - camera_x, y*TILE_SIZE - camera_y
+            if (-96 <= xpos <= WIDTH) and (-64 <= ypos <= HEIGHT):
+                if scale: surf = pygame.transform.scale_by(surf, scale)
+                screen.blit(surf, (xpos, ypos))
+
+        upper_rect = pygame.Rect(0, 0, sprite_width, sprite_height/2)
+        upper_rect.bottomleft = (player_x - camera_x, player_y - camera_y)
+        screen.blit(current_img[0], upper_rect)
 
         if npc.talking:
             pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 160, WIDTH - 100, 110))
@@ -539,28 +522,17 @@ while running:
             else:
                 screen.blit(FONT.render(current_line, True, WHITE), (60, HEIGHT - 130))
 
-        for char in characters:
-            screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
-
-            popup_button_rect = None
-            for character in characters:
-                screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
-
         # Only show popup for the first nearby character
+        popup_button_rect = None
         for character in characters:
+            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
             if is_near(player_x, player_y, character["x"], character["y"]):
                 popup_button_rect = draw_popup(screen, character["description"], small_font)
                 break  # Only one popup at a time
 
-        if not show_intro_message:
-            screen.blit(mge_statsbar_image, (0, 0))
-            energy_text = custom_font.render(f"{energy:06}", True, (0, 0, 0))
-            money_text = custom_font.render(f"{money:06}", True, (0, 0, 0))
-            screen.blit(energy_text, (80, 28))
-            screen.blit(money_text, (80, 105))
-            draw_floating_texts()
-
-        Functions.display_stats(screen, hp, mp)
+        Functions.display_stats(screen)
+        NOTI.displayicon(vm_level, xsmall_font)
+        Functions.draw_floating_texts(screen)
 
     # == Lanching Mini Game  ==
     if statemanager: statemanager.draw()
@@ -626,12 +598,10 @@ while running:
                     if result:
                         energy -= result["energy_spent"]
                         money += result["money_earned"]
-                        add_floating_text(f"-{result['energy_spent']}", 250, 28, (128, 128, 128))
-                        add_floating_text(f"+{result['money_earned']}", 250, 110, (128, 128, 128))
+                        Functions.add_floating_text(f"-{result['energy_spent']}", 250, 28, (128, 128, 128))
+                        Functions.add_floating_text(f"+{result['money_earned']}", 250, 110, (128, 128, 128))
 
-                        pygame.mixer.music.load("Assets/Song/background.mp3")
-                        pygame.mixer.music.set_volume(0.5)
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("background")
 
                         # Force a redraw after MG3 ends
                         pygame.display.set_mode((WIDTH, HEIGHT))
@@ -670,12 +640,24 @@ while running:
                 elif event.key == pygame.K_1: 
                     statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT, clock), mg1_var_dict.copy())
                     game_state = "mg1"
+                    break
+
+                # Placeholder for launching minigames
+                elif event.key == pygame.K_4: 
+                    statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, vm_buyingprices), mg4_var_dict.copy())
+                    game_state = "mg4"
+                    break
+
+        # == EVENTS for passive income from Mini Game 4 ==
+        elif event.type == VM1: Functions.update_stats(mpchange=vm_income[0][vm_level[0] - 1])
+        elif event.type == VM2: Functions.update_stats(mpchange=vm_income[1][vm_level[1] - 1])
+        NOTI.updatetip(vm_level, event)
         
         if statemanager: statemanager.eventhandler(event)
+        NOTI.updatetip(vm_level, event)
 
     if statemanager: statemanager.update()
 
-        
-draw_floating_texts()
-pygame.display.flip()
+    pygame.display.flip()
+
 pygame.quit()

@@ -5,25 +5,29 @@ displaystat = True
 floating_texts = [] 
 floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110}}
 
-def update_stats(hp, mp, hpchange = None, mpchange = None):
-    if hpchange:    hp = min(max(hp + hpchange, 0), MAXHP)
-    if mpchange:    mp = min(max(mp + mpchange, 0), MAXMP)
-    return hp, mp
+def initialize_stats(hp=9999, mp=9999):
+    global energy, money, statsbar
+    energy, money = hp, mp
+    statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
 
-# === Function to display hp and mp ===
-def display_stats(S, hp, mp):    
+def update_stats(hpchange = None, mpchange = None):
+    global energy, money
+    if hpchange: energy = min(max(energy + hpchange, 0), MAXHP)
+    if mpchange: money = min(max(money + mpchange, 0), MAXMP)
+
+# === Function to display energy and money ===
+def display_stats(S):    
     Lfont = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
     if not displaystat: return
-    statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
-    hpsurf = Lfont.render(str(hp).zfill(6), False, 'Black')
+    hpsurf = Lfont.render(str(energy).zfill(6), False, 'Black')
     hprect = pygame.Rect(90, 30, 80, 50)
-    mpsurf = Lfont.render(str(mp).zfill(6), False, 'Black')
+    mpsurf = Lfont.render(str(money).zfill(6), False, 'Black')
     mprect = pygame.Rect(90, 105, 80, 50)
     S.blit(statsbar, (13, 13))
     S.blit(hpsurf, hprect)
     S.blit(mpsurf, mprect)
 
-def add_floating_text(text, id, color):
+def add_floating_text(text, id, color=(128,128,128)):
     floating_texts.append({"text": text, "x": floating_texts_pos[id]['x'], "y": floating_texts_pos[id]['y'], "start_time": pygame.time.get_ticks(), "color": color})
 
 def draw_floating_texts(S):
@@ -57,18 +61,53 @@ def draw_floating_texts(S):
     for ft in texts_to_remove:
         floating_texts.remove(ft)
 
+def get_sprite(sprite_width, sprite_height, spritesheet):
+    surflist = []
+    for i in range(int(spritesheet.get_height()/sprite_height)):
+        for j in range(int(spritesheet.get_width()/sprite_width)):
+            surf = pygame.Surface((sprite_width, sprite_height), pygame.SRCALPHA).convert_alpha()
+            surf.blit(spritesheet, (0,0), (j*sprite_width, i*sprite_height, sprite_width, sprite_height))
+            surflist.append(surf)
+    return surflist
+
+def load_sprite():
+    global iconlist, mainbtnlist, menubtnlist, tbtnlist
+    iconsheet = pygame.image.load("Assets/Images/Iconsheet.png").convert_alpha()
+    abtnsheet = pygame.image.load("Assets/Images/Mainbtnsheet.png").convert_alpha()
+    ebtnsheet = pygame.image.load("Assets/Images/Menubtnsheet.png").convert_alpha()
+    tbtnsheet = pygame.image.load("Assets/Images/Transactionbtnsheet.png").convert_alpha()
+
+    iconlist = get_sprite(30, 30, iconsheet)
+    mainbtnlist = get_sprite(80, 80, abtnsheet)
+    menubtnlist = get_sprite(271, 81, ebtnsheet)
+    tbtnlist = get_sprite(76, 34, tbtnsheet)
+
+def playsound(soundtype):
+    if soundtype == "btnclicked":
+        pygame.mixer.Sound("Assets/Audio/button_click.mp3").play()
+    elif soundtype == "success":
+        pygame.mixer.Sound("Assets/Audio/success.mp3").play(maxtime=2500)
+    elif soundtype == "fail":
+        pygame.mixer.Sound("Assets/Audio/fail.mp3").play()
+    elif soundtype == "transaction":
+        pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3").play(fade_ms=800)
+
+def play_music(path):
+    pygame.mixer.music.unload()
+    pygame.mixer.music.load(f"Assets/Audio/{path}.mp3")
+    pygame.mixer.music.play(-1)
+
 class Menu():
     def __init__(self, W):
+        self.muted = False
         self.audiobarxpos = [447, 649]
-        self.menupage = pygame.image.load("Assets/Images/MENU_Menu.png").convert_alpha()
-        self.resumebtn = pygame.image.load("Assets/Images/MENU_Resumebtn.png").convert_alpha()
+        self.menubtncenter = [(W/2, 235), (W/2, 335), (W/2, 435)]
+        self.resumebtn, self.restartbtn, self.quitbtn = menubtnlist[0], menubtnlist[1], menubtnlist[2]
         self.resumebtnrect = self.resumebtn.get_rect(center = (W/2, 235))
-        self.restartbtn = pygame.image.load("Assets/Images/MENU_Restartbtn.png").convert_alpha()
         self.restartbtnrect = self.restartbtn.get_rect(center = (W/2, 335))
-        self.quitbtn = pygame.image.load("Assets/Images/MENU_Quitbtn.png").convert_alpha()
         self.quitbtnrect = self.quitbtn.get_rect(center = (W/2, 435))
-        self.audioslider = pygame.image.load("Assets/Images/MENU_Audioslider.png").convert_alpha()
-        self.audiosliderrect = self.audioslider.get_rect(center = (0, 132))
+        self.audiosliderrect = pygame.rect.Rect(0, 0, 20, 20)
+        self.audiosliderrect.center = (0, 132)
         self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
         self.audiobtnrect = self.audiobtn.get_rect(center = (400, 132))
 
@@ -77,7 +116,7 @@ class Menu():
     
     def eventhandler(self, E, var_dict):
         cursor = False
-        restartable = False if var_dict['prev_state'] == "mainpage" else True
+        restartable = True if var_dict['prev_state'] == "game" else False
 
         if E.type == pygame.MOUSEBUTTONDOWN:
             if self.resumebtnrect.collidepoint(E.pos): 
@@ -133,28 +172,85 @@ class Menu():
         self.audiosliderrect.center = (audiosliderxpos, 132)
 
         # Load audio btn if music playing, load muted btn otherwise
-        if pygame.mixer.music.get_busy(): self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
-        else: self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn2.png").convert_alpha()
+        if pygame.mixer.music.get_busy(): self.audiobtn = self.muted = False
+        else: self.audiobtn = self.muted = True
 
     def draw(self, S):
-        S.blit(self.menupage, (0,0))
+        pygame.draw.rect(S, (100, 100, 120), (339, 82, 344, 412))
+        pygame.draw.rect(S, 'Black', (339, 82, 344, 412), 1)
         S.blit(self.resumebtn, self.resumebtnrect)
         S.blit(self.restartbtn, self.restartbtnrect)
         S.blit(self.quitbtn, self.quitbtnrect)
         S.blit(self.audiobtn, self.audiobtnrect)
-        S.blit(self.audioslider, self.audiosliderrect)
+        if self.muted: pygame.draw.line(S, 'Black', self.audiobtnrect.topleft, self.audiobtnrect.bottomright, 2)
+        pygame.draw.line(S, 'Black', (self.audiobarxpos[0], 130), (self.audiobarxpos[1], 130), 4)
+        pygame.draw.circle(S, 'Black', self.audiosliderrect.center, 10)
 
-def playsound(soundtype):
-    btnclicked = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
-    success = pygame.mixer.Sound("Assets/Audio/success.mp3")
-    fail = pygame.mixer.Sound("Assets/Audio/fail.mp3")
-    transaction = pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3")
+class Notifications():
+    def __init__(self, S, vm_buyingprices, vm_income):
+        self.S, self.vm_buyingprices, self.vm_income = S, vm_buyingprices, vm_income
+        self.displaynoti = [True, True]
+        self.counter = 0
+        self.anglecounter = 0
+        self.alertcenter = [(51, 159), (91, 159)]
+        self.angles = [0, 0, 25, -25, 25, -25]
+        self.hovering = False
 
-    if soundtype == "btnclicked":
-        btnclicked.play()
-    elif soundtype == "success":
-        success.play(maxtime=2500)
-    elif soundtype == "fail":
-        fail.play()
-    elif soundtype == "transaction":
-        transaction.play(fade_ms=800)
+        vm1noti, vm2noti = iconlist[4], iconlist[5]
+        vm1notirect = vm1noti.get_rect(center=(38, 170))
+        vm2notirect = vm2noti.get_rect(center=(78, 170))
+        self.alertbtn = pygame.image.load("Assets/Images/MAIN_Alertbtn.png").convert_alpha()
+
+        self.notis = [{'surf': vm1noti, 'rect': vm1notirect}, 
+                      {'surf': vm2noti, 'rect': vm2notirect}]
+    
+    def displayicon(self, vm_level, xsfont):
+        if not displaystat: return
+        elif not self.displaynoti[0] and not self.displaynoti[1]: return
+
+        self.counter += 1
+        if self.counter % 30 == 0:
+            if self.anglecounter < (len(self.angles) - 1): self.anglecounter += 1
+            else:self.anglecounter = 0
+        notialert = pygame.transform.rotate(self.alertbtn, self.angles[self.anglecounter])
+
+        for i in range(len(vm_level)):
+            if self.displaynoti[i]:
+                if not vm_level[i]:
+                    surf = pygame.transform.grayscale(self.notis[i]['surf'])
+                else: surf = self.notis[i]['surf']
+
+                self.S.blit(surf, self.notis[i]['rect'])
+                if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]:
+                    self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[i])))
+                elif vm_level[i]:
+                    pygame.draw.circle(self.S, 'Green', (self.alertcenter[i]), 6)
+                    pygame.draw.circle(self.S, 'Black', (self.alertcenter[i]), 6, 1)
+        
+        if self.hovering: self.displaytip(vm_level, xsfont)
+
+    def updatetip(self, vm_level, E):
+        if E.type == pygame.MOUSEMOTION: 
+            for i in range(len(vm_level)):
+                if self.displaynoti[i] and (self.notis[i]['rect']).collidepoint(E.pos):
+                    self.tippos = E.pos
+                    self.hovering = True
+                    break
+                else: self.hovering = False
+
+    def displaytip(self, vm_level, xsfont):
+        for i in range(len(vm_level)):
+            if self.displaynoti[i] and (self.notis[i]['rect']).collidepoint(pygame.mouse.get_pos()):
+                if not vm_level[i]: 
+                    lvltxt, incometxt = '', '(Not Owned)'
+                else:
+                    lvltxt = f'(Lv{vm_level[i]})' if vm_level[i] <= 2 else '(Maxed)'
+                    incometxt = f'income:{self.vm_income[i][vm_level[i]-1]}$/s'
+
+                tipsurfs = [xsfont.render((f'VM{i + 1} ' + lvltxt).center(12), False, 'Black'), 
+                           xsfont.render(incometxt, False, 'Black')]
+                tiprect = pygame.Rect(self.tippos[0] + 10, self.tippos[1] + 10, 100, 30)
+                pygame.draw.rect(self.S, 'White', tiprect)
+                pygame.draw.rect(self.S, 'Black', tiprect, 2)
+                for i in range(len(tipsurfs)):
+                    self.S.blit(tipsurfs[i], (tiprect.x + 6, tiprect.y + 5 + i * 12))
