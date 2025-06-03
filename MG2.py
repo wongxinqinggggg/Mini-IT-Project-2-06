@@ -330,4 +330,3 @@ def run_game(screen):
 
     pygame.time.set_timer(TIMER_EVENT, 0)
     pygame.mixer.music.stop()
-
