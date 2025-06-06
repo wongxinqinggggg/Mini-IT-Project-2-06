@@ -254,3 +254,161 @@ class Notifications():
                 pygame.draw.rect(self.S, 'Black', tiprect, 2)
                 for i in range(len(tipsurfs)):
                     self.S.blit(tipsurfs[i], (tiprect.x + 6, tiprect.y + 5 + i * 12))
+
+class Inventory():
+    def __init__(self, S, C):
+        self.S, self.C = S, C
+        self.maxlist = [1, 3, 9]
+        exitbtnpos = (975, 50)
+        self.dragging = False
+        self.hpchanges = [20, None, 150, 500]
+        self.statschange, self.usedcell = {'hp': None, 'mp': None}, None
+        self.bagprices = [-500, -2000]
+        self.baglvl, self.itemmax, self.surflist, self.rectlist, self.rectcenter = 1, 0, [], [], []
+        self.inventories = {'c1': None, 'c2': None, 'c3': None, 'c4': None, 'c5': None, 
+                            'c6': None, 'c7': None, 'c8': None, 'c9': None}
+        for key in self.inventories.keys(): self.inventories[key] = {'id': None, 'no': 0, 'locked': False}
+
+        self.baglist = [pygame.image.load("Assets/Images/Bag1.png").convert_alpha(),
+                        pygame.image.load("Assets/Images/Bag2.png").convert_alpha(),
+                        pygame.image.load("Assets/Images/Bag3.png").convert_alpha()]
+        
+        self.bag = self.baglist[0]
+        self.upgradebtn = pygame.image.load("Assets/Images/MGE_Upgradebtn.png").convert_alpha()
+        self.maxbtn = pygame.image.load("Assets/Images/MGE_Maxbtn.png").convert_alpha()
+        self.bagbtn, self.btnrect = self.upgradebtn, self.maxbtn.get_rect(center = (185, 480))
+        self.exitbtn = pygame.image.load("Assets/Images/MGE_Exitbtn.png").convert_alpha()
+        self.exitbtnrect = self.exitbtn.get_rect(center = exitbtnpos)
+
+        self.itemlist = [pygame.image.load("Assets/Images/STORE_Item1.png").convert_alpha(),
+                         pygame.image.load("Assets/Images/STORE_Item2.png").convert_alpha(),
+                         pygame.image.load("Assets/Images/STORE_Item3.png").convert_alpha(),
+                         pygame.image.load("Assets/Images/STORE_Item4.png").convert_alpha()]
+    
+        for i in range(len(self.itemlist)):
+            surf = self.itemlist[i]
+            Wratio, Hratio = surf.get_width()/120, surf.get_height()/120
+            if Wratio > 1 or Hratio > 1: ratio = min(1/Wratio, 1/Hratio)
+            else: ratio = max(Wratio, Hratio)
+            self.itemlist[i] = pygame.transform.scale(surf, (surf.get_width() * ratio, surf.get_height() * ratio))
+            
+        for i in range(9): self.rectcenter.append(((475 + int(i % 3) * 170, 135 + int(i / 3) * 170)))
+
+    def eventhandler(self, E, inventorypage=True):
+        global sprinttime
+        if E.type == pygame.MOUSEBUTTONDOWN and inventorypage:
+            soundtype = None
+            if self.btnrect.collidepoint(E.pos):
+                if self.baglvl < 3 and money >= (-self.bagprices[self.baglvl - 1]):
+                    self.statschange['mp'] = self.bagprices[self.baglvl - 1]
+                    self.baglvl += 1
+                    soundtype = 'transaction'
+                else: soundtype = 'btnclicked'
+                playsound(soundtype)
+            
+            if self.exitbtnrect.collidepoint(E.pos):
+                soundtype = 'btnclicked'
+                playsound(soundtype)
+                return 1
+
+            self.dragging = True
+
+        elif E.type == pygame.MOUSEMOTION:
+            pass
+
+        elif E.type == pygame.MOUSEBUTTONUP:
+            self.dragging = False
+
+        elif E.type == pygame.KEYDOWN:      
+            key = 'c' + E.unicode
+            if self.inventories.get(key): 
+                selectedcell = self.inventories[key]
+                if selectedcell['id'] and selectedcell['no']:
+                    self.statschange['hp'], self.usedcell = self.hpchanges[selectedcell['id'] - 1], key
+                    if selectedcell['id'] == 2: 
+                        sprinttime = 10
+
+                else: add_floating_text("Inventory slot empty!", 'inventoryE')
+
+        return
+            
+    def update(self):
+        global sprinttime
+        update_stats(self.statschange['hp'], self.statschange['mp'])
+        if self.statschange['hp']: add_floating_text(f"+{self.statschange['hp']}", 'hp')
+        if self.statschange['mp']: add_floating_text(f"{self.statschange['mp']}", 'mp')
+        self.statschange['hp'], self.statschange['mp'] = None, None
+
+        if self.usedcell:
+            self.inventories[self.usedcell]['no'] -= 1
+            if not self.inventories[self.usedcell]['no'] and not self.inventories[self.usedcell]['locked']:
+                self.inventories[self.usedcell]['id'] = None
+            self.usedcell = None
+
+        self.itemmax, self.surflist, self.rectlist, i = self.maxlist[self.baglvl - 1], [], [], 0
+        for key in self.inventories.keys():
+            surf = None
+            if self.inventories[key]['id']:
+                if self.inventories[key]['no']: surf = self.itemlist[self.inventories[key]['id'] - 1]  
+                else: surf = pygame.transform.grayscale(self.itemlist[self.inventories[key]['id'] - 1])
+
+            rect = None if not surf else surf.get_rect(center = self.rectcenter[i])
+            self.surflist.append(surf), self.rectlist.append(rect)
+            i += 1
+
+        if self.baglvl < 3:
+            if money >= (-self.bagprices[self.baglvl - 1]): self.bagbtn = self.upgradebtn 
+            else: self.bagbtn = pygame.transform.grayscale(self.upgradebtn)
+        else: self.bagbtn = self.maxbtn
+
+        self.bag = self.baglist[self.baglvl - 1]
+        sprinttime = max(0, sprinttime - self.C.get_time()/1000 )
+
+    def draw(self, xsfont, font):
+        self.S.fill((71, 59, 120))
+        self.S.blit(self.bag, (120, 300))
+        self.S.blit(self.bagbtn, self.btnrect)
+        self.S.blit(self.exitbtn, self.exitbtnrect)
+
+        for i in range(9):
+            dx, dy = int(i % 3) * 170, int(i / 3) * 170
+            pygame.draw.rect(self.S, 'White', ((400 + dx), (60 + dy), 150, 150), 0, 30)
+            pygame.draw.rect(self.S, 'Black', ((400 + dx), (60 + dy), 150, 150), 3, 30)
+            pygame.draw.circle(self.S, 'White', ((405 + dx), (202 + dy)), 15)
+            pygame.draw.circle(self.S, 'Black', ((405 + dx), (202 + dy)), 15, 1)
+            keytext = font.render(f'{i + 1}', False, 'Black')
+            self.S.blit(keytext, ((396 + dx), (194 + dy)))
+
+            if self.inventories['c' + str(i + 1)]['id']:
+                pygame.draw.circle(self.S, 'Grey', ((543  + dx), (68 + dy)), 15)
+                pygame.draw.circle(self.S, 'Black', ((543 + dx), (68 + dy)), 15, 1)
+                notext = xsfont.render(f"{self.inventories['c' + str(i + 1)]['no']}/{self.itemmax}", True, 'Black')
+                self.S.blit(notext, ((531 + dx), (65 + dy)))
+
+        for i in range(len(self.surflist)):
+            if self.surflist[i]: self.S.blit(self.surflist[i], self.rectlist[i])
+
+        draw_floating_texts(self.S)
+
+    def additem(self, item_id):
+        cell, cell1, cell2 = None, None, None
+        for key in self.inventories.keys():
+            if self.inventories[key]['id'] == item_id and self.inventories[key]['no'] < self.itemmax:
+                cell1 = key if not cell1 else cell1    # Prioritise the first cell if no locked cell
+                if self.inventories[key]['locked']: 
+                    cell = key      # Prioritise the locked cell
+                    break
+
+            elif not self.inventories[key]['id']: cell2 = key if not cell2 else cell2  # Use empty cell if no available cell
+        
+        if not cell:
+            if cell1: cell = cell1
+            else: cell = cell2
+        if cell: 
+            self.inventories[cell]['id'] = item_id
+            self.inventories[cell]['no'] += 1
+            return True    
+        
+        else: 
+            add_floating_text("Inventory full!", 'inventoryF')
+            return False
