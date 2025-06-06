@@ -3,7 +3,9 @@ import pygame
 MAXHP, MAXMP = 999999, 999999
 displaystat = True
 floating_texts = [] 
-floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110}}
+floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110},
+                      'inventoryE': {'x': 250, 'y': 500}, 'inventoryF': {'x': 350, 'y': 500}}
+sprinttime = 0
 
 def initialize_stats(hp=9999, mp=9999):
     global energy, money, statsbar
@@ -91,6 +93,8 @@ def playsound(soundtype):
         pygame.mixer.Sound("Assets/Audio/fail.mp3").play()
     elif soundtype == "transaction":
         pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3").play(fade_ms=800)
+    elif soundtype == "eating": 
+        pygame.mixer.Sound("Assets/Audio/Eating-Effect (u_scysdwddsp).mp3").play(maxtime=1200)
 
 def play_music(path):
     pygame.mixer.music.unload()
@@ -112,7 +116,7 @@ class Menu():
         self.audiobtnrect = self.audiobtn.get_rect(center = (400, 132))
 
         self.btnrectlist = [self.resumebtnrect, self.restartbtnrect, self.quitbtnrect, 
-                        self.audiobtnrect, self.audiosliderrect]
+                            self.audiobtnrect, self.audiosliderrect]
     
     def eventhandler(self, E, var_dict):
         cursor = False
@@ -189,7 +193,7 @@ class Menu():
 class Notifications():
     def __init__(self, S, vm_buyingprices, vm_income):
         self.S, self.vm_buyingprices, self.vm_income = S, vm_buyingprices, vm_income
-        self.displaynoti = [True, True]
+        self.displaynoti = [True, True, True, True]
         self.counter = 0
         self.anglecounter = 0
         self.alertcenter = [(51, 159), (91, 159)]
@@ -204,7 +208,7 @@ class Notifications():
         self.notis = [{'surf': vm1noti, 'rect': vm1notirect}, 
                       {'surf': vm2noti, 'rect': vm2notirect}]
     
-    def displayicon(self, vm_level, xsfont):
+    def displayicon(self, vm_level, xsfont, is_night):
         if not displaystat: return
         elif not self.displaynoti[0] and not self.displaynoti[1]: return
 

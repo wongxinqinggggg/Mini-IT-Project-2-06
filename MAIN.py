@@ -4,7 +4,7 @@ import time
 import random
 import os
 from MG3.MG_3 import run_MG3
-from Features import Functions, MiniGame1, MiniGame4
+from Features import Functions, MiniGame1, MiniGame4, Store
 
 # === SETUP ===
 pygame.init()
@@ -46,6 +46,48 @@ bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/Assets/Images/m
 map_img = pygame.image.load("Assets/Images/final_map.png").convert()
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
 
+# === GAME VARIABLES ===
+player_name = ''
+selected_character = None
+active_input = False
+warning_message = ''
+game_state = "intro"
+show_intro_message = True
+typing_done = False
+running = True
+
+Functions.initialize_stats()
+vm_level = [0, 0]   # Vending machine level for Mini Game 4
+vm_income = [[1, 2, 3], [5, 6, 7]]
+vm_buyingprices = [[300, 400, 500], [800, 900, 1000]]
+VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
+MENU = Functions.Menu(WIDTH)
+NOTI = Functions.Notifications(screen, vm_buyingprices, vm_income)
+INVENTORY = Functions.Inventory(screen, clock)
+menu_var_dict = {'mg_state': "menu", 'prev_state': "game", 'dragging': False}
+mg1_var_dict = {'mg_state': "mainpage", 'time_passed': 0, 'msg': None, 'new_plate': True, 
+                'plates': 0, 'stains': None, 'dragging': None, 'prev_state': None,
+                'Lfont': large_font, 'Mfont': middle_font, 'XLfont': xlarge_font, 'fade': None}
+mg4_var_dict = {'mg_state': "mainpage", 'vm_level': vm_level, 'vm_income': vm_income, 
+                'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 'XSfont': xsmall_font, 
+                'prev_state': None, 'dragging': None, 'noti': NOTI}
+store_var_dict = {'mg_state': "mainpage", 'prev_state': None, 'dragging': None, 'Mfont': middle_font}
+
+# CURSOR
+cursor_visible = True
+cursor_timer = 0
+cursor_interval = 500
+
+# UI ELEMENTS
+male_box = pygame.Rect(330, 325, 40, 40)
+female_box = pygame.Rect(650, 325, 40, 40)
+start_button = pygame.Rect(100, 455, 200, 60)
+continue_button = pygame.Rect(400, 455, 200, 60)
+reset_button = pygame.Rect(700, 455, 200, 60)
+typed_message = ""
+typing_index = 0
+saving_box = pygame.Rect(0, 200, WIDTH, 200)
+
 # === TILEMAP BLOCKING ===
 def load_tilemap(filename):
     tilemap = []
@@ -67,10 +109,22 @@ for y, row in enumerate(tilemap):
 # === SAVE/LOAD ===
 SAVE_FILE = "save_data.json"
 
-def save_game(player_name, selected_character):
-    data = {"player_name": player_name, "selected_character": selected_character}
+def save_game():
+    inventories = save_inventories(INVENTORY.inventories)
+    data = {"player_name": player_name, "selected_character": selected_character, 
+            'energy': Functions.energy, 'money': Functions.money, 'vm_level': vm_level, 
+            'inventories': inventories, 'sprinttime': Functions.sprinttime, 
+            'displaynoti': NOTI.displaynoti}
     with open(SAVE_FILE, "w") as f:
         json.dump(data, f)
+
+def save_inventories(inventories):
+    dic = {}
+    data = inventories.copy()
+    for key in data.keys():
+        for item in ['surf', 'rect', 'center', 'cellrect', 'lockrect']:
+            data[key].pop(item)
+    return data
 
 def load_game():
     if os.path.exists(SAVE_FILE):
@@ -78,7 +132,7 @@ def load_game():
             data = json.load(f)
         return data
     else:
-        print("No save file found. Starting a new game.")
+        warning_message = "No save file found. Starting a new game."
         return None  
 
 def reset_game():
@@ -89,47 +143,6 @@ def reset_game():
     else:
         warning_message = "No save file to delete!"
 
-# === GAME VARIABLES ===
-player_name = ''
-selected_character = None
-active_input = False
-warning_message = ''
-game_state = "intro"
-show_intro_message = True
-typing_done = False
-running = True
-
-Functions.initialize_stats()
-vm_level = [0, 0]   # Vending machine level for Mini Game 4
-vm_income = [[1, 2, 3], [5, 6, 7]]
-vm_buyingprices = [[300, 400, 500], [800, 900, 1000]]
-VM1, VM2 = pygame.USEREVENT + 1, pygame.USEREVENT + 2
-NOTI = Functions.Notifications(screen, vm_buyingprices, vm_income)
-INVENTORY = Functions.Inventory(screen, clock)
-mg_var_dict = {}
-store_var_dict = {'mg_state': "mainpage", 'prev_state': None, 'dragging': None}
-mg_var_dict = {}
-mg1_var_dict = {'mg_state': "mainpage", 'time_passed': 0, 'msg': None, 'new_plate': True, 
-                'plates': 0, 'stains': None, 'dragging': None, 'prev_state': None,
-                'Lfont': large_font, 'Mfont': middle_font, 'XLfont': xlarge_font, 'fade': None}
-mg4_var_dict = {'mg_state': "mainpage", 'vm_level': vm_level, 'vm_income': vm_income, 
-                'VM_EVENT': [VM1, VM2], 'Sfont': small_font, 'XSfont': xsmall_font, 
-                'prev_state': None, 'dragging': None, 'noti': NOTI}
-
-# CURSOR
-cursor_visible = True
-cursor_timer = 0
-cursor_interval = 500
-
-# UI ELEMENTS
-male_box = pygame.Rect(330, 325, 40, 40)
-female_box = pygame.Rect(650, 325, 40, 40)
-start_button = pygame.Rect(100, 455, 200, 60)
-continue_button = pygame.Rect(400, 455, 200, 60)
-reset_button = pygame.Rect(700, 455, 200, 60)
-typed_message = ""
-typing_index = 0
-
 # === PLAYER ===
 sprite_width, sprite_height = 32, 64
 def get_sprite(x, y):
@@ -139,7 +152,6 @@ def get_sprite(x, y):
     lowersurf = pygame.Surface((sprite_width, sprite_height/2), pygame.SRCALPHA).convert_alpha()
     lowersurf.blit(spritesheet, (0,0), (x*sprite_width, y*sprite_height+sprite_height/2, sprite_width, sprite_height/2))
     return [uppersurf, lowersurf]
-
 
 def load_player_images(character):
     if character == "female": y = 0
@@ -158,7 +170,7 @@ def get_camera_offset():
     return camera_x, camera_y
 
 # Load and scale character images, and define their positions
-def is_near(player_x, player_y, npc_x, npc_y, distance=50):
+def is_near(player_x, player_y, npc_x, npc_y, img, distance=50):
     npc_x += img.get_width()/2
     npc_y += img.get_height()/2
     return abs(player_x - npc_x) < distance and abs(player_y - npc_y) < distance
@@ -294,6 +306,11 @@ obstaclelist = [(1, 0, 0, 0), (18, 0, 0, 0), (40, 2, 0, 0), (57, 10.2, 0, 0), (5
                 (18, 37.3, 2, 0)]
 buildinglist = [(2.5, 3.2), (47.4, 1.5), (19.9, 17.15), (42, 18.15), (4.85, 35.5), (37.8, 34.54)]
 
+# === Main Btn ===
+inventoryrect = INVENTORY.bag.get_rect(center = (940, 500)) 
+menubtn = Functions.mainbtnlist[1]
+menubtnrect = menubtn.get_rect(center = (975, 50))
+
 # FUNCTION TO GENERATE INTRO MESSAGE
 def generate_intro_message(name):
     return (
@@ -335,7 +352,8 @@ selected_option = 0
 player_x = 500
 player_y = 400
 moving = False
-player_speed = 1.5
+speed = 1.5
+player_speed = speed
 player_direction = "s"
 walk_frame = 0
 walk_timer = 0
@@ -362,7 +380,7 @@ class StateManager():
     def draw(self):
         self.state.draw(screen, self.var_dict['mg_state'])
         Functions.display_stats(screen)
-        NOTI.displayicon(vm_level, xsmall_font)
+        NOTI.displayicon(vm_level, xsmall_font, is_night)
         if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
 clock = pygame.time.Clock()
@@ -412,35 +430,23 @@ while running:
             screen.blit(font.render(warning_message, True, WARNING_COLOR), (180, 530))
 
     elif game_state == "game":
-        player_speed = speedlist[1] if Functions.sprinttime > 0 else speedlist[0]
+        player_speed = speed if Functions.sprinttime <= 0 else speed * 2
 
         camera_x, camera_y = get_camera_offset()
         screen.fill((0, 0, 0))
         screen.blit(map_img, (0 - camera_x, 0 - camera_y))  # Apply camera offset # Apply camera offset here
 
-       # EFFECT FOR INTRO MESSAGE
-        if show_intro_message:
-            if not typing_done:
-                if typing_index < len(intro_message):
-                    typed_message += intro_message[typing_index]
-                    typing_index += 1
-                else:
-                    typing_done = True
-
-            # DRAW MESSAGE BOX
-            dialog_box_rect = pygame.Rect(110, 380, 800, 180)
-            draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
-
         # 更新NPC和绘制玩家
         npc.move_random()
         npc.draw(screen, camera_x, camera_y)
-        move_distance = player_speed
+        
 
         # Player movement 
         keys = pygame.key.get_pressed()
         moving = False
         new_x, new_y = player_x, player_y  # New position after moving
-        
+        move_distance = player_speed
+
         if ((keys[pygame.K_w] and keys[pygame.K_s]) or 
             (keys[pygame.K_a] and keys[pygame.K_d])): 
             moving = False
@@ -516,6 +522,14 @@ while running:
         upper_rect.bottomleft = (player_x - camera_x, player_y - camera_y)
         screen.blit(current_img[0], upper_rect)
 
+        # Only show popup for the first nearby character
+        popup_button_rect = None
+        for character in characters:
+            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
+            if is_near(player_x+sprite_width/2, player_y, character["x"], character["y"], character['img']):
+                popup_button_rect = draw_popup(screen, character["description"], small_font)
+                break  # Only one popup at a time
+
         if npc.talking:
             pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 160, WIDTH - 100, 110))
             pygame.draw.rect(screen, (255, 255, 255), (50, HEIGHT - 160, WIDTH - 100, 110), 3)
@@ -528,41 +542,62 @@ while running:
             else:
                 screen.blit(FONT.render(current_line, True, WHITE), (60, HEIGHT - 130))
 
-        # Only show popup for the first nearby character
-        popup_button_rect = None
-        for character in characters:
-            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
-            if is_near(player_x, player_y, character["x"], character["y"]):
-                popup_button_rect = draw_popup(screen, character["description"], small_font)
-                break  # Only one popup at a time
-
-        inventoryrect = INVENTORY.bag.get_rect(center = (940, 500)) 
+        screen.blit(menubtn, menubtnrect)
         screen.blit(INVENTORY.bag, inventoryrect)        # PLACEHOLDER
         Functions.display_stats(screen)
-        NOTI.displayicon(vm_level, xsmall_font)
+        NOTI.displayicon(vm_level, xsmall_font, is_night)
         Functions.draw_floating_texts(screen)
+
+        # EFFECT FOR INTRO MESSAGE
+        if show_intro_message:
+            if not typing_done:
+                if typing_index < len(intro_message):
+                    typed_message += intro_message[typing_index]
+                    typing_index += 1
+                else:
+                    typing_done = True
+
+            # DRAW MESSAGE BOX
+            dialog_box_rect = pygame.Rect(110, 380, 800, 180)
+            draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
 
     elif game_state == "inventory":
         INVENTORY.draw(xsmall_font, font)
         Functions.display_stats(screen)
-        NOTI.displayicon(vm_level, xsmall_font)
+        NOTI.displayicon(vm_level, xsmall_font, is_night)
+
+    elif game_state == "menu":
+        screen.blit(bg_img, (0, 0))
+        MENU.draw(screen)
+
+    elif game_state == "saving":
+        screen.blit(bg_img, (0, 0))
+        saving_timer += clock.get_time()
+        pygame.draw.rect(screen, (200, 0, 0), saving_box, 200)
+        i = int((saving_timer / 400) % 4)
+        screen.blit(xlarge_font.render(f'SAVING GAME{'.' * i}', True, 'Black'), (WIDTH/2 - 300, HEIGHT/2))
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAIT)
+        if saving_timer >= 3500: running = False
+        pygame.display.flip()
+        continue
 
     # == Lanching Mini Game  ==
     if statemanager: statemanager.draw()
 
     for event in pygame.event.get():
+        cursorclicked, cursorcollide = False, False
         if event.type == pygame.QUIT: running = False
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "intro":
                 active_input = True
                 if male_box.collidepoint(event.pos): selected_character = 'male'
-                if female_box.collidepoint(event.pos): selected_character = 'female'
-                if start_button.collidepoint(event.pos):
-                    if start_button.collidepoint(event.pos):
-                        if player_name and selected_character:
-                            save_game(player_name, selected_character)
+                elif female_box.collidepoint(event.pos): selected_character = 'female'
+                elif start_button.collidepoint(event.pos):
                     if player_name and selected_character:
+                        Functions.initialize_stats() 
+                        vm_level, NOTI.displaynoti, Functions.sprinttime = [0,0], [True, True, False, False], 0
+                        INVENTORY.load_inventories()
                         intro_message = generate_intro_message(player_name)
                         show_intro_message = True
                         typing_done = False
@@ -572,9 +607,15 @@ while running:
                         game_state = "game"
                     else:
                         warning_message = "Enter name and choose a character!"  # Only show this when conditions aren't met
-                if continue_button.collidepoint(event.pos):
+
+                elif continue_button.collidepoint(event.pos):
                     saved_data = load_game()
                     if saved_data:
+                        # load data from saved files
+                        Functions.initialize_stats(saved_data["energy"], saved_data["money"]) 
+                        vm_level, Functions.sprinttime = saved_data['vm_level'], saved_data['sprinttime']
+                        NOTI.displaynoti = saved_data['displaynoti']
+                        INVENTORY.load_inventories(saved_data['inventories'])
                         player_name = saved_data["player_name"]
                         selected_character = saved_data["selected_character"]
                         game_state = "game"
@@ -586,7 +627,9 @@ while running:
                         player_imgs = load_player_images(selected_character)
                     else:
                         warning_message = "No saved game found!"
-                if reset_button.collidepoint(event.pos): reset_game()
+
+                elif reset_button.collidepoint(event.pos): reset_game()
+
             elif game_state == "game":
                 if show_intro_message and typing_done: show_intro_message = False
                 if popup_button_rect and popup_button_rect.collidepoint(event.pos):
@@ -615,8 +658,51 @@ while running:
 
                         # Force a redraw after MG3 ends
                         pygame.display.set_mode((WIDTH, HEIGHT))
-                if inventoryrect.collidepoint(event.pos):
+
+                elif inventoryrect.collidepoint(event.pos):
+                    cursorclicked = True
+                    Functions.play_music("Playful-Days (MMAudio)")
                     game_state = "inventory"
+
+                elif menubtnrect.collidepoint(event.pos):
+                    cursorclicked = True
+                    var_dict = menu_var_dict.copy()
+                    game_state = "menu"
+
+            elif game_state == "inventory": 
+                if INVENTORY.eventhandler(event):
+                    Functions.play_music("background")
+                    game_state = "game" 
+
+            elif game_state == "menu":
+                var_dict, cursorclicked = MENU.eventhandler(event, var_dict)
+                if var_dict['mg_state'] == "game": game_state = "game"
+
+                elif var_dict['mg_state'] == "restart": 
+                    reset_game()
+                    game_state = "intro"
+
+                elif not var_dict['mg_state']: 
+                    save_game()
+                    saving_timer = 0
+                    game_state = "saving"
+
+        elif event.type == pygame.MOUSEMOTION:
+            if game_state == "menu": var_dict, cursorcollide = MENU.eventhandler(event, var_dict)
+
+            elif game_state == "game":
+                if menubtnrect.collidepoint(event.pos) or inventoryrect.collidepoint(event.pos):
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+                    cursorcollide = True
+
+            elif game_state == "inventory": 
+                INVENTORY.eventhandler(event)
+                cursorcollide = True
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if game_state == "menu": var_dict['dragging'] = False
+            elif game_state == "inventory": 
+                INVENTORY.eventhandler(event)
 
         elif event.type == pygame.KEYDOWN:
             if game_state == "intro":
@@ -624,13 +710,16 @@ while running:
                     player_name = player_name[:-1]
                 elif len(player_name) < 30:
                     player_name += event.unicode
+
             elif game_state == "game":
                 if event.key == pygame.K_RETURN and show_intro_message and typing_done:
                     show_intro_message = False
-                if event.key == pygame.K_e and npc.is_near_player(player_x, player_y):
+
+                elif event.key == pygame.K_e and npc.is_near_player(player_x, player_y):
                     npc.talking = True
                     npc.current_line = 0
                     selected_option = 0
+
                 if npc.talking:
                     if npc.dialogue[npc.current_line] == "[MENU]":
                         if event.key == pygame.K_LEFT:
@@ -652,29 +741,32 @@ while running:
                 elif event.key == pygame.K_p:
                     statemanager = StateManager(Store.STORE(WIDTH, HEIGHT, INVENTORY), store_var_dict.copy())
                     game_state = "store"
+                    break
                     
-                elif event.key == pygame.K_1: 
+                elif event.key == pygame.K_i: 
                     statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT, clock), mg1_var_dict.copy())
                     game_state = "mg1"
                     break
 
                 # Placeholder for launching minigames
-                elif event.key == pygame.K_4: 
+                elif event.key == pygame.K_o: 
                     statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, vm_buyingprices), mg4_var_dict.copy())
                     game_state = "mg4"
                     break
 
         # == EVENTS for passive income from Mini Game 4 ==
-        elif event.type == VM1: Functions.update_stats(mpchange=vm_income[0][vm_level[0] - 1])
-        elif event.type == VM2: Functions.update_stats(mpchange=vm_income[1][vm_level[1] - 1])
+        elif event.type and not is_night == VM1: Functions.update_stats(mpchange=vm_income[0][vm_level[0] - 1])
+        elif event.type and not is_night == VM2: Functions.update_stats(mpchange=vm_income[1][vm_level[1] - 1])
         
         if statemanager: statemanager.eventhandler(event)
-        elif game_state == "game": INVENTORY.eventhandler(event, False)
-        elif game_state == "inventory": game_state = "game" if INVENTORY.eventhandler(event) else "inventory"
-        NOTI.updatetip(vm_level, event)
+        else: 
+            if cursorclicked: Functions.playsound("btnclicked")
+            if not cursorcollide: pygame.mouse.set_cursor()
+        NOTI.updatetip(event)
 
     if statemanager: statemanager.update()
-    INVENTORY.update()
+    elif game_state == "menu": MENU.update()
+    elif game_state == "game" or game_state == "inventory": INVENTORY.update()
 
     pygame.display.flip()
 
