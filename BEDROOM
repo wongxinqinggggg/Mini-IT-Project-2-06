@@ -73,7 +73,7 @@ bed_rect = pygame.Rect(50, 350, 280, 100)
 
 # === Game State ===
 game_state = "bedroom"
-sleep_duration = 10
+sleep_duration = 20
 inside_menu_active = False
 show_sleep_popup = True
 sleeping = False
