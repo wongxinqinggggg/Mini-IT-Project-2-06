@@ -739,18 +739,18 @@ while running:
 
                 # Placeholder for launching minigames
                 elif event.key == pygame.K_p:
-                    statemanager = StateManager(Store.STORE(WIDTH, HEIGHT, INVENTORY), store_var_dict.copy())
+                    statemanager = StateManager(Store.STORE(WIDTH, HEIGHT, MENU, INVENTORY), store_var_dict.copy())
                     game_state = "store"
                     break
                     
                 elif event.key == pygame.K_i: 
-                    statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT, clock), mg1_var_dict.copy())
+                    statemanager = StateManager(MiniGame1.MG1(WIDTH, HEIGHT, MENU, clock), mg1_var_dict.copy())
                     game_state = "mg1"
                     break
 
                 # Placeholder for launching minigames
                 elif event.key == pygame.K_o: 
-                    statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, vm_buyingprices), mg4_var_dict.copy())
+                    statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, MENU, vm_buyingprices), mg4_var_dict.copy())
                     game_state = "mg4"
                     break
 

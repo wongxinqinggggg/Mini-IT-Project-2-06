@@ -2,33 +2,35 @@ import pygame
 from Features import Functions
 
 class STORE():
-    def __init__(self, W, H, Inventory):
+    def __init__(self, W, H, Menu, Inventory):
         global mpchange 
-        self.Menu, self.Inventory = Functions.Menu(W), Inventory
-        self.pricelist = [10, 25, 50, 120]
-        self.btnpos = [(465, 190), (755, 190), (475, 400), (750, 395)]
-        itemcenter = [(350, 245), (630, 245), (320, 446), (620, 470)]
+        self.Menu, self.Inventory = Menu, Inventory
+        self.pricelist = [10, 25, 50, 120, 45, 100]
+        self.infolist = [20, '10s', 150, 500, 80, 200]
+        self.rackrect = [(112, 324, 800, 30), (112, 534, 800, 30)]
+        self.infopos = [[(245, 220), (245, 252), (323, 250)], [(500, 220), (480, 252), (582, 250)],
+                        [(850, 220), (830, 252), (935, 250)], [(270, 430), (270, 462), (375, 460)],
+                        [(550, 430), (550, 462), (628, 460)], [(820, 430), (820, 462), (925, 460)]]
+        self.btnpos = [(300, 190), (555, 190), (880, 190), (330, 400), (600, 400), (880, 400)]
+        itemcenter = [(190, 245), (425, 245), (720, 236), (200, 470), (490, 454), (740, 456)]
         menubtnpos = (975, 50)
         mpchange = None
 
-        pygame.mixer.music.load("Assets/Audio/Retro-Game-Music (moodmode).mp3")
-        pygame.mixer.music.play(-1)
+        Functions.play_music("Retro-Game-Music (moodmode)")
 
-        self.base = pygame.transform.scale(pygame.image.load("Assets/Images/STORE_base.png").convert(), (W, H))
-        self.mainbase = pygame.image.load("Assets/Images/STORE_Mainbase.png").convert_alpha()
-        self.menubtn = pygame.image.load("Assets/Images/MAIN_Menubtn.png").convert_alpha()
+        self.menubtn = Functions.mainbtnlist[1]
         self.menubtnrect = self.menubtn.get_rect(center = menubtnpos)
-        item1 = pygame.image.load("Assets/Images/STORE_Item1.png").convert_alpha()
-        item1rect = item1.get_rect(center = itemcenter[0])
-        item2 = pygame.image.load("Assets/Images/STORE_Item2.png").convert_alpha()
-        item2rect = item2.get_rect(center = itemcenter[1])
-        item3 = pygame.image.load("Assets/Images/STORE_Item3.png").convert_alpha()
-        item3rect = item3.get_rect(center = itemcenter[2])
-        item4 = pygame.image.load("Assets/Images/STORE_Item4.png").convert_alpha()
-        item4rect = item4.get_rect(center = itemcenter[3])
-        self.itemsurflist = [item1, item2, item3, item4]
-        self.itemlist = [[item1, item1rect], [item2, item2rect], 
-                         [item3, item3rect], [item4, item4rect]]
+        self.itemsurflist = Functions.itemlist
+        sprint, hp, pethp = Functions.iconlist[2], Functions.iconlist[0], Functions.iconlist[3]
+        self.iconlist = [hp, sprint, hp, hp, pethp, pethp]
+        self.itemlist = []
+        for i in range(len(self.itemsurflist)):
+            rect = self.itemsurflist[i].get_rect(center=itemcenter[i])
+            self.itemlist.append({'surf': self.itemsurflist[i], 'rect': rect,
+                                  'price': f'-{self.pricelist[i]}$', 'pricerect': (self.infopos[i][0], (26, 100)),
+                                  'info': f'+{self.infolist[i]}', 'inforect': (self.infopos[i][1], (26, 100)),
+                                  'icon': self.iconlist[i], 'iconrect': (self.infopos[i][2], (26, 100))})
+
         self.btnrectdict = {'mainpage': [self.menubtnrect]}
 
     def eventhandler(self, mg_state, E):
@@ -53,7 +55,6 @@ class STORE():
         elif E.type == pygame.MOUSEMOTION:
             global cursorcollide
             cursorcollide = False
-
             if mg_state == "menu":
                 self.var_dict, cursorcollide = self.Menu.eventhandler(E, self.var_dict)
 
@@ -74,41 +75,47 @@ class STORE():
         global mpchange
         self.var_dict = var_dict
         if mpchange: 
-            self.var_dict['hp'], self.var_dict['mp'] = Functions.update_stats(self.var_dict['hp'], self.var_dict['mp'], mpchange=mpchange)
-            Functions.add_floating_text(f"{mpchange}", 'mp', (128, 128, 128))
+            Functions.update_stats(mpchange=mpchange)
+            Functions.add_floating_text(f"{mpchange}", 'mp')
             mpchange = None
 
         if mg_state == "mainpage":
             Functions.displaystat = True
-            mp =  self.var_dict['mp']
             self.buttons = pygame.sprite.Group()
             for i in range(len(self.pricelist)): 
-                self.buttons.add(Buttons(i, mp, self.pricelist, self.btnpos))
-                if mp < self.pricelist[i]:
-                    self.itemlist[i][0] = pygame.transform.grayscale(self.itemsurflist[i])
-                else: self.itemlist[i][0] = self.itemsurflist[i]
+                self.buttons.add(Buttons(i, self.pricelist, self.btnpos))
+                if Functions.money < self.pricelist[i]:
+                    self.itemlist[i]['surf'] = pygame.transform.grayscale(self.itemsurflist[i])
+                else: self.itemlist[i]['surf'] = self.itemsurflist[i]
 
         elif mg_state == "menu": 
             Functions.displaystat = False
             self.Menu.update()
     
     def draw(self, S, mg_state):
-        S.blit(self.base, (0, 0))
+        S.fill((77, 166, 255))
         if mg_state == "mainpage": self.mainpage(S)
         elif mg_state == "menu": self.Menu.draw(S)
         
     def mainpage(self, S):
-        S.blit(self.mainbase, (0, 0))
+        for i in range(2):
+            pygame.draw.rect(S, (96, 96, 112), self.rackrect[i])
         S.blit(self.menubtn, self.menubtnrect)
-        for surf, rect in self.itemlist: S.blit(surf, rect)
+        for item in self.itemlist:
+            S.blit(item['surf'], item['rect'])
+            txt = self.var_dict['Mfont'].render(item['price'], False, 'Black')
+            S.blit(txt, item['pricerect'])
+            S.blit(item['icon'], item['iconrect'])
+            txt = self.var_dict['Mfont'].render(item['info'], False, 'Black')
+            S.blit(txt, item['inforect'])
         self.buttons.draw(S)
         Functions.draw_floating_texts(S)
     
 class Buttons(pygame.sprite.Sprite):
-    def __init__(self, id, mp, pricelist, btnpos):
+    def __init__(self, id, pricelist, btnpos):
         super().__init__()
-        self.image = pygame.image.load("Assets/Images/MGE_Buybtn.png").convert_alpha()
-        if mp < pricelist[id]: 
+        self.image = Functions.tbtnlist[0]
+        if Functions.money < pricelist[id]: 
             self.clickable = False
             self.image = pygame.transform.grayscale(self.image)
             
@@ -127,8 +134,7 @@ class Buttons(pygame.sprite.Sprite):
         soundtype = None
         if self.rect.collidepoint(E.pos):
             if self.clickable: 
-                item_id = self.item_id
-                if Inventory.additem(item_id):
+                if Inventory.additem(self.item_id):
                     mpchange = self.mpc 
                     soundtype = "transaction"
 

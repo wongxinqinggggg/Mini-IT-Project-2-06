@@ -1,12 +1,12 @@
 import pygame
 from Features import Functions
-from random import randint, choice, uniform
+from random import randint
 
 class MG1():
-    def __init__(self, W, H, C):
+    def __init__(self, W, H, Menu, C):
         self.W, self.H, self.C = W, H, C
         self.STATS = {'hp': 10, 'mp': 10}
-        self.menu = Functions.Menu(W)
+        self.Menu = Menu
         self.time_limit, self.plate_requirement = 20, 3
         self.msg = [["YOU LOSE!", 380], ["YOU WIN!", 400], ["INSUFFICIENT ENERGY!", 190]]
         menubtnpos = (975, 50)
@@ -27,6 +27,7 @@ class MG1():
         self.platerect = self.plate.get_rect(center = (W/2 + 100, H/2))
         self.horiplate = pygame.image.load("Assets/Images/MG1_Horiplate.png").convert_alpha()
         self.spongecursor = pygame.image.load("Assets/Images/MG1_Sponge.png").convert_alpha()
+        self.stainsurf = Functions.get_sprite(100, 100, pygame.image.load("Assets/Images/Stainsheet.png").convert_alpha())
 
         self.btnrectdict = {'mainpage': [self.startbtnrect, self.instrucbtnrect, self.menubtnrect], 
                             'instruc': [self.instrucbackrect], 'game': [self.menubtnrect]}
@@ -43,8 +44,7 @@ class MG1():
                     self.var_dict['prev_state'] = self.var_dict['mg_state'] 
                     self.var_dict['mg_state'] = "menu"
 
-                elif self.startbtnrect.collidepoint(E.pos): 
-                    self.newgame()
+                elif self.startbtnrect.collidepoint(E.pos): self.newgame()
 
             elif mg_state == "instruc":
                 if self.instrucbackrect.collidepoint(E.pos): self.var_dict['mg_state'] = "mainpage"
@@ -60,7 +60,7 @@ class MG1():
             elif self.var_dict['mg_state'] == "displaymsg": self.var_dict['mg_state'] = "mainpage"
 
             elif self.var_dict['mg_state'] == "menu":
-                self.var_dict, cursorclicked = self.menu.eventhandler(E, self.var_dict)
+                self.var_dict, cursorclicked = self.Menu.eventhandler(E, self.var_dict)
                 if self.var_dict['mg_state'] == "restart": self.newgame()
 
             if self.btnrectdict.get(mg_state):
@@ -74,11 +74,12 @@ class MG1():
             cursorcollide = False
 
             if mg_state == "game": 
-                pygame.mouse.set_cursor((50, 50), self.spongecursor)
+                cursorcenter = (self.spongecursor.get_width()//2, self.spongecursor.get_width()//2)
+                pygame.mouse.set_cursor(cursorcenter, self.spongecursor)
                 cursorcollide = True
 
             elif mg_state == "menu":
-                self.var_dict, cursorcollide = self.menu.eventhandler(E, self.var_dict)
+                self.var_dict, cursorcollide = self.Menu.eventhandler(E, self.var_dict)
 
             if self.btnrectdict.get(mg_state):
                 for rect in self.btnrectdict[mg_state]:
@@ -94,8 +95,8 @@ class MG1():
     def update(self, mg_state, var_dict):
         self.var_dict = var_dict
         Functions.update_stats(self.statschange['hpc'], self.statschange['mpc'])
-        if self.statschange['hpc']: Functions.add_floating_text(f"{self.statschange['hpc']}", 'hp', )
-        if self.statschange['mpc']: Functions.add_floating_text(f"+{self.statschange['mpc']}", 'mp',)
+        if self.statschange['hpc']: Functions.add_floating_text(f"{self.statschange['hpc']}", 'hp')
+        if self.statschange['mpc']: Functions.add_floating_text(f"+{self.statschange['mpc']}", 'mp')
         self.statschange['hpc'], self.statschange['mpc'] = None, None
 
         if mg_state == "game":
@@ -117,7 +118,11 @@ class MG1():
                 # Creating new stains for new plate
                 self.stains = pygame.sprite.Group()
                 platemask = pygame.mask.from_surface(self.plate)
-                for i in range(randint(3, 5)): self.stains.add(Stains(self.platerect, platemask, self.stains))
+                difficulty = self.var_dict['plates'] / self.plate_requirement
+                if difficulty < 0.3: stainno, scale = 3, 1.3
+                elif difficulty < 0.6: stainno, scale = 5, 1
+                else: stainno, scale = 8, 0.8
+                for i in range(stainno): self.stains.add(Stains(self.platerect, platemask, self.stains, self.stainsurf, scale))
                 self.var_dict['new_plate'] = False
 
             if not self.stains:
@@ -133,7 +138,7 @@ class MG1():
 
             self.var_dict['stains'], self.var_dict['time_passed'] = self.stains, self.time_passed
 
-        elif mg_state == "menu": self.menu.update()
+        elif mg_state == "menu": self.Menu.update()
 
         if mg_state: 
             if mg_state == "mainpage" or (mg_state == "countdown" and self.statschangetimer >= 0):
@@ -148,9 +153,9 @@ class MG1():
         elif mg_state == "instruc": 
             self.instruc(S, self.var_dict['Mfont'], self.var_dict['XLfont'])
         elif mg_state == "game": 
-            self.game(S, self.var_dict['plates'], self.var_dict['Lfont'])
+            self.game(S, self.var_dict['Lfont'])
         elif mg_state == "menu": 
-            self.menu.draw(S)
+            self.Menu.draw(S)
         elif mg_state == "countdown":
             self.countdown(S, self.W, self.H, self.C, self.var_dict['XLfont']) 
 
@@ -192,11 +197,11 @@ class MG1():
             line_surface = Mfont.render(l.strip(), True, 'Black')
             S.blit(line_surface, (instrucrect.x + padding, instrucrect.y + padding + i * lineheight))
 
-    def game(self, S, plates, Lfont):
+    def game(self, S, Lfont):
         S.blit(self.plate, self.platerect)
         S.blit(self.menubtn, self.menubtnrect)
         S.blit(self.horiplatestack, self.horiplatestack.get_rect(bottomleft = (20, 550)))
-        self.displayscore(S, plates, (self.time_limit - self.var_dict['time_passed']), Lfont)
+        self.displayscore(S, self.var_dict['plates'], (self.time_limit - self.var_dict['time_passed']), Lfont)
         self.var_dict['stains'].draw(S)
 
     def displayscore(self, S, plates, time_left, Lfont):
@@ -212,7 +217,7 @@ class MG1():
         S.blit(time_leftsurf, (time_leftect.x + 40, time_leftect.y + 22))
         S.blit(platessurf, (platesrect.x + 22, platesrect.y + 22))
         
-    def displaymsg(self, S, W, msg, xpos, Lfont, ypos = 480):
+    def displaymsg(self, S, W, msg, xpos, Lfont, ypos=480):
         box_rect = pygame.Rect(30, 400, W-60, 180)
         pygame.draw.rect(S, 'White', box_rect)
         pygame.draw.rect(S, 'Black', box_rect, 3)
@@ -259,16 +264,14 @@ class MG1():
             self.update(self.var_dict['mg_state'], self.var_dict)
 
 class Stains(pygame.sprite.Sprite):
-    def __init__(self, platerect, platemask, stains):
+    def __init__(self, platerect, platemask, stains, stainsurf, scale):
         super().__init__()
-
-        path = choice(["MG1_Stain1", "MG1_Stain2"])
-        image = pygame.image.load(f"Assets/Images/{path}.png")
+        image = stainsurf[randint(0, (len(stainsurf) -1))]
 
         while True:
             # Randomize stain images
             temp = pygame.sprite.Sprite()
-            temp.image = pygame.transform.rotozoom(image, randint(-360, 360), round(uniform(1, 1.4), 2))
+            temp.image = pygame.transform.rotozoom(image, randint(-360, 360), scale)
             temp.mask = pygame.mask.from_surface(temp.image)
             temp.rect = temp.mask.get_rect(center = (randint(350, 850), randint(50, 550)))
 
@@ -286,15 +289,17 @@ class Stains(pygame.sprite.Sprite):
                 
                 if temp:
                     temp.image = self.pallete_swap(temp.image, (0, 0, 0, 0))
-                    temp.image = self.pallete_swap(temp.image, (170, 117 ,34), None)
+                    temp.image = self.pallete_swap(temp.image, new_colour=None)
                     temp.image.set_colorkey((1, 1, 1))
                     self.image, self.rect, self.mask = temp.image, temp.rect, temp.mask
                     break
 
     def update(self, pos):
-        if self.rect.collidepoint(pos): self.kill()    # Delete sprite when clicked
+        if self.rect.collidepoint(pos): 
+            if self.mask.get_at(((pos[0] - self.rect.x), (pos[1] - self.rect.y))):
+                self.kill()    # Delete sprite when clicked
 
-    def pallete_swap(self, surf, old_colour, new_colour = (1, 1, 1)):
+    def pallete_swap(self, surf, old_colour=(255,181,112), new_colour=(1, 1, 1)):
         # Randomize the colour of stain image
         image = pygame.Surface(surf.get_size())
         if not new_colour:  new_colour = (randint(130, 210), randint(100, 160), randint(5, 65))

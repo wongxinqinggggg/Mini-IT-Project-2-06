@@ -63,26 +63,34 @@ def draw_floating_texts(S):
     for ft in texts_to_remove:
         floating_texts.remove(ft)
 
-def get_sprite(sprite_width, sprite_height, spritesheet):
+def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
     surflist = []
     for i in range(int(spritesheet.get_height()/sprite_height)):
         for j in range(int(spritesheet.get_width()/sprite_width)):
             surf = pygame.Surface((sprite_width, sprite_height), pygame.SRCALPHA).convert_alpha()
             surf.blit(spritesheet, (0,0), (j*sprite_width, i*sprite_height, sprite_width, sprite_height))
-            surflist.append(surf)
+            if trim:
+                rect = surf.get_bounding_rect()
+                surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
+                surface.blit(spritesheet, (0,0), (j*sprite_width, i*sprite_height, sprite_width, sprite_height))
+                surflist.append(surface)
+            else: 
+                surflist.append(surf)
     return surflist
 
 def load_sprite():
-    global iconlist, mainbtnlist, menubtnlist, tbtnlist
+    global iconlist, mainbtnlist, menubtnlist, tbtnlist, itemlist
     iconsheet = pygame.image.load("Assets/Images/Iconsheet.png").convert_alpha()
     abtnsheet = pygame.image.load("Assets/Images/Mainbtnsheet.png").convert_alpha()
     ebtnsheet = pygame.image.load("Assets/Images/Menubtnsheet.png").convert_alpha()
     tbtnsheet = pygame.image.load("Assets/Images/Transactionbtnsheet.png").convert_alpha()
+    itemsheet = pygame.image.load("Assets/Images/Itemsheet.png").convert_alpha()
 
     iconlist = get_sprite(30, 30, iconsheet)
     mainbtnlist = get_sprite(80, 80, abtnsheet)
     menubtnlist = get_sprite(271, 81, ebtnsheet)
     tbtnlist = get_sprite(76, 34, tbtnsheet)
+    itemlist = get_sprite(208, 175, itemsheet, True)
 
 def playsound(soundtype):
     if soundtype == "btnclicked":
@@ -196,110 +204,140 @@ class Notifications():
         self.displaynoti = [True, True, True, True]
         self.counter = 0
         self.anglecounter = 0
-        self.alertcenter = [(51, 159), (91, 159)]
+        self.iconcenter = [(38, 170), (78, 170), (118, 170), (158, 170)]
+        self.alertcenter = [(51, 159), (91, 159), (141, 159)]
         self.angles = [0, 0, 25, -25, 25, -25]
         self.hovering = False
 
-        vm1noti, vm2noti = iconlist[4], iconlist[5]
-        vm1notirect = vm1noti.get_rect(center=(38, 170))
-        vm2notirect = vm2noti.get_rect(center=(78, 170))
+        petnoti, vm1noti, vm2noti, sprint = iconlist[3], iconlist[4], iconlist[5], iconlist[2]
         self.alertbtn = pygame.image.load("Assets/Images/MAIN_Alertbtn.png").convert_alpha()
 
-        self.notis = [{'surf': vm1noti, 'rect': vm1notirect}, 
-                      {'surf': vm2noti, 'rect': vm2notirect}]
+        self.notis = [{'surf': vm1noti, 'rect': vm1noti.get_rect()}, 
+                      {'surf': vm2noti, 'rect': vm2noti.get_rect()},
+                      {'surf': petnoti, 'rect': petnoti.get_rect()},
+                      {'surf': sprint, 'rect': sprint.get_rect()}]
     
     def displayicon(self, vm_level, xsfont, is_night):
         if not displaystat: return
         elif not self.displaynoti[0] and not self.displaynoti[1]: return
 
+        self.displaynoti[3] = True if sprinttime > 0 else False
         self.counter += 1
         if self.counter % 30 == 0:
             if self.anglecounter < (len(self.angles) - 1): self.anglecounter += 1
             else:self.anglecounter = 0
         notialert = pygame.transform.rotate(self.alertbtn, self.angles[self.anglecounter])
 
-        for i in range(len(vm_level)):
+        for i in range(len(self.displaynoti)):
+            alert, indicate = False, False
             if self.displaynoti[i]:
-                if not vm_level[i]:
-                    surf = pygame.transform.grayscale(self.notis[i]['surf'])
-                else: surf = self.notis[i]['surf']
+                num = self.displaynoti[:i].count(True)
+                if i in [0, 1]:
+                    if not vm_level[i]:
+                        surf = pygame.transform.grayscale(self.notis[i]['surf'])
+                    else: surf = self.notis[i]['surf']
 
-                self.S.blit(surf, self.notis[i]['rect'])
-                if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]:
-                    self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[i])))
-                elif vm_level[i]:
+                    self.notis[i]['rect'].center = self.iconcenter[num]
+                    self.S.blit(surf, self.notis[i]['rect'])
+                    if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]: alert = True
+                    elif vm_level[i]:
+                        indicate = True
+                        color = 'Grey' if is_night else 'Green'
+
+                else:
+                    if i == 2: pass
+                    self.notis[i]['rect'].center = self.iconcenter[num]
+                    self.S.blit(self.notis[i]['surf'], self.notis[i]['rect'])
+                
+                if alert: self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[num])))
+                elif indicate:
                     pygame.draw.circle(self.S, 'Green', (self.alertcenter[i]), 6)
                     pygame.draw.circle(self.S, 'Black', (self.alertcenter[i]), 6, 1)
         
-        if self.hovering: self.displaytip(vm_level, xsfont)
+        if self.hovering: self.displaytip(vm_level, xsfont, is_night)
 
-    def updatetip(self, vm_level, E):
+    def updatetip(self, E):
         if E.type == pygame.MOUSEMOTION: 
-            for i in range(len(vm_level)):
+            for i in range(len(self.displaynoti)):
                 if self.displaynoti[i] and (self.notis[i]['rect']).collidepoint(E.pos):
                     self.tippos = E.pos
                     self.hovering = True
                     break
                 else: self.hovering = False
 
-    def displaytip(self, vm_level, xsfont):
-        for i in range(len(vm_level)):
+    def displaytip(self, vm_level, xsfont, is_night):
+        for i in range(len(self.displaynotil)):
             if self.displaynoti[i] and (self.notis[i]['rect']).collidepoint(pygame.mouse.get_pos()):
-                if not vm_level[i]: 
-                    lvltxt, incometxt = '', '(Not Owned)'
-                else:
-                    lvltxt = f'(Lv{vm_level[i]})' if vm_level[i] <= 2 else '(Maxed)'
-                    incometxt = f'income:{self.vm_income[i][vm_level[i]-1]}$/s'
+                if i in [0, 1]:
+                    if not vm_level[i]: 
+                        lvltxt, incometxt = '', '(Not Owned)'
+                    else:
+                        lvltxt = f'(Lv{vm_level[i]})' if vm_level[i] <= 2 else '(Maxed)'
+                        if is_night: incometxt = 'Shop Closed'
+                        else: incometxt = f'income:{self.vm_income[i][vm_level[i]-1]}$/s'
 
-                tipsurfs = [xsfont.render((f'VM{i + 1} ' + lvltxt).center(12), False, 'Black'), 
-                           xsfont.render(incometxt, False, 'Black')]
-                tiprect = pygame.Rect(self.tippos[0] + 10, self.tippos[1] + 10, 100, 30)
+                    tipsurfs = [xsfont.render((f'VM{i + 1} ' + lvltxt).center(12), False, 'Black'), 
+                                xsfont.render(incometxt, False, 'Black')]
+                    tipboxheight = 30
+                
+                elif i == 2:
+                    tipsurfs = [xsfont.render((f'name').center(12), False, 'Black'), 
+                                xsfont.render((f'HP: 500/500').center(12), False, 'Black')]
+                    tipboxheight = 30
+
+                elif i == 3:
+                    tipsurfs = [xsfont.render((f'Sprint ({round(sprinttime)}s)').center(12), False, 'Black')]
+                    tipboxheight = 17
+
+                tiprect = pygame.Rect(self.tippos[0] + 10, self.tippos[1] + 10, 100, tipboxheight)
                 pygame.draw.rect(self.S, 'White', tiprect)
                 pygame.draw.rect(self.S, 'Black', tiprect, 2)
-                for i in range(len(tipsurfs)):
-                    self.S.blit(tipsurfs[i], (tiprect.x + 6, tiprect.y + 5 + i * 12))
+                for j in range(len(tipsurfs)):
+                    self.S.blit(tipsurfs[j], (tiprect.x + 6, tiprect.y + 5 + j * 12))
+                break
 
 class Inventory():
     def __init__(self, S, C):
         self.S, self.C = S, C
         self.maxlist = [1, 3, 9]
         exitbtnpos = (975, 50)
-        self.dragging = False
-        self.hpchanges = [20, None, 150, 500]
+        self.dragging, self.selecteditem = False, None
+        self.effects = [{'effect': 'hp', 'value': 20}, {'effect': 'sprint', 'value': 10}, 
+                        {'effect': 'hp', 'value': 150}, {'effect': 'hp', 'value': 500}, 
+                        {'effect': 'pethp', 'value': 80}, {'effect': 'pethp', 'value': 200}]
         self.statschange, self.usedcell = {'hp': None, 'mp': None}, None
         self.bagprices = [-500, -2000]
-        self.baglvl, self.itemmax, self.surflist, self.rectlist, self.rectcenter = 1, 0, [], [], []
-        self.inventories = {'c1': None, 'c2': None, 'c3': None, 'c4': None, 'c5': None, 
-                            'c6': None, 'c7': None, 'c8': None, 'c9': None}
-        for key in self.inventories.keys(): self.inventories[key] = {'id': None, 'no': 0, 'locked': False}
+        self.pricepos = [(150, 510), (130, 510)]
+        self.baglvl, self.itemmax = 1, 0
+        self.inventories = {'c1': {}, 'c2': {}, 'c3': {}, 'c4': {}, 'c5': {}, 
+                            'c6': {}, 'c7': {}, 'c8': {}, 'c9': {}}
+        self.keys = list(self.inventories.keys())
+        self.load_inventories()
 
-        self.baglist = [pygame.image.load("Assets/Images/Bag1.png").convert_alpha(),
-                        pygame.image.load("Assets/Images/Bag2.png").convert_alpha(),
-                        pygame.image.load("Assets/Images/Bag3.png").convert_alpha()]
-        
+        bagsheet = pygame.image.load("Assets/Images/Bagsheet.png").convert_alpha()
+        self.baglist = get_sprite(136, 136, bagsheet)
         self.bag = self.baglist[0]
-        self.upgradebtn = pygame.image.load("Assets/Images/MGE_Upgradebtn.png").convert_alpha()
-        self.maxbtn = pygame.image.load("Assets/Images/MGE_Maxbtn.png").convert_alpha()
-        self.bagbtn, self.btnrect = self.upgradebtn, self.maxbtn.get_rect(center = (185, 480))
-        self.exitbtn = pygame.image.load("Assets/Images/MGE_Exitbtn.png").convert_alpha()
+        self.lock = pygame.image.load("Assets/Images/Inventory_lock.png").convert_alpha()
+        self.lockrect = self.lock.get_rect()
+        self.upgradebtn, self.maxbtn = tbtnlist[1], tbtnlist[3]
+        self.bagbtn, self.btnrect = self.upgradebtn, self.upgradebtn.get_rect(center = (185, 480))
+        self.exitbtn = mainbtnlist[2]
         self.exitbtnrect = self.exitbtn.get_rect(center = exitbtnpos)
 
-        self.itemlist = [pygame.image.load("Assets/Images/STORE_Item1.png").convert_alpha(),
-                         pygame.image.load("Assets/Images/STORE_Item2.png").convert_alpha(),
-                         pygame.image.load("Assets/Images/STORE_Item3.png").convert_alpha(),
-                         pygame.image.load("Assets/Images/STORE_Item4.png").convert_alpha()]
+        self.itemsurflist = itemlist.copy()
     
-        for i in range(len(self.itemlist)):
-            surf = self.itemlist[i]
+        for i in range(len(self.itemsurflist)):
+            surf = self.itemsurflist[i]
             Wratio, Hratio = surf.get_width()/120, surf.get_height()/120
             if Wratio > 1 or Hratio > 1: ratio = min(1/Wratio, 1/Hratio)
             else: ratio = max(Wratio, Hratio)
-            self.itemlist[i] = pygame.transform.scale(surf, (surf.get_width() * ratio, surf.get_height() * ratio))
+            self.itemsurflist[i] = pygame.transform.scale(surf, (surf.get_width() * ratio, surf.get_height() * ratio))
             
-        for i in range(9): self.rectcenter.append(((475 + int(i % 3) * 170, 135 + int(i / 3) * 170)))
+        self.btnrectlist = [self.btnrect, self.exitbtnrect] 
 
     def eventhandler(self, E, inventorypage=True):
         global sprinttime
+        cursor = False
         if E.type == pygame.MOUSEBUTTONDOWN and inventorypage:
             soundtype = None
             if self.btnrect.collidepoint(E.pos):
@@ -309,18 +347,63 @@ class Inventory():
                     soundtype = 'transaction'
                 else: soundtype = 'btnclicked'
                 playsound(soundtype)
+                return
             
-            if self.exitbtnrect.collidepoint(E.pos):
+            elif self.exitbtnrect.collidepoint(E.pos):
                 soundtype = 'btnclicked'
                 playsound(soundtype)
                 return 1
 
-            self.dragging = True
+            for i in range(len(self.keys)):
+                key = self.keys[i]
+                if self.inventories[key]['lockrect'].collidepoint(E.pos):
+                    self.inventories[key]['locked'] = not self.inventories[key]['locked']
+                    break
 
-        elif E.type == pygame.MOUSEMOTION:
-            pass
+                elif (self.inventories[key]['rect'] and 
+                      self.inventories[key]['rect'].collidepoint(E.pos) and
+                      not self.inventories[key]['locked']):
+                    self.selecteditem = key
+                    self.cursorsurf = self.inventories[key]['surf']
+                    self.cursorcenter = (self.cursorsurf.get_width()//2, self.cursorsurf.get_height()//2)
+                    self.dragging = True
+                    break
 
-        elif E.type == pygame.MOUSEBUTTONUP:
+        elif E.type == pygame.MOUSEMOTION and inventorypage:
+            if not self.dragging:
+                for rect in self.btnrectlist:
+                    if rect.collidepoint(E.pos):
+                        cursor = pygame.SYSTEM_CURSOR_HAND
+                        break
+                for key in self.keys:
+                    if self.inventories[key]['lockrect'].collidepoint(E.pos):
+                        cursor = pygame.SYSTEM_CURSOR_HAND
+                        break
+                    elif self.inventories[key]['rect'] and self.inventories[key]['rect'].collidepoint(E.pos):
+                        if self.inventories[key]['locked']: cursor = pygame.SYSTEM_CURSOR_NO
+                        else: cursor = pygame.SYSTEM_CURSOR_HAND
+                        break
+
+        elif E.type == pygame.MOUSEBUTTONUP and inventorypage:
+            if self.dragging:
+                for i in range(len(self.keys)):
+                    key = self.keys[i]
+                    if self.inventories[key]['cellrect'].collidepoint(E.pos):
+                        if self.inventories[key]['id'] == self.inventories[self.selecteditem]['id']:
+                            if self.inventories[key]['no'] < self.itemmax:
+                                maxno = self.itemmax - self.inventories[key]['no']
+                                no = min(self.inventories[self.selecteditem]['no'], maxno)
+                                self.inventories[self.selecteditem]['no'] -= no
+                                self.inventories[key]['no'] += no
+
+                        elif not self.inventories[key]['locked']:
+                            temp = self.inventories[self.selecteditem]
+                            id, no = temp['id'], temp['no']
+                            self.inventories[self.selecteditem]['id'] = self.inventories[key]['id']
+                            self.inventories[self.selecteditem]['no'] = self.inventories[key]['no']
+                            self.inventories[key]['id'] = id
+                            self.inventories[key]['no'] = no
+                        break
             self.dragging = False
 
         elif E.type == pygame.KEYDOWN:      
@@ -328,14 +411,22 @@ class Inventory():
             if self.inventories.get(key): 
                 selectedcell = self.inventories[key]
                 if selectedcell['id'] and selectedcell['no']:
-                    self.statschange['hp'], self.usedcell = self.hpchanges[selectedcell['id'] - 1], key
-                    if selectedcell['id'] == 2: 
-                        sprinttime = 10
+                    playsound('eating')
+                    self.usedcell =  key
+                    effect = self.effects[selectedcell['id'] - 1]['effect']
+                    value = self.effects[selectedcell['id'] - 1]['value']
+
+                    if effect == 'hp': self.statschange['hp'] = value
+                    elif effect == 'sprint': sprinttime = value
+                    elif effect == 'pethp': pass
 
                 else: add_floating_text("Inventory slot empty!", 'inventoryE')
-
-        return
             
+        if not self.dragging: 
+            if cursor: pygame.mouse.set_cursor(cursor)
+            else: pygame.mouse.set_cursor()
+        else: pygame.mouse.set_cursor(self.cursorcenter, self.cursorsurf)
+
     def update(self):
         global sprinttime
         update_stats(self.statschange['hp'], self.statschange['mp'])
@@ -349,16 +440,18 @@ class Inventory():
                 self.inventories[self.usedcell]['id'] = None
             self.usedcell = None
 
-        self.itemmax, self.surflist, self.rectlist, i = self.maxlist[self.baglvl - 1], [], [], 0
+        self.itemmax = self.maxlist[self.baglvl - 1]
         for key in self.inventories.keys():
-            surf = None
+            if not self.inventories[key]['no'] and not self.inventories[key]['locked']: 
+                self.inventories[key]['id'] = None
+                surf = None
             if self.inventories[key]['id']:
-                if self.inventories[key]['no']: surf = self.itemlist[self.inventories[key]['id'] - 1]  
-                else: surf = pygame.transform.grayscale(self.itemlist[self.inventories[key]['id'] - 1])
+                if self.inventories[key]['no']: surf = self.itemsurflist[self.inventories[key]['id'] - 1]  
+                else: surf = pygame.transform.grayscale(self.itemsurflist[self.inventories[key]['id'] - 1])
+            else: surf = None
 
-            rect = None if not surf else surf.get_rect(center = self.rectcenter[i])
-            self.surflist.append(surf), self.rectlist.append(rect)
-            i += 1
+            rect = None if not surf else surf.get_rect(center = self.inventories[key]['center'])
+            self.inventories[key]['surf'], self.inventories[key]['rect'] = surf, rect
 
         if self.baglvl < 3:
             if money >= (-self.bagprices[self.baglvl - 1]): self.bagbtn = self.upgradebtn 
@@ -366,7 +459,7 @@ class Inventory():
         else: self.bagbtn = self.maxbtn
 
         self.bag = self.baglist[self.baglvl - 1]
-        sprinttime = max(0, sprinttime - self.C.get_time()/1000 )
+        if sprinttime: sprinttime = max(0, sprinttime - self.C.get_time()/1000 )
 
     def draw(self, xsfont, font):
         self.S.fill((71, 59, 120))
@@ -374,7 +467,13 @@ class Inventory():
         self.S.blit(self.bagbtn, self.btnrect)
         self.S.blit(self.exitbtn, self.exitbtnrect)
 
-        for i in range(9):
+        if self.baglvl <= 2:
+            pricetxt = font.render(f'{-self.bagprices[self.baglvl-1]}$', False, 'Black')
+            self.S.blit(pricetxt, self.pricepos[self.baglvl-1])
+
+        for i in range(len(self.keys)):
+            key = self.keys[i]
+            cell = self.inventories[key]
             dx, dy = int(i % 3) * 170, int(i / 3) * 170
             pygame.draw.rect(self.S, 'White', ((400 + dx), (60 + dy), 150, 150), 0, 30)
             pygame.draw.rect(self.S, 'Black', ((400 + dx), (60 + dy), 150, 150), 3, 30)
@@ -383,31 +482,35 @@ class Inventory():
             keytext = font.render(f'{i + 1}', False, 'Black')
             self.S.blit(keytext, ((396 + dx), (194 + dy)))
 
-            if self.inventories['c' + str(i + 1)]['id']:
+            if cell['id']:
                 pygame.draw.circle(self.S, 'Grey', ((543  + dx), (68 + dy)), 15)
                 pygame.draw.circle(self.S, 'Black', ((543 + dx), (68 + dy)), 15, 1)
-                notext = xsfont.render(f"{self.inventories['c' + str(i + 1)]['no']}/{self.itemmax}", True, 'Black')
+                notext = xsfont.render(f"{cell['no']}/{self.itemmax}", True, 'Black')
                 self.S.blit(notext, ((531 + dx), (65 + dy)))
+                pygame.draw.circle(self.S, 'White', (cell['lockrect'].center), 15)
+                pygame.draw.circle(self.S, 'Black', (cell['lockrect'].center), 15, 1)
 
-        for i in range(len(self.surflist)):
-            if self.surflist[i]: self.S.blit(self.surflist[i], self.rectlist[i])
+                if cell['locked']: 
+                    self.lockrect.center = cell['lockrect'].center
+                    self.S.blit(self.lock, self.lockrect)
+
+                self.S.blit(self.inventories[key]['surf'], self.inventories[key]['rect'])
 
         draw_floating_texts(self.S)
 
     def additem(self, item_id):
         cell, cell1, cell2 = None, None, None
-        for key in self.inventories.keys():
+        for key in self.keys:
             if self.inventories[key]['id'] == item_id and self.inventories[key]['no'] < self.itemmax:
                 cell1 = key if not cell1 else cell1    # Prioritise the first cell if no locked cell
                 if self.inventories[key]['locked']: 
                     cell = key      # Prioritise the locked cell
                     break
 
-            elif not self.inventories[key]['id']: cell2 = key if not cell2 else cell2  # Use empty cell if no available cell
+            elif not self.inventories[key]['id']: 
+                cell2 = key if not cell2 else cell2  # Use empty cell if no available cell
         
-        if not cell:
-            if cell1: cell = cell1
-            else: cell = cell2
+        if not cell: cell = cell1 if cell1 else cell2
         if cell: 
             self.inventories[cell]['id'] = item_id
             self.inventories[cell]['no'] += 1
@@ -416,3 +519,18 @@ class Inventory():
         else: 
             add_floating_text("Inventory full!", 'inventoryF')
             return False
+        
+    def load_inventories(self, data=None):
+        for i in range(len(self.keys)):
+            key = self.keys[i]
+            if data: 
+                self.inventories[key].update(data[key])
+            else: self.inventories[key].update({'id': None, 'no': 0, 'locked': False})
+
+            dx, dy = int(i % 3) * 170, int(i / 3) * 170
+            center = ((475 + dx, 135 + dy))
+            cell = pygame.rect.Rect((400 + dx), (60 + dy), 150, 150)
+            lockrect = pygame.rect.Rect((528  + dx), (187 + dy), 30, 30)
+            self.inventories[key].update({'surf': None, 'rect': None, 'center': center, 
+                                          'cellrect': cell, 'lockrect': lockrect})
+                    
