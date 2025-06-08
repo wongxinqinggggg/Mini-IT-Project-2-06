@@ -40,6 +40,8 @@ button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
 energy_increase = pygame.mixer.Sound("Assets/Audio/energy_increase.mp3")
 correct_click = pygame.mixer.Sound("Assets/Audio/correct_sound.mp3")
 error_click = pygame.mixer.Sound("Assets/Audio/error_sound.mp3")
+spooky_sound = pygame.mixer.Sound("Assets/Audio/Bedroom_spooky.mp3") 
+narcissism_sound = pygame.mixer.Sound("Assets/Audio/bedroom_narcissism.mp3")
 
 # === Music ===
 def play_background_music():
@@ -85,6 +87,11 @@ interacted_items = set()
 interacted_items_popup = False
 bedroom_objects_initialized = False
 previous_game_state = None
+mirror_click_count = 0
+Functions.energy = 50
+game_minutes = 170
+minutes_per_real_second = 1  # Can be adjusted for faster/slower time
+last_minute_update = pygame.time.get_ticks()
 
 # === Stats ===
 floating_texts = []
@@ -134,9 +141,15 @@ def draw_stats():
     money_text = custom_font.render(f"{Functions.money:06}", True, (0, 0, 0))
     screen.blit(energy_text, (80, 28))
     screen.blit(money_text, (80, 105))
-    screen.blit(brush_img, brush_rect)
-    screen.blit(towel_img, towel_rect)
-    screen.blit(mirror_img, mirror_rect)
+    time_text = custom_font.render(get_game_time(), True, (0, 0, 0))
+    screen.blit(time_text, (505, 120)) 
+
+    if "brush" not in interacted_items:
+        screen.blit(brush_img, brush_rect)
+    if "towel" not in interacted_items:
+        screen.blit(towel_img, towel_rect)
+    if "mirror" not in interacted_items:
+        screen.blit(mirror_img, mirror_rect)
 
 def handle_inside_menu_events(event):
     global inside_menu_active, slider_dragging, volume, game_state
@@ -226,18 +239,33 @@ def bedroom_screen():
         pygame.draw.rect(screen, (255, 140, 0), box_rect, 2)
         screen.blit(text_surf, text_rect)
 
+def get_game_time():
+    hours = game_minutes // 60
+    minutes = game_minutes % 60
+    hour_12 = hours % 12
+    hour_12 = 12 if hour_12 == 0 else hour_12
+    suffix = "AM" if hours < 12 else "PM"
+    return f"{hour_12:02}:{minutes:02} {suffix}"
+
 # === Main Function ===
 def run():
     global sleeping, game_state, show_sleep_popup, already_slept_popup, interacted_items_popup
     global slept_once, sleep_start_time, inside_menu_active, popup_timer, bedroom_objects_initialized, previous_game_state
+    global mirror_click_count, game_minutes, last_minute_update
 
     running = True
     while running:
         current_time = pygame.time.get_ticks()
         mouse_pos = pygame.mouse.get_pos()
 
+        now = pygame.time.get_ticks()
+        if now - last_minute_update > 1000:  # 1 second has passed
+            game_minutes = (game_minutes + minutes_per_real_second) % (24 * 60)
+            last_minute_update = now
+
         if game_state == "bedroom" and previous_game_state != "bedroom":
             reset_bedroom_objects()
+            interacted_items.clear()    
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -278,7 +306,15 @@ def run():
                         add_floating_text("Wiped face!", event.pos[0], event.pos[1], (0, 180, 0))  # Green
 
                     elif mirror_rect.collidepoint(event.pos):
-                        correct_click.play()
+                        mirror_click_count += 1
+                        if mirror_click_count == 5:
+                            narcissism_sound.play()
+                            Functions.energy += 10
+                            add_floating_text("You're so narcissism!", event.pos[0], event.pos[1] - 50, (255, 20, 147))
+                            add_floating_text("+10 Energy", 200, 28, (255, 0, 0))  
+                            mirror_click_count = 0  
+                        else:
+                            correct_click.play()
                         interacted_items.add("mirror")
                         add_floating_text("Pretty!", event.pos[0], event.pos[1], (255, 105, 180))  # Pink
 
@@ -286,17 +322,24 @@ def run():
                         if slept_once:
                             already_slept_popup = True
                             popup_timer = current_time
-                            error_click.play() 
-                        elif {"brush", "towel", "mirror"}.issubset(interacted_items):
-                            correct_click.play()
+                            error_click.play()
+                        elif not {"brush", "towel", "mirror"}.issubset(interacted_items):
+                            # Not done all routines yet, show popup
+                            interacted_items_popup = True
+                            popup_timer = current_time
+                            error_click.play()
+                        else:
+                            # All routines done, can sleep
                             sleeping = True
                             sleep_start_time = current_time
                             slept_once = True
                             play_sleep_start()
-                        else:
-                            interacted_items_popup = True
-                            popup_timer = current_time
-                            error_click.play() 
+
+                            current_minutes = game_minutes % (24 * 60)  
+                            if 180 <= current_minutes <= 185:  
+                                spooky_sound.play()
+                                Functions.energy -= 10  
+                                add_floating_text("-10 Energy", 200, 28, (255, 0, 0)) 
 
         if not inside_menu_active:
             if any(r.collidepoint(mouse_pos) for r in [brush_rect, towel_rect, mirror_rect, bed_rect]):
@@ -311,7 +354,6 @@ def run():
                 energy_increase.play()
                 add_floating_text("+30 Energy", 200, 28, (128, 128, 128))
                 sleeping = False
-                interacted_items.clear()
                 play_bedroom_music()
 
         if game_state == "bedroom":
