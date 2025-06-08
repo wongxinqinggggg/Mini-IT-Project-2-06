@@ -32,6 +32,8 @@ pygame.mixer.music.load("Assets/Audio/background.mp3")
 button_click = pygame.mixer.Sound("Assets/Audio/MG3_button_click.mp3")
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
+coin_sound = pygame.mixer.Sound("Assets/Audio/coinmusic.mp3")
+coin_sound.set_volume(0.3)
 
 # === COLORS ===
 BLACK = (0, 0, 0)
@@ -61,6 +63,8 @@ pet_img1 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()
 pet_img2 = pygame.image.load("Assets/Sprites/npc/pet2.png").convert_alpha()
 pet_img3 = pygame.image.load("Assets/Sprites/npc/pet3.png").convert_alpha()
 pet_img4 = pygame.image.load("Assets/Sprites/npc/pet4.png").convert_alpha()
+coin_img = pygame.image.load("Assets/Images/coin.webp").convert_alpha()
+coin_img = pygame.transform.scale(coin_img, (20, 20))
 
 # === GAME VARIABLES ===
 player_name = ''
@@ -90,6 +94,12 @@ player_direction = "s"  # Initial direction (facing down)
 walk_frame = 0  # Current animation frame
 walk_timer = 0  # Timer for animation updates
 walk_delay = 200
+money_drops = []  
+money_drop_timer = 5
+MONEY_DROP_INTERVAL = 15000 
+MONEY_DROP_PROBABILITY = 0.3 
+MONEY_DURATION = 15000 
+BLINK_START = 5000
 running = True
 
 class AdelineNPC:
@@ -99,17 +109,16 @@ class AdelineNPC:
         self.direction = random.choice(["left", "right"])
         self.walk_frame = 0
         self.walk_timer = 0
-        self.walk_delay = 200  # 毫秒
+        self.walk_delay = 200  
         self.talking = False
         self.active = True
-        self.dialogue_state = 0  # 0:初始, 1:选择颜色, 2:结果
+        self.dialogue_state = 0  
         self.reward_given = False
         
     def update(self):
         if not self.active or self.talking:
             return
             
-        # 限制在y坐标范围内
         if self.y < 190:
             self.y = 190
             self.direction = "right"
@@ -117,7 +126,6 @@ class AdelineNPC:
             self.y = 200
             self.direction = "left"
 
-        # 限制在x坐标范围内
         if self.x < -5:
             self.x = -5
             self.direction = "right"
@@ -125,17 +133,14 @@ class AdelineNPC:
             self.x = 1020
             self.direction = "left"
 
-        # 随机改变方向
         if random.random() < 0.01:  # 1%的几率改变方向
             self.direction = "left" if self.direction == "right" else "right"
             
-        # 移动
         if self.direction == "left":
             self.x -= 1
         else:
             self.x += 1
             
-        # 更新动画帧
         if pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
             self.walk_frame = (self.walk_frame + 1) % 2
             self.walk_timer = pygame.time.get_ticks()
@@ -144,7 +149,7 @@ class AdelineNPC:
         if not self.active:
             return
             
-        # 绘制NPC
+        # NPC
         if self.direction == "left":
             img = npc_left1 if self.walk_frame == 0 else npc_left2
         else:
@@ -152,7 +157,6 @@ class AdelineNPC:
             
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
         
-        # 如果玩家靠近且不在对话中，显示提示
         if self.is_player_near() and not self.talking:
             text = FONT.render("Click Y to talk with ADELINE", True, WHITE)
             surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
@@ -168,8 +172,8 @@ class AdelineNPC:
     def end_dialogue(self):
         print("Dialogue ended.")
         self.talking = False
-        if self.dialogue_state == 2:  # 如果完成了对话
-            self.active = False  # NPC消失
+        if self.dialogue_state == 2:  
+            self.active = False  # NPC Disappear
         if selected_color_option != 0:
             self.active = False    
 
@@ -180,43 +184,38 @@ class TralaleloTralalaNPC:
         self.direction = random.choice(["left", "right"])
         self.walk_frame = 0
         self.walk_timer = 0
-        self.walk_delay = 200  # 毫秒
+        self.walk_delay = 200  
         self.talking = False
         self.active = True
-        self.dialogue_state = 0  # 0:初始, 1:选择颜色, 2:结果
+        self.dialogue_state = 0  
         self.reward_given = False
         
     def update(self):
         if not self.active or self.talking:
             return
             
-        # 限制在y坐标范围内
-        if self.y < 450:
-            self.y = 450
+        if self.y < 750:
+            self.y = 750
             self.direction = "right"
-        elif self.y > 550:
-            self.y = 550
+        elif self.y > 850:
+            self.y = 850
             self.direction = "left"
 
-        # 限制在x坐标范围内
         if self.x < -5:
             self.x = -5
             self.direction = "right"
-        elif self.x > 1020:
-            self.x = 1020
+        elif self.x > 1000:
+            self.x = 1000
             self.direction = "left"
 
-        # 随机改变方向
         if random.random() < 0.01:  # 1%的几率改变方向
             self.direction = "left" if self.direction == "right" else "right"
             
-        # 移动
         if self.direction == "left":
             self.x -= 1
         else:
             self.x += 1
             
-        # 更新动画帧
         if pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
             self.walk_frame = (self.walk_frame + 1) % 2
             self.walk_timer = pygame.time.get_ticks()
@@ -225,7 +224,7 @@ class TralaleloTralalaNPC:
         if not self.active:
             return
             
-        # 绘制NPC
+        # NPC
         if self.direction == "left":
             img = npc_tralalelo_tralala_left
         else:
@@ -233,7 +232,6 @@ class TralaleloTralalaNPC:
             
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
         
-        # 如果玩家靠近且不在对话中，显示提示
         if self.is_player_near() and not self.talking:
             text = FONT.render("Click Y to talk with TRALALELO", True, WHITE)
             surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
@@ -249,8 +247,8 @@ class TralaleloTralalaNPC:
     def end_dialogue(self):
         print("Dialogue ended.")
         self.talking = False
-        if self.dialogue_state == 2:  # 如果完成了对话
-            self.active = False  # NPC消失
+        if self.dialogue_state == 2:  
+            self.active = False  
         if selected_friend_option != 0:
             self.active = False
 
@@ -264,7 +262,7 @@ class FourDNPC:
         self.walk_delay = 200
         self.talking = False
         self.active = True
-        self.dialogue_state = 0  # 0:初始, 1:查看余额&下单, 2:Reward Display, 3:余额不足, 4:Bye, 5:有钱再来
+        self.dialogue_state = 0  # 0:Initial, 1:Checking & Buy, 2:Reward Display, 3:Not enough money, 4:Bye, 5:come again
         self.reward_money = 0
         self.reward_energy = 0
         self.selected_pay_option = 0
@@ -279,20 +277,20 @@ class FourDNPC:
         self.current_line = 0
         self.checked_wallet = False
         self.wallet_check_timer = 0
-        self.wallet_check_duration = 3000  # 3秒
+        self.wallet_check_duration = 3000  # 3s
         self.wallet_check_started = False
 
     def handle_input(self, event):
         
         if event.type == pygame.KEYDOWN and self.talking:
-            if self.dialogue_state == 0:  # 选择BUY/BYE状态
+            if self.dialogue_state == 0:  # BUY/BYE
                 if event.key == pygame.K_LEFT:
-                    self.selected_pay_option = 0  # 选择BUY
+                    self.selected_pay_option = 0  # BUY
                 elif event.key == pygame.K_RIGHT:
-                    self.selected_pay_option = 1  # 选择BYE
-                elif event.key == pygame.K_RETURN:  # 确认选择
+                    self.selected_pay_option = 1  # BYE
+                elif event.key == pygame.K_RETURN:  
                     if self.selected_pay_option == 0:  # BUY
-                        self.dialogue_state = 1  # 进入检查钱包状态
+                        self.dialogue_state = 1  # Checking
                         self.current_line = 1
                         self.checked_wallet = False
                         self.wallet_check_started = True
@@ -302,11 +300,11 @@ class FourDNPC:
                         self.current_line = 4
                             
             elif event.key == pygame.K_SPACE:
-                if self.dialogue_state == 2:      # 如果是奖励状态
+                if self.dialogue_state == 2:      
                     Functions.update_stats (mpchange=self.reward_money, hpchange=self.reward_energy)   
                     self.dialogue_state = 5
                     self.current_line = 5
-                elif self.dialogue_state in [3, 4, 5]:  # 钱不够/再见状态
+                elif self.dialogue_state in [3, 4, 5]:  
                     self.end_dialogue()
 
     def update(self):
@@ -315,18 +313,18 @@ class FourDNPC:
         if not self.active:
             return
             
-        if self.y < 700:
-            self.y = 700
+        if self.y < 460:
+            self.y = 460
             self.direction = "right"
-        elif self.y > 800:
-            self.y = 800
+        elif self.y > 560:
+            self.y = 560
             self.direction = "left"
 
         if self.x < -5:
             self.x = -5
             self.direction = "right"
-        elif self.x > 1000:
-            self.x = 1000
+        elif self.x > 1020:
+            self.x = 1020
             self.direction = "left"
 
         if random.random() < 0.01:
@@ -341,7 +339,6 @@ class FourDNPC:
             self.walk_frame = (self.walk_frame + 1) % 3
             self.walk_timer = pygame.time.get_ticks()
 
-        # 只在对话状态下检查钱包状态
         if self.talking and self.dialogue_state == 1 and self.wallet_check_started and not self.checked_wallet:
             current_time = pygame.time.get_ticks()
             print(f"Checking wallet... Time elapsed: {current_time - self.wallet_check_timer}ms")  # 调试输出
@@ -368,7 +365,7 @@ class FourDNPC:
             pygame.draw.rect(surface, (0, 0, 0), (50, HEIGHT-200, WIDTH-100, 150))
             pygame.draw.rect(surface, WHITE, (50, HEIGHT-200, WIDTH-100, 150), 3)
             
-            if self.dialogue_state == 0:  # 初始选择状态
+            if self.dialogue_state == 0:  
                 
                 for i, option in enumerate(["BUY", "BYE"]):
                     color = HIGHLIGHT if i == self.selected_pay_option else WHITE
@@ -418,8 +415,8 @@ class FourDNPC:
         self.talking = True
         self.dialogue_state = 0
         self.current_line = 0
-        self.selected_pay_option = 0  # 重置选择
-        self.reward_given = False  # 标记是否已给奖励
+        self.selected_pay_option = 0 
+        self.reward_given = False  
     
     def end_dialogue(self):
         self.talking = False
@@ -451,52 +448,48 @@ class PetNPC:
         self.name_confirmed = False
         self.width = 32
         self.height = 32
-        self.event = pygame.USEREVENT + 103
-        self.pet_img1 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()  # 右站立/右走1
-        self.pet_img2 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()  # 右走2
-        self.pet_img3 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()  # 左站立/左走1
-        self.pet_img4 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()  # 左走2
-        
-    def update(self, player_x, player_y, collision_rects):
-        if not self.name_confirmed or not self.pet_hp:
+        self.event = pygame.USEREVENT + 103  # This line was missing in the implementation
+        self.pet_img1 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()
+        self.pet_img2 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()
+        self.pet_img3 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()
+        self.pet_img4 = pygame.image.load("Assets/Sprites/npc/pet1.png").convert_alpha()
+        self.collect_range = 50  
+        self.collect_cooldown = 0  
+        self.happy_timer = 0  
+        self.is_happy = False
+
+    def update(self, player_x, player_y, collision_rects, money_drops):
+        if not self.name_confirmed:  
             return
-            
-        # 计算与玩家的方向和距离
+                
         dx = player_x - self.x
         dy = player_y - self.y
         
-        # 确定移动方向
         if dx > 0:
             self.direction = "right"
         elif dx < 0:
             self.direction = "left"
         
-        # 计算目标位置
         target_x = player_x - (self.follow_distance if self.direction == "right" else -self.follow_distance)
         target_y = player_y
         
-        # 计算移动向量
         move_x = target_x - self.x
         move_y = target_y - self.y
         distance = (move_x**2 + move_y**2)**0.5
         
-        if distance > 5:  # 需要移动
-            # 标准化移动向量
+        if distance > 3: 
             if distance > 0:
                 move_x = move_x / distance * self.follow_speed
                 move_y = move_y / distance * self.follow_speed
             
-            # 先尝试x方向移动
             new_x = self.x + move_x
             new_y = self.y
             pet_rect = pygame.Rect(new_x, new_y, self.width, self.height)
             
-            # 检查x方向碰撞
             can_move_x = True
             for rect in collision_rects:
                 if pet_rect.colliderect(rect):
                     can_move_x = False
-                    print('false')
                     break
             
             if can_move_x:
@@ -504,12 +497,10 @@ class PetNPC:
             else:
                 move_x = 0
             
-            # 再尝试y方向移动
             new_x = self.x
             new_y = self.y + move_y
             pet_rect = pygame.Rect(new_x, new_y, self.width, self.height)
             
-            # 检查y方向碰撞
             can_move_y = True
             for rect in collision_rects:
                 if pet_rect.colliderect(rect):
@@ -519,34 +510,58 @@ class PetNPC:
             if can_move_y:
                 self.y = new_y
             
-            # 更新动画帧（修改为4帧循环）
             if pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
-                self.walk_frame = (self.walk_frame + 1) % 4  # 现在有4帧
+                self.walk_frame = (self.walk_frame + 1) % 4  # 现在有4帧动画
                 self.walk_timer = pygame.time.get_ticks()
         else:
-            self.walk_frame = 0  # 站立不动时使用第一帧
+            self.walk_frame = 0  
 
-    def draw(self, surface, camera_x, camera_y):
+        if self.name_confirmed:  # Only collect money after naming
+            current_time = pygame.time.get_ticks()
+            if current_time - self.collect_cooldown > 1000:  # 1 second cooldown
+                for money in money_drops[:]:
+                    distance = ((self.x - money["x"])**2 + (self.y - money["y"])**2)**0.5
+                    if distance < self.collect_range:
+                        # Collect money
+                        Functions.update_stats(mpchange=money["value"])
+                        # Changed this line to use 'mp' as the ID instead of coordinates
+                        Functions.add_floating_text(f"+{money['value']} Money", 'mp', (0, 255, 0))
+                        coin_sound.play()  # Play collection sound
+                        money_drops.remove(money)
+                        self.collect_cooldown = current_time
+                        self.is_happy = True
+                        self.happy_timer = current_time
+                        break
+                
+            # Happy state duration (2 seconds)
+            if self.is_happy and current_time - self.happy_timer > 2000:
+                self.is_happy = False
+
+
+    def draw(self, surface, camera_x, camera_y, money_drops):
         if not self.active:
             return
             
-        # 绘制宠物 - 修改为4帧动画
         if self.direction == "left":
-            # 向左走: pet3, pet4, pet3, pet4
             if self.walk_frame == 0 or self.walk_frame == 2:
                 img = self.pet_img3
             else:
                 img = self.pet_img4
         else:
-            # 向右走: pet1, pet2, pet1, pet2
             if self.walk_frame == 0 or self.walk_frame == 2:
                 img = self.pet_img1
             else:
                 img = self.pet_img2
             
+        if self.is_happy:
+            img = pygame.transform.scale(img, (int(img.get_width()*1.2), int(img.get_height()*1.2)))
+
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
         
-        # 如果玩家靠近且不在对话中，显示提示
+        if self.is_happy:
+            heart = small_font.render("<3", True, (255, 0, 0))
+            surface.blit(heart, (self.x - camera_x + img.get_width()//2 - heart.get_width()//2, self.y - camera_y - 20))
+
         if self.is_player_near() and not self.talking and not self.name_confirmed:
             text = FONT.render("Press P to talk with PET", True, WHITE)
             surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
@@ -556,44 +571,44 @@ class PetNPC:
         return distance < 100
     
     def start_dialogue(self):
-        if not self.name_confirmed:  # 只有在未确认名字时才开启对话
+        if not self.name_confirmed:  
             self.talking = True
             self.dialogue_state = 0
     
     def handle_input(self, event):
         if event.type == pygame.KEYDOWN and self.talking:
-            if self.dialogue_state == 0:  # 初始选择是否收养
+            if self.dialogue_state == 0:  
                 if event.key == pygame.K_LEFT:
-                    self.selected_option = 0  # 选择YES
+                    self.selected_option = 0  
                 elif event.key == pygame.K_RIGHT:
-                    self.selected_option = 1  # 选择NO
+                    self.selected_option = 1  
                 elif event.key == pygame.K_RETURN:
                     if self.selected_option == 0:  # YES
-                        self.dialogue_state = 1  # 进入取名状态
+                        self.dialogue_state = 1  
                         self.name_input_active = True
                     else:  # NO
                         self.end_dialogue()
                         
-            elif self.dialogue_state == 1:  # 取名状态
+            elif self.dialogue_state == 1:  
                 if event.key == pygame.K_BACKSPACE:
                     self.pet_name = self.pet_name[:-1]
-                elif event.key == pygame.K_RETURN and self.pet_name:  # 确认名字
+                elif event.key == pygame.K_RETURN and self.pet_name:  
                     self.name_input_active = False
-                    self.dialogue_state = 2  # 进入确认名字状态
+                    self.dialogue_state = 2  
                 elif len(self.pet_name) < 11 and event.unicode.isprintable():
                     self.pet_name += event.unicode
                     
-            elif self.dialogue_state == 2:  # 确认名字
+            elif self.dialogue_state == 2:  
                 if event.key == pygame.K_LEFT:
-                    self.selected_option = 0  # 确认名字
+                    self.selected_option = 0  
                 elif event.key == pygame.K_RIGHT:
-                    self.selected_option = 1  # 重新命名
+                    self.selected_option = 1  
                 elif event.key == pygame.K_RETURN:
-                    if self.selected_option == 0:  # 确认
+                    if self.selected_option == 0:  
                         self.name_confirmed = True
                         pygame.time.set_timer(self.event, 5000)
                         self.end_dialogue()
-                    else:  # 重新命名
+                    else:  
                         self.dialogue_state = 0
                         self.pet_name = ""
     
@@ -788,12 +803,33 @@ def get_sprite(x, y):
 def load_player_images(character):
     if character == "female": y = 0
     elif character == "male": y = 1
-    return {"idle": {"w": get_sprite(3, y), "s": get_sprite(0, y), 
-                     "a": get_sprite(1, y), "d": get_sprite(2, y)},
-            "walk": {"w": [get_sprite(8, y), get_sprite(9, y)],
-                     "s": [get_sprite(4, y), get_sprite(5, y)],
-                     "a": [get_sprite(6, y), get_sprite(1, y)],
-                     "d": [get_sprite(7, y), get_sprite(2, y)]}}
+
+    idle_s = get_sprite(0, y)
+    idle_a = get_sprite(1, y)
+    idle_d = get_sprite(2, y)
+    idle_w = get_sprite(3, y)
+
+    walk_s1 = get_sprite(4, y)
+    walk_s2 = get_sprite(5, y)
+    walk_a = get_sprite(6, y)
+    walk_d = get_sprite(7, y)
+    walk_w1 = get_sprite(8, y)
+    walk_w2 = get_sprite(9, y)
+
+    return {
+        # Walk (%4)
+        "w": [idle_w, walk_w1, idle_w, walk_w2],
+        "s": [idle_s, walk_s1, idle_s, walk_s2],
+        "a": [idle_a, walk_a, idle_a, walk_a],  
+        "d": [idle_d, walk_d, idle_d, walk_d],
+
+        "idle": {
+            "w": idle_w,
+            "s": idle_s,
+            "a": idle_a,
+            "d": idle_d
+        }
+    }
 
 # === CAMERA ===
 def get_camera_offset():
@@ -814,8 +850,6 @@ def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255),
     box_height = 160
     box_x = box_margin
     box_y = screen_height - box_height - 20
-
-    # Wrap text
     words = message.split(' ')
     lines = []
     line = ''
@@ -832,7 +866,6 @@ def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255),
     popup_surface.set_alpha(230)
     popup_surface.fill(bg_color)
     pygame.draw.rect(popup_surface, border_color, popup_surface.get_rect(), 4)
-
     line_height = font.get_height() + line_spacing
     y_offset = padding
     for l in lines:
@@ -1000,6 +1033,22 @@ while running:
         transitioning = True
         last_switch_time = now
 
+    now = pygame.time.get_ticks()
+    if now - money_drop_timer > MONEY_DROP_INTERVAL and random.random() < 0.3:
+        money_drops.append({
+            "x": random.randint(50, MAP_WIDTH-50),
+            "y": random.randint(50, MAP_HEIGHT-50),
+            "value": random.randint(1, 10),
+            "time": now,
+            "duration": MONEY_DURATION
+        })
+        money_drop_timer = now
+
+    current_time = pygame.time.get_ticks()
+    for money in money_drops[:]:
+        if current_time - money["time"] > money["duration"]:
+            money_drops.remove(money)
+
     screen.fill(WHITE)
     cursor_timer += dt
     if cursor_timer >= cursor_interval:
@@ -1065,37 +1114,28 @@ while running:
                     current_alpha = 0
                     transitioning = False
         # Apply darkness overlay
-        dark_overlay.fill((0, 0, 0, current_alpha))  # update alpha in fill, not via set_alpha
+        dark_overlay.fill((0, 0, 0, current_alpha))
         screen.blit(dark_overlay, (0, 0))
 
         # Draw light masks to simulate glowing lamp posts
         if is_night:
             for lx, ly in lamp_post_positions:
-                light_mask.set_alpha(180)  # fixed brightness, no flicker
+                light_mask.set_alpha(180)
                 screen_x = lx - camera_x
                 screen_y = ly - camera_y
                 screen.blit(light_mask, (screen_x - 100, screen_y - 100))
 
-        # Player movement 
+        # Player movement logic
         old_x, old_y = player_x, player_y
-        keys = pygame.key.get_pressed()
         moving = False
-        new_x, new_y = player_x, player_y  # New position after moving
+        new_x, new_y = player_x, player_y
 
-        # 获取按键
         if not input_locked:
             keys = pygame.key.get_pressed()
-            moving = False
-            new_x, new_y = player_x, player_y  #
             move_distance = player_speed 
         
-            if ((keys[pygame.K_w] and keys[pygame.K_s]) or 
-                (keys[pygame.K_a] and keys[pygame.K_d])): 
-                moving = False
-            else:
-                # Calculate distance for diagonal movement so that total displacement is = speed 
-                if ((keys[pygame.K_w] or keys[pygame.K_s]) and 
-                    (keys[pygame.K_a] or keys[pygame.K_d])):
+            if not ((keys[pygame.K_w] and keys[pygame.K_s]) or (keys[pygame.K_a] and keys[pygame.K_d])):
+                if (keys[pygame.K_w] or keys[pygame.K_s]) and (keys[pygame.K_a] or keys[pygame.K_d]):
                     move_distance = ((player_speed**2)/2)**0.5  
 
                 if keys[pygame.K_w]:
@@ -1112,44 +1152,51 @@ while running:
                     new_x += move_distance
                     player_direction = "d"
 
-        # 创建玩家的目标矩形，用来检查碰撞
-            if player_x != new_x:
-                player_rect = pygame.Rect(new_x, player_y, sprite_width, sprite_height/2)
-                for rect in collision_rects:
-                    if player_rect.colliderect(rect):
-                        x_distance = abs(player_x + sprite_width/2 - rect.center[0]) - (sprite_width/2 + rect.width/2)
-                        if not x_distance: new_x = player_x  # Stop movement on collision
-                        else: 
-                            if keys[pygame.K_a]: new_x = player_x - x_distance
-                            elif keys[pygame.K_d]: new_x = player_x + x_distance
-                        break
+        # Collision detection logic
+        if new_x != player_x:
+            player_rect = pygame.Rect(new_x, player_y, sprite_width, sprite_height/2)
+            # Simplified collision check
+            collision_found = False
+            for rect in collision_rects:
+                if player_rect.colliderect(rect):
+                    collision_found = True
+                    break
+            if not collision_found:
+                player_x = new_x
 
-            if player_y != new_y:
-                player_rect = pygame.Rect(player_x, new_y, sprite_width, sprite_height/2)
-                for rect in collision_rects:
-                    if player_rect.colliderect(rect):
-                        y_distance = abs(player_y + sprite_height/4 - rect.center[1]) - (sprite_height/4 + rect.height/2)
-                        if not y_distance: new_y = player_y  # Stop movement on collision
-                        else: 
-                            if keys[pygame.K_w]: new_y = player_y - y_distance
-                            elif keys[pygame.K_s]: new_y = player_y + y_distance
-                        break
+        if new_y != player_y:
+            player_rect = pygame.Rect(player_x, new_y, sprite_width, sprite_height/2)
+            # Simplified collision check
+            collision_found = False
+            for rect in collision_rects:
+                if player_rect.colliderect(rect):
+                    collision_found = True
+                    break
+            if not collision_found:
+                player_y = new_y
+        
+        # Determine if the player is actually moving
+        moving = (player_x != old_x) or (player_y != old_y)
+        
+        # Update animation frame
+        if moving:
+            if pygame.time.get_ticks() - walk_timer > walk_delay:
+                walk_frame = (walk_frame + 1) % len(player_imgs[player_direction])
+                walk_timer = pygame.time.get_ticks()
+        else:
+            walk_frame = 0
 
-            # 如果没有发生碰撞，更新玩家位置, 更新动画帧
-            if (player_x != new_x) or (player_y != new_y): 
-                moving = True
-                player_x, player_y = new_x, new_y
-                if pygame.time.get_ticks() - walk_timer > walk_delay:
-                    walk_frame += 1
-                    if walk_frame >= len(player_imgs["walk"][player_direction]): walk_frame = 0
-                    walk_timer = pygame.time.get_ticks()
+        # Choose the correct sprite based on state
+        if moving:
+            current_img = player_imgs[player_direction][walk_frame]
+        else:
+            current_img = player_imgs["idle"][player_direction]
 
-            else: walk_frame = 0
-
-        # 绘制玩家
-        current_img = player_imgs["walk"][player_direction][walk_frame] if moving else player_imgs["idle"][player_direction]
+        # --- DRAWING SEQUENCE STARTS HERE ---
+        # Draw player's lower half
         screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
 
+        # **MOVED CODE**: Draw buildings and obstacles now
         for i in range(len(buildinglist)): 
             xpos, ypos = buildinglist[i][0]*TILE_SIZE - camera_x, buildinglist[i][1]*TILE_SIZE - camera_y
             if (-224 <= xpos <= WIDTH) and (-160 <= ypos <= HEIGHT):
@@ -1161,13 +1208,20 @@ while running:
             if (-96 <= xpos <= WIDTH) and (-64 <= ypos <= HEIGHT):
                 if scale: surf = pygame.transform.scale_by(surf, scale)
                 screen.blit(surf, (xpos, ypos))
+        
+        for char in characters:
+            screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
 
         upper_rect = pygame.Rect(0, 0, sprite_width, sprite_height/2)
         upper_rect.bottomleft = (player_x - camera_x, player_y - camera_y)
         screen.blit(current_img[0], upper_rect)
 
-        for char in characters:
-            screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
+        for money in money_drops:
+            time_left = money["duration"] - (current_time - money["time"])
+            if time_left > BLINK_START or (time_left // 500) % 2 == 0:
+                screen.blit(coin_img, (money["x"] - camera_x - coin_img.get_width()//2, money["y"] - camera_y - coin_img.get_height()//2))
+                text = xsmall_font.render(str(money["value"]), True, WHITE)
+                screen.blit(text, (money["x"] - camera_x - text.get_width()//2, money["y"] - camera_y - 25))
 
         popup_button_rect = None
         for character in characters:
@@ -1251,41 +1305,40 @@ while running:
             if four_d_npc.talking:
                 screen.blit(small_font.render(four_d_npc.dialogue_lines[four_d_npc.current_line], True, WHITE), (70, HEIGHT-180))
 
-        pet_npc.update(player_x, player_y, collision_rects)
-        pet_npc.draw(screen, camera_x, camera_y)
+        pet_npc.update(player_x, player_y, collision_rects, money_drops)
+        pet_npc.draw(screen, camera_x, camera_y, money_drops)
         
         if pet_npc.talking:
             pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT-200, WIDTH-100, 150))
             pygame.draw.rect(screen, WHITE, (50, HEIGHT-200, WIDTH-100, 150), 3)
             
-            if pet_npc.dialogue_state == 0:  # 初始选择
-                text = small_font.render("Do you want it become your lovely pet?", True, WHITE)
-                screen.blit(text, (70, HEIGHT-180))
+            if pet_npc.dialogue_state == 0:  
+                text1 = small_font.render("Do you want it become your lovely pet?", True, WHITE)
+                text2 = small_font.render("It will occasionally drop coins after adoption!", True, WHITE)
+                screen.blit(text1, (70, HEIGHT-180))
+                screen.blit(text2, (70, HEIGHT-140))
                 
                 for i, option in enumerate(["YES", "NO"]):
                     color = HIGHLIGHT if i == pet_npc.selected_option else WHITE
-                    screen.blit(font.render(option, True, color), (100 + i * 200, HEIGHT-140))
+                    screen.blit(font.render(option, True, color), (100 + i * 200, HEIGHT-100))
                     
-            elif pet_npc.dialogue_state == 1:  # 取名状态
+            elif pet_npc.dialogue_state == 1:  
                 text = small_font.render("Name your pet:", True, WHITE)
                 screen.blit(text, (70, HEIGHT-180))
                 
-                # 显示当前输入的名字
                 name_text = font.render(pet_npc.pet_name + ("|" if pet_npc.name_input_active and cursor_visible else ""), True, WHITE)
                 screen.blit(name_text, (70, HEIGHT-150))
                 
                 hint = small_font.render("Press ENTER to confirm", True, WHITE)
                 screen.blit(hint, (70, HEIGHT-120))
                 
-            elif pet_npc.dialogue_state == 2:  # 确认名字
+            elif pet_npc.dialogue_state == 2:  
                 text = small_font.render(f"Hi, I'm {pet_npc.pet_name} now!", True, WHITE)
                 screen.blit(text, (70, HEIGHT-180))
                 
                 for i, option in enumerate(["Hi! You are my pet now!", "RENAME"]):
                     color = HIGHLIGHT if i == pet_npc.selected_option else WHITE
                     screen.blit(small_font.render(option, True, color), (100 + i * 400, HEIGHT-140))
-
-               # EFFECT FOR INTRO MESSAGE
         
         if show_intro_message:
             if not typing_done:
@@ -1602,7 +1655,7 @@ while running:
                     button_click.play()
                     show_intro_message = False
 
-                # NPC对话触发
+                # NPC
                 if event.key == pygame.K_y and adeline.active and adeline.is_player_near() and not adeline.talking:  
                     adeline.start_dialogue()
                 if event.key == pygame.K_y and tralalelo.active and tralalelo.is_player_near() and not tralalelo.talking:  
@@ -1612,7 +1665,8 @@ while running:
                 if event.key == pygame.K_p and pet_npc.active and pet_npc.is_player_near() and not pet_npc.talking and not pet_npc.name_confirmed:
                     pet_npc.start_dialogue()
                 
-                if pet_npc.talking: pet_npc.handle_input(event)
+                if pet_npc.talking:
+                    pet_npc.handle_input(event)
 
                 INVENTORY.eventhandler(event, False)
 
@@ -1675,3 +1729,4 @@ while running:
     pygame.display.flip()
     
 pygame.quit()
+
