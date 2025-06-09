@@ -21,23 +21,21 @@ dragging = False
 
 # Load images
 def load():
-    global full_map_image, mg3_menu_image, mg3_question_image, mg3_instruction_image, mg3_base_image
-    global mge_statsbar_image, Inside_menu_image, Menu_image
+    global mg3_menu_image, mg3_question_image, mg3_instruction_image, mg3_base_image
+    global mge_statsbar_image, Inside_menu_image, menubtn 
     global success_sound, fail_sound, button_click
-    full_map_image = pygame.image.load("Assets/Images/final_map.png").convert()
     mg3_menu_image = pygame.image.load("Assets/Images/MG3-Menu.png").convert()
-    mg3_question_image = pygame.image.load("Assets/Images/MG3-Elements_1.png").convert_alpha()
+    mg3_question_image = Functions.mainbtnlist[0]
     mg3_instruction_image = pygame.image.load("Assets/Images/MG3-Instructions.png").convert()
     mg3_base_image = pygame.image.load("Assets/Images/MG3-Base.png").convert()
-    mge_statsbar_image = pygame.image.load("Assets/Images/MG3_Statsbar.png").convert_alpha()
-    Menu_image = pygame.image.load("Assets/Images/MG3_Menubutton.png").convert_alpha()
+    mge_statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
+    menubtn = Functions.mainbtnlist[1]
     Inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
 
-
     # Load sounds
-    success_sound = pygame.mixer.Sound("Assets/Audio/MG3_success.mp3")
-    fail_sound = pygame.mixer.Sound("Assets/Audio/MG3_fail.mp3")
-    button_click = pygame.mixer.Sound("Assets/Audio/MG3_button_click.mp3")
+    success_sound = pygame.mixer.Sound("Assets/Audio/success.mp3")
+    fail_sound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
+    button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
     pygame.mixer.music.load("Assets/Audio/MG3_bgm.mp3")
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
@@ -108,20 +106,19 @@ def draw_floating_texts():
 def draw_statsbar():
     energy_text = custom_font.render(f"{Functions.energy:06}", True, (0, 0, 0))
     money_text = custom_font.render(f"{Functions.money:06}", True, (0, 0, 0))
-    screen.blit(energy_text, (80, 28))
-    screen.blit(money_text, (80, 105))
+    screen.blit(energy_text, (80, 20))
+    screen.blit(money_text, (80, 95))
 
 font = pygame.font.SysFont('Assets/Fonts/PressStart2P.ttf', 28, bold=True)
 floating_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 30)  
-custom_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 25)
+custom_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
 
 # UI Rects
-question_button_rect = pygame.Rect(710, 100, 315,294)
+question_button_rect = pygame.Rect(920, 120, 80, 80)
 back_button_rect = pygame.Rect(460, 400, 120, 50)
 start_button_rect = pygame.Rect(450, 350, 150, 60)
 retry_button_rect = pygame.Rect(450, 460, 120, 50)
-menu_button_menu_screen_rect = pygame.Rect(720, 0, 301, 576)
-menu_button_base_screen = pygame.Rect(720, 50, 301, 576) 
+menu_button_base_screen = pygame.Rect(920, 20, 80, 80) 
 restart_button_rect = pygame.Rect(380, 300, 270, 80)
 quit_button_rect = pygame.Rect(380, 400, 270, 80)
 resume_button_rect = pygame.Rect(390, 195, 270, 80)
@@ -179,7 +176,6 @@ def full_map_screen():
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_3:
                 return "mg3_menu"
 
-        screen.blit(full_map_image, (0, 0))
         screen.blit(mge_statsbar_image, (0, 0))
 
         draw_statsbar()
@@ -210,15 +206,15 @@ def mg3_menu():
                     else:
                         button_click.play()
                         return "mg3_base"
-                elif menu_button_menu_screen_rect.collidepoint(event.pos):  
+                elif menu_button_base_screen.collidepoint(event.pos):  
                     button_click.play()
                     inside_menu_active = not inside_menu_active  
                     print(f"Inside menu active state toggled: {inside_menu_active}")  
 
         # Show the background of the main menu
         screen.blit(mg3_menu_image, (0, 0))
-        screen.blit(Menu_image, (720, 0))  
-        screen.blit(mg3_question_image, (710, 100))  
+        screen.blit(menubtn, (920, 20))  
+        screen.blit(mg3_question_image, (920, 120))  
         screen.blit(mge_statsbar_image, (0, 0))
 
         # Display the inside menu if it's active
@@ -315,9 +311,6 @@ def mg3_base():
     total_energy_spent += 20
     cursor_x = 100
     cursor_y = 300
-
-    print("Entered mg3_base")
-
     paragraph = random.choice(paragraphs)
     user_input = ""
     typing_started = False
@@ -363,6 +356,7 @@ def mg3_base():
                         result_message = "Not enough energy to retry."
 
                 elif menu_button_base_screen.collidepoint(event.pos):
+                    button_click.play()
                     result = inside_menu_screen()
                     if result == "resume":
                         inside_menu_active = False  
@@ -400,7 +394,7 @@ def mg3_base():
                     user_input += event.unicode
 
         screen.blit(mg3_base_image, (0, 0))
-        screen.blit(Menu_image, (720, 50))
+        screen.blit(menubtn, (920, 20))
         screen.blit(mge_statsbar_image, (0, 0))
 
         draw_statsbar()
@@ -470,7 +464,7 @@ def mg3_base():
         if total_money_earned > 0:
             add_floating_text(f"+{total_money_earned}", 250, 110, (128, 128, 128))
             total_money_earned = 0
-
+        
         draw_floating_texts()
         pygame.display.flip()
 
