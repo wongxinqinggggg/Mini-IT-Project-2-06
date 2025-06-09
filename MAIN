@@ -1022,7 +1022,6 @@ last_switch_time = pygame.time.get_ticks()
 while running:
     dt = clock.tick(60)
     input_locked = show_intro_message or welcome_message != ""
-    # Day/night timer logic — always runs every frame
     now = pygame.time.get_ticks()
     if is_night and now - last_switch_time > NIGHT_LENGTH:
         is_night = False
@@ -1062,7 +1061,6 @@ while running:
         cursor_timer = 0
 
     if game_state == "intro":
-        # Intro Screen Logic
         screen.blit(bg_img, (0, 0))
         name_color = BLACK if player_name else GRAY
         display_name = player_name if player_name else "ENTER YOUR NAME"
@@ -1227,37 +1225,19 @@ while running:
         for character in characters:
             screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
 
-        # Only show popup for the first nearby character
-        for character in characters:
-            mgid_candidate = character['mg_state']
-            
-            if is_near(player_x+sprite_width/2, player_y, character["x"], character["y"], character['img']):
-                if is_night and mgid_candidate in ["MG1", "MG4"]:
-                    closed_message = "This place is closed for the night. Come back during the day!"
-                    closed_message_timer = pygame.time.get_ticks()
-                    mgid = None
-                    popup_button_rect = None
-                else:
-                    mgid = mgid_candidate
-                    popup_button_rect = draw_popup(screen, character["description"], small_font)
-                break 
-
         if adeline.active:
             adeline.update()
             adeline.draw(screen, camera_x, camera_y)
-            
             if adeline.talking:
                 pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 200, WIDTH - 100, 150))
                 pygame.draw.rect(screen, WHITE, (50, HEIGHT - 200, WIDTH - 100, 150), 3)
-                
                 if adeline.dialogue_state == 0:
                     text = "Guess what's my favorite colour? It's a rare one!"
                     screen.blit(small_font.render(text, True, WHITE), (70, HEIGHT - 180))
-                    
                     for i, option in enumerate(color_options):
                         color = HIGHLIGHT if i == selected_color_option else WHITE
-                        screen.blit(font.render(option, True, color), (100 + i * 200, HEIGHT - 140))
-                        
+                        screen.blit(font.render(option, True, color), (100 + i * 200, HEIGHT - 140)) 
+
                 elif adeline.dialogue_state == 1:
                     if selected_color_option == 0:
                         text = "You got it wrong... I thought we had a connection..."
@@ -1273,15 +1253,12 @@ while running:
         if tralalelo.active:
             tralalelo.update()
             tralalelo.draw(screen, camera_x, camera_y)
-            
             if tralalelo.talking:
                 pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 200, WIDTH - 100, 150))
                 pygame.draw.rect(screen, WHITE, (50, HEIGHT - 200, WIDTH - 100, 150), 3)
-                
                 if tralalelo.dialogue_state == 0:
                     text = "Guess who are my friend!"
                     screen.blit(small_font.render(text, True, WHITE), (70, HEIGHT - 180))
-                    
                     for i, option in enumerate(friend_options):
                         friend = HIGHLIGHT if i == selected_friend_option else WHITE
                         screen.blit(small_font.render(option, True, friend), (100 + i * 200, HEIGHT - 140))
@@ -1297,27 +1274,15 @@ while running:
                     screen.blit(small_font.render(text, True, WHITE), (70, HEIGHT - 160))
                 elif tralalelo.dialogue_state == 2:
                     screen.blit(small_font.render("Thanks for chatting!", True, WHITE), (70, HEIGHT - 160))
-
-        if four_d_npc.active:
-            four_d_npc.update()
-            four_d_npc.draw(screen, camera_x, camera_y)
-                
-            if four_d_npc.talking:
-                screen.blit(small_font.render(four_d_npc.dialogue_lines[four_d_npc.current_line], True, WHITE), (70, HEIGHT-180))
-
-        pet_npc.update(player_x, player_y, collision_rects, money_drops)
-        pet_npc.draw(screen, camera_x, camera_y, money_drops)
         
         if pet_npc.talking:
             pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT-200, WIDTH-100, 150))
             pygame.draw.rect(screen, WHITE, (50, HEIGHT-200, WIDTH-100, 150), 3)
-            
             if pet_npc.dialogue_state == 0:  
                 text1 = small_font.render("Do you want it become your lovely pet?", True, WHITE)
                 text2 = small_font.render("It will occasionally drop coins after adoption!", True, WHITE)
                 screen.blit(text1, (70, HEIGHT-180))
                 screen.blit(text2, (70, HEIGHT-140))
-                
                 for i, option in enumerate(["YES", "NO"]):
                     color = HIGHLIGHT if i == pet_npc.selected_option else WHITE
                     screen.blit(font.render(option, True, color), (100 + i * 200, HEIGHT-100))
@@ -1325,21 +1290,26 @@ while running:
             elif pet_npc.dialogue_state == 1:  
                 text = small_font.render("Name your pet:", True, WHITE)
                 screen.blit(text, (70, HEIGHT-180))
-                
                 name_text = font.render(pet_npc.pet_name + ("|" if pet_npc.name_input_active and cursor_visible else ""), True, WHITE)
                 screen.blit(name_text, (70, HEIGHT-150))
-                
                 hint = small_font.render("Press ENTER to confirm", True, WHITE)
                 screen.blit(hint, (70, HEIGHT-120))
                 
             elif pet_npc.dialogue_state == 2:  
                 text = small_font.render(f"Hi, I'm {pet_npc.pet_name} now!", True, WHITE)
                 screen.blit(text, (70, HEIGHT-180))
-                
                 for i, option in enumerate(["Hi! You are my pet now!", "RENAME"]):
                     color = HIGHLIGHT if i == pet_npc.selected_option else WHITE
                     screen.blit(small_font.render(option, True, color), (100 + i * 400, HEIGHT-140))
         
+        if four_d_npc.active:
+            four_d_npc.update()
+            four_d_npc.draw(screen, camera_x, camera_y)
+            if four_d_npc.talking:
+                screen.blit(small_font.render(four_d_npc.dialogue_lines[four_d_npc.current_line], True, WHITE), (70, HEIGHT-180))
+        pet_npc.update(player_x, player_y, collision_rects, money_drops)
+        pet_npc.draw(screen, camera_x, camera_y, money_drops)
+
         if show_intro_message:
             if not typing_done:
                 if typing_index < len(intro_message):
@@ -1382,8 +1352,23 @@ while running:
             else:
                 closed_message = ""
 
-        screen.blit(menubtn, menubtnrect)
-        screen.blit(INVENTORY.bag, inventoryrect)
+         # Only show popup for the first nearby character
+        for character in characters:
+            mgid_candidate = character['mg_state']
+            screen.blit(menubtn, menubtnrect)
+            screen.blit(INVENTORY.bag, inventoryrect)
+            
+            if is_near(player_x+sprite_width/2, player_y, character["x"], character["y"], character['img']):
+                if is_night and mgid_candidate in ["MG1", "MG4"]:
+                    closed_message = "This place is closed for the night. Come back during the day!"
+                    closed_message_timer = pygame.time.get_ticks()
+                    mgid = None
+                    popup_button_rect = None
+                else:
+                    mgid = mgid_candidate
+                    popup_button_rect = draw_popup(screen, character["description"], small_font)
+                break 
+
         Functions.display_stats(screen)
         NOTI.displayicon(vm_level, pet_npc, xsmall_font, is_night)
         Functions.draw_floating_texts(screen)
@@ -1416,7 +1401,10 @@ while running:
 
     for event in pygame.event.get():
         cursorclicked, cursorcollide = False, False
-        if event.type == pygame.QUIT: running = False
+    
+        if event.type == pygame.QUIT:
+            save_game()
+            running = False
         
         elif event.type == pygame.KEYDOWN:
             if input_locked:
@@ -1545,16 +1533,6 @@ while running:
                         game_state = "game"
                         break
 
-                    elif mgid == "MG4": 
-                        statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, MENU, vm_buyingprices), mg4_var_dict.copy())
-                        game_state = "mg4"
-                        break
-
-                    elif mgid == "STORE":
-                        statemanager = StateManager(Store.STORE(WIDTH, HEIGHT, MENU, INVENTORY), store_var_dict.copy())
-                        game_state = "store"
-                        break
-
                     elif mgid == "MG3":
                         game_state = "mg3"
                         pygame.mixer.music.stop()
@@ -1575,7 +1553,17 @@ while running:
                                 MiniGame3.game_state = MiniGame3.inside_menu_screen()
                         pygame.mixer.music.load("Assets/Audio/MG3_background.mp3")
                         pygame.mixer.music.play(-1)
-                        break   
+                        break  
+
+                    elif mgid == "MG4": 
+                        statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, MENU, vm_buyingprices), mg4_var_dict.copy())
+                        game_state = "mg4"
+                        break
+
+                    elif mgid == "STORE":
+                        statemanager = StateManager(Store.STORE(WIDTH, HEIGHT, MENU, INVENTORY), store_var_dict.copy())
+                        game_state = "store"
+                        break 
 
                     elif mgid == "bedroom":
                         pygame.mixer.music.load("Assets/Audio/bedroom.mp3")
@@ -1707,7 +1695,6 @@ while running:
                 pet_npc.pet_hp = max(pet_npc.pet_hp-5, 0)
                 if (pet_npc.pet_hp/pet_npc.MAXHP >= pet_npc.hp_percentage['happy']): 
                     Functions.update_stats(hpchange=1)
-
         
         if statemanager: statemanager.eventhandler(event)
         else: 
