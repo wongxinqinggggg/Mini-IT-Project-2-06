@@ -1209,6 +1209,8 @@ while running:
         
         for char in characters:
             screen.blit(char["img"], (char["x"] - camera_x, char["y"] - camera_y))
+            screen.blit(menubtn, menubtnrect)
+            screen.blit(INVENTORY.bag, inventoryrect)
 
         upper_rect = pygame.Rect(0, 0, sprite_width, sprite_height/2)
         upper_rect.bottomleft = (player_x - camera_x, player_y - camera_y)
@@ -1355,8 +1357,6 @@ while running:
          # Only show popup for the first nearby character
         for character in characters:
             mgid_candidate = character['mg_state']
-            screen.blit(menubtn, menubtnrect)
-            screen.blit(INVENTORY.bag, inventoryrect)
             
             if is_near(player_x+sprite_width/2, player_y, character["x"], character["y"], character['img']):
                 if is_night and mgid_candidate in ["MG1", "MG4"]:
