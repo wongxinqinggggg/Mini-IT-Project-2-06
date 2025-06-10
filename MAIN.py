@@ -1151,7 +1151,9 @@ while running:
         # --- DRAWING SEQUENCE STARTS HERE ---
         # Draw player's lower half
         screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
-
+        pet_npc.update(player_x, player_y, collision_rects, money_drops)
+        pet_npc.draw(screen, camera_x, camera_y, money_drops)
+        
         # **MOVED CODE**: Draw buildings and obstacles now
         for i in range(len(buildinglist)): 
             xpos, ypos = buildinglist[i][0]*TILE_SIZE - camera_x, buildinglist[i][1]*TILE_SIZE - camera_y
@@ -1210,8 +1212,6 @@ while running:
             four_d_npc.draw(screen, camera_x, camera_y)
             if four_d_npc.talking:
                 screen.blit(small_font.render(four_d_npc.dialogue_lines[four_d_npc.current_line], True, WHITE), (70, HEIGHT-180))
-        pet_npc.update(player_x, player_y, collision_rects, money_drops)
-        pet_npc.draw(screen, camera_x, camera_y, money_drops)
 
         if adeline.active:
             adeline.update()
