@@ -43,21 +43,25 @@ BUTTON_COLOR = (220, 220, 220)
 # === IMAGES ===
 bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
 map_img = pygame.image.load("Assets/Images/final_map.png").convert()
+NPC = pygame.image.load("Assets/Sprites/npc/NPC.png").convert_alpha()
+NPClist = Functions.get_sprite(83, 70, NPC)
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
-npc_left1 = Functions.NPC_list[3]
-npc_left2 = Functions.NPC_list[4]
-npc_right1 = Functions.NPC_list[5]
-npc_right2 = Functions.NPC_list[6]
-npc_tralalelo_tralala_left = Functions.NPC_list[7]
-npc_tralalelo_tralala_right = Functions.NPC_list[8]
-npc_4d_img = Functions.NPC_list[0]
-npc_4d_left1 = Functions.NPC_list[1]
-npc_4d_right1 = Functions.NPC_list[2]
+npc_left1 = NPClist[3]
+npc_left2 = NPClist[4]
+npc_right1 = NPClist[5]
+npc_right2 = NPClist[6]
+npc_tralalelo_tralala_left = NPClist[7]
+npc_tralalelo_tralala_right = NPClist[8]
+npc_4d_img = NPClist[0]
+npc_4d_left1 = NPClist[1]
+npc_4d_right1 = NPClist[2]
 four_d_img = pygame.image.load("Assets/Images/Four_d.png").convert_alpha()
-pet_img1 = Functions.PETlist[0]
-pet_img2 = Functions.PETlist[1]
-pet_img3 = Functions.PETlist[2]
-pet_img4 = Functions.PETlist[3]
+Pet = pygame.image.load("Assets/Sprites/npc/PET.png").convert_alpha()
+Petlist = Functions.get_sprite(30, 34, Pet)
+pet_img1 = Petlist[0]
+pet_img2 = Petlist[1]
+pet_img3 = Petlist[2]
+pet_img4 = Petlist[3]
 coin_img = pygame.image.load("Assets/Images/coin.webp").convert_alpha()
 coin_img = pygame.transform.scale(coin_img, (20, 20))
 
@@ -442,10 +446,10 @@ class PetNPC:
         self.width = 32
         self.height = 32
         self.event = pygame.USEREVENT + 103  # This line was missing in the implementation
-        self.pet_img1 = Functions.PETlist[0]
-        self.pet_img2 = Functions.PETlist[1]
-        self.pet_img3 = Functions.PETlist[2]
-        self.pet_img4 = Functions.PETlist[3]
+        self.pet_img1 = Petlist[0]
+        self.pet_img2 = Petlist[1]
+        self.pet_img3 = Petlist[2]
+        self.pet_img4 = Petlist[3]
         self.collect_range = 50  
         self.collect_cooldown = 0  
         self.happy_timer = 0  
@@ -866,11 +870,12 @@ def draw_popup(screen, message, font, color=(0, 0, 0), bg_color=(255, 255, 255),
     # Return absolute screen coordinates of the button
     return pygame.Rect(box_x + button_x, box_y + button_y, button_width, button_height)
 
-
+Characterssheet = pygame.image.load("Assets/Sprites/npc/characters.png").convert_alpha()
+character  = Functions.get_sprite(42, 64, Characterssheet)
 characters = [
     {
         "mg_state": "MG1",
-        "img": Functions.NPClist[0],
+        "img": character[0],
         "x": 790,
         "y": 135,
         "description": "Welcome to the restaurant, where the scent of sizzling meals meets the sound of scrubbing dishes. "
@@ -878,39 +883,39 @@ characters = [
     },
     {
         "mg_state": "MG2",
-        "img": Functions.NPClist[1], 
-        "x": 630,
+        "img": character[1], 
+        "x": 640,
         "y": 670,
         "description": "Bustling with customers and chaos. Today, you are not shopping — you are working! "
                        "Step behind the counter and become the cashier of the day."
     },
     {
         "mg_state": "MG3",
-        "img": Functions.NPClist[2],
-        "x": 105,
-        "y": 690,
+        "img": character[2],
+        "x": 110,
+        "y": 680,
         "description": "This is the teenagers' zone, and the only way to win here is to type like lightning. "
                        "Put your speed and accuracy to the test and rake in digital dough with each correct keystroke."
     },
     {
         "mg_state": "MG4",
-        "img": Functions.NPClist[3],
-        "x": 65,
-        "y": 170,
+        "img": character[3],
+        "x": 70,
+        "y": 180,
         "description": "This is not just shop — it is a gateway to passive income. "
                        "Invest wisely, and your money will grow while you rest."
     },
     {
         "mg_state": "STORE",
-        "img": Functions.NPClist[4],
-        "x": 760,
-        "y": 356,
+        "img": character[4],
+        "x": 770,
+        "y": 365,
         "description": "Ready to bring you back to life. Choose your meal, sit back, and recover the energy you need to keep going. "
                        "After all, a hardworking spirit needs fuel to thrive."
     },
     {
         "mg_state": "bedroom",
-        "img": Functions.NPClist[5],
+        "img": character[5],
         "x": 310,
         "y": 380,
         "description": "You've survived another day in the pixel world! Time to face your toughest quest yet: getting out of bed." 
