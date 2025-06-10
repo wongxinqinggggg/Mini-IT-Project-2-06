@@ -32,9 +32,8 @@ Bedroom_image = pygame.image.load("Assets/Images/Bedroom.png").convert()
 inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
 statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
 menubtn = Functions.mainbtnlist[1]
-towel_img = Functions.bedroomlist[0]
-brush_img = Functions.bedroomlist[1]
-mirror_img = Functions.bedroomlist[2]
+bedroomsheet = pygame.image.load("Assets/Images/Bedroomsheet.png").convert_alpha()
+towel_img, brush_img, mirror_img = Functions.get_sprite(78, 83, bedroomsheet)
 
 # === Sounds ===
 button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
@@ -127,7 +126,7 @@ spawn_points = [(100, 380),  (300, 320),  (500, 400),  (700, 350),  (850, 420), 
 def get_random_position():
     return random.choice(spawn_points)
 brush_rect = brush_img.get_rect(topleft=(0,0))
-towel_rect = towel_img.get_rect(topleft=(0,0))
+towel_rect = towel_img(topleft=(0,0))
 mirror_rect = mirror_img.get_rect(topleft=(0,0))
 
 def reset_bedroom_objects():
