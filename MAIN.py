@@ -25,6 +25,7 @@ xsmall_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 8)
 
 # === MUSIC ===
 pygame.mixer.music.load("Assets/Audio/background.mp3")
+money_sound = pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3")
 button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
@@ -809,6 +810,10 @@ def load_player_images(character):
         }
     }
 
+def is_any_npc_talking():
+    return (tralalelo.talking or adeline.talking or four_d_npc.talking or 
+            (pet_npc.active and pet_npc.talking))
+    
 # === CAMERA ===
 def get_camera_offset():
     camera_x = max(0, min(player_x - WIDTH // 2, MAP_WIDTH - WIDTH))
@@ -1087,8 +1092,9 @@ while running:
         new_x, new_y = player_x, player_y
 
         if not input_locked:
-            keys = pygame.key.get_pressed()
-            move_distance = player_speed 
+            if not is_any_npc_talking():
+                keys = pygame.key.get_pressed()
+                move_distance = player_speed 
         
             if not ((keys[pygame.K_w] and keys[pygame.K_s]) or (keys[pygame.K_a] and keys[pygame.K_d])):
                 if (keys[pygame.K_w] or keys[pygame.K_s]) and (keys[pygame.K_a] or keys[pygame.K_d]):
@@ -1203,6 +1209,7 @@ while running:
                         if not tralalelo.reward_given:
                             Functions.update_stats (+0,+50)
                             tralalelo.reward_given = True
+                            money_sound.play()
                     screen.blit(small_font.render(text, True, WHITE), (70, HEIGHT - 160))
                 elif tralalelo.dialogue_state == 2:
                     screen.blit(small_font.render("Thanks for chatting!", True, WHITE), (70, HEIGHT - 160))
@@ -1234,6 +1241,7 @@ while running:
                         if not adeline.reward_given:
                             Functions.update_stats (+50,+0)
                             adeline.reward_given = True
+                            money_sound.play()
                     screen.blit(small_font.render(text, True, WHITE), (70, HEIGHT - 160))
                 elif adeline.dialogue_state == 2:
                     screen.blit(small_font.render("Thanks for chatting!", True, WHITE), (70, HEIGHT - 160))       
@@ -1635,26 +1643,6 @@ while running:
             if cursorclicked: Functions.playsound("btnclicked")
             if not cursorcollide: pygame.mouse.set_cursor()
         NOTI.updatetip(event)
-
-        if adeline.talking and adeline.dialogue_state == 1:
-            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                if selected_color_option == 0:
-                    adeline.end_dialogue()
-                else:
-                    if not adeline.reward_given:
-                        Functions.update_stats (+50,+0)
-                        adeline.reward_given = True
-                        adeline.dialogue_state = 2
-
-        elif tralalelo.talking and tralalelo.dialogue_state == 1:
-            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                if selected_friend_option == 0:
-                    tralalelo.end_dialogue()
-                else:
-                    if not tralalelo.reward_given:
-                        Functions.update_stats (+0,+50)
-                        tralalelo.reward_given = True
-                        tralalelo.dialogue_state = 2
 
     if statemanager: statemanager.update()
     elif game_state == "menu": MENU.update()
