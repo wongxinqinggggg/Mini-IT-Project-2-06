@@ -166,8 +166,10 @@ class AdelineNPC:
         return distance < 100
     
     def start_dialogue(self):
+        global player_x, player_y, moving
         self.talking = True
         self.dialogue_state = 0
+        moving = False
     
     def end_dialogue(self):
         self.talking = False
@@ -240,8 +242,10 @@ class TralaleloTralalaNPC:
         return distance < 100
     
     def start_dialogue(self):
+        global player_x, player_y, moving
         self.talking = True
         self.dialogue_state = 0
+        moving = False
     
     def end_dialogue(self):
         self.talking = False
@@ -358,6 +362,20 @@ class FourDNPC:
     def draw(self, surface, camera_x, camera_y):
         if not self.active:
             return
+
+        # Draw NPC
+        if self.direction == "left":
+            if self.walk_frame == 0 or self.walk_frame == 2:
+                img = npc_4d_img
+            else:
+                img = npc_4d_left1
+        else:
+            if self.walk_frame == 0 or self.walk_frame == 2:
+                img = npc_4d_img
+            else:
+                img = npc_4d_right1
+            
+        surface.blit(img, (self.x - camera_x, self.y - camera_y))
        
         if self.talking:
             pygame.draw.rect(surface, (0, 0, 0), (50, HEIGHT-200, WIDTH-100, 150))
@@ -387,20 +405,6 @@ class FourDNPC:
             elif self.dialogue_state == 5:
                 surface.blit(small_font.render("Come back anytime!", True, WHITE), (70, HEIGHT-180))
 
-        # Draw NPC
-        if self.direction == "left":
-            if self.walk_frame == 0 or self.walk_frame == 2:
-                img = npc_4d_img
-            else:
-                img = npc_4d_left1
-        else:
-            if self.walk_frame == 0 or self.walk_frame == 2:
-                img = npc_4d_img
-            else:
-                img = npc_4d_right1
-            
-        surface.blit(img, (self.x - camera_x, self.y - camera_y))
-
         if self.is_player_near() and not self.talking:
             text = FONT.render("Click Y to talk with 4D Seller", True, WHITE)
             surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
@@ -410,11 +414,13 @@ class FourDNPC:
         return distance < 100
 
     def start_dialogue(self):
+        global player_x, player_y, moving
         self.talking = True
         self.dialogue_state = 0
         self.current_line = 0
         self.selected_pay_option = 0 
         self.reward_given = False  
+        moving = False 
     
     def end_dialogue(self):
         self.talking = False
@@ -567,9 +573,11 @@ class PetNPC:
         return distance < 100
     
     def start_dialogue(self):
+        global player_x, player_y, moving
         if not self.name_confirmed:  
             self.talking = True
             self.dialogue_state = 0
+            moving = False
     
     def handle_input(self, event):
         if event.type == pygame.KEYDOWN and self.talking:
@@ -1091,10 +1099,9 @@ while running:
         moving = False
         new_x, new_y = player_x, player_y
 
-        if not input_locked:
-            if not is_any_npc_talking():
-                keys = pygame.key.get_pressed()
-                move_distance = player_speed 
+        if not input_locked and not is_any_npc_talking():
+            keys = pygame.key.get_pressed()
+            move_distance = player_speed 
         
             if not ((keys[pygame.K_w] and keys[pygame.K_s]) or (keys[pygame.K_a] and keys[pygame.K_d])):
                 if (keys[pygame.K_w] or keys[pygame.K_s]) and (keys[pygame.K_a] or keys[pygame.K_d]):
