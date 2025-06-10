@@ -58,14 +58,14 @@ def run_game(screen):
     instruction_img = load_and_scale("Assets/Images/MG2-Instructions.png")
     success_img = load_and_scale("Assets/Images/MG2-Success.png")
     fail_img = load_and_scale("Assets/Images/MG2-Fail.png")
-    mge_statsbar_image = pygame.image.load("Assets/Images/MG3_Statsbar.png").convert_alpha()
+    mge_statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
     Inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
-    Menu_image = pygame.image.load("Assets/Images/MG3_Menubutton.png").convert_alpha()
+    Menu_image = Functions.mainbtnlist[1]
     
     # Load sounds
-    success_sound = pygame.mixer.Sound("Assets/Audio/MG3_success.mp3")
-    fail_sound = pygame.mixer.Sound("Assets/Audio/MG3_fail.mp3")
-    button_click = pygame.mixer.Sound("Assets/Audio/MG3_button_click.mp3")
+    success_sound = pygame.mixer.Sound("Assets/Audio/success.mp3")
+    fail_sound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
+    button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
     pygame.mixer.music.load("Assets/Audio/MG2_bgm.mp3")
     pygame.mixer.music.set_volume(volume)
     pygame.mixer.music.play(-1)
@@ -84,7 +84,7 @@ def run_game(screen):
 
     # Button areas
     return_button = pygame.Rect(20, 20, 120, 50)
-    menu_button_rect = pygame.Rect(800, 30, 301, 576)
+    menu_button_rect = pygame.Rect(920, 20, 80, 80)
     resume_button_rect = pygame.Rect(390, 195, 270, 80)
     restart_button_rect = pygame.Rect(380, 300, 270, 80)
     quit_button_rect = pygame.Rect(380, 400, 270, 80)
@@ -173,10 +173,15 @@ def run_game(screen):
                     pygame.mixer.music.set_volume(volume)
 
             # Draw volume control
-            pygame.draw.rect(screen, (100, 100, 100), (slider_x, slider_y, slider_width, slider_height))
+            pygame.draw.rect(screen, (0, 0, 0), (slider_x, slider_y, slider_width, slider_height))
             knob_x = slider_x + int(volume * slider_width)
-            pygame.draw.circle(screen, (70, 70, 70), (knob_x, slider_y + slider_height // 2), knob_radius)
-                                    
+            pygame.draw.circle(screen, (0, 0, 0), (knob_x, slider_y + slider_height // 2), knob_radius)
+
+            SLASH_FONT = pygame.font.SysFont('Arial', 80)
+            if volume == 0:
+                slash_symbol = SLASH_FONT.render("\\", True, (0, 0, 0))
+                screen.blit(slash_symbol, (slider_x + slider_width - 248, slider_y - 45))
+
             pygame.display.flip()
 
     def reset_minigame():
