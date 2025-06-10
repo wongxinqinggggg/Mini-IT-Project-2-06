@@ -79,26 +79,18 @@ def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
     return surflist
 
 def load_sprite():
-    global iconlist, mainbtnlist, menubtnlist, tbtnlist, itemlist, bedroomlist, NPClist, NPC_list, PETlist
+    global iconlist, mainbtnlist, menubtnlist, tbtnlist, itemlist
     iconsheet = pygame.image.load("Assets/Images/Iconsheet.png").convert_alpha()
     abtnsheet = pygame.image.load("Assets/Images/Mainbtnsheet.png").convert_alpha()
     ebtnsheet = pygame.image.load("Assets/Images/Menubtnsheet.png").convert_alpha()
     tbtnsheet = pygame.image.load("Assets/Images/Transactionbtnsheet.png").convert_alpha()
     itemsheet = pygame.image.load("Assets/Images/Itemsheet.png").convert_alpha()
-    bedroomsheet = pygame.image.load("Assets/Images/Bedroomsheet.png").convert_alpha()
-    NPCsheet = pygame.image.load("Assets/Sprites/npc/NPCsheet.png").convert_alpha()
-    NPC = pygame.image.load("Assets/Sprites/npc/NPC.png").convert_alpha()
-    PET = pygame.image.load("Assets/Sprites/npc/PET.png").convert_alpha()
 
     iconlist = get_sprite(30, 30, iconsheet)
     mainbtnlist = get_sprite(80, 80, abtnsheet)
     menubtnlist = get_sprite(271, 81, ebtnsheet)
     tbtnlist = get_sprite(76, 34, tbtnsheet)
     itemlist = get_sprite(208, 175, itemsheet, True)
-    bedroomlist = get_sprite (78, 83, bedroomsheet)
-    NPClist = get_sprite(48, 50, NPCsheet)
-    NPC_list = get_sprite(83, 70, NPC)
-    PETlist = get_sprite(30.75, 34, PET)
 
 def playsound(soundtype):
     if not pygame.mixer.music.get_busy(): return
