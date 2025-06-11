@@ -6,8 +6,11 @@ floating_texts = []
 floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110},
                       'inventoryE': {'x': 250, 'y': 500}, 'inventoryF': {'x': 350, 'y': 500}}
 sprinttime = 0
+floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110},
+                      'inventoryE': {'x': 250, 'y': 500}, 'inventoryF': {'x': 350, 'y': 500}}
+sprinttime = 0
 
-def initialize_stats(hp=9999, mp=9999):
+def initialize_stats(hp=520, mp=520):
     global energy, money, statsbar
     energy, money = hp, mp
     statsbar = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
@@ -18,7 +21,7 @@ def update_stats(hpchange = None, mpchange = None):
     if mpchange: money = min(max(money + mpchange, 0), MAXMP)
 
 # === Function to display energy and money ===
-def display_stats(S):    
+def display_stats(S):
     Lfont = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
     if not displaystat: return
     hpsurf = Lfont.render(str(energy).zfill(6), False, 'Black')
@@ -46,11 +49,11 @@ def draw_floating_texts(S):
         alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
 
         # Create the text surface
-        text_surface = floating_font.render(ft["text"], True, ft["color"])
+        text_surface = floating_font.render(ft["text"], False, ft["color"])
         text_surface.set_alpha(alpha)
 
         # Create an outline by drawing black text slightly shifted
-        outline_color = (50, 50, 50)  
+        outline_color = (30, 30, 30)  
         for dx in [-2, 0, 2]:
             for dy in [-2, 0, 2]:
                 if dx != 0 or dy != 0:
@@ -64,6 +67,7 @@ def draw_floating_texts(S):
         floating_texts.remove(ft)
 
 def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
+def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
     surflist = []
     for i in range(int(spritesheet.get_height()/sprite_height)):
         for j in range(int(spritesheet.get_width()/sprite_width)):
@@ -76,14 +80,23 @@ def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
                 surflist.append(surface)
             else: 
                 surflist.append(surf)
+            if trim:
+                rect = surf.get_bounding_rect()
+                surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
+                surface.blit(spritesheet, (0,0), (j*sprite_width, i*sprite_height, sprite_width, sprite_height))
+                surflist.append(surface)
+            else: 
+                surflist.append(surf)
     return surflist
 
 def load_sprite():
+    global iconlist, mainbtnlist, menubtnlist, tbtnlist, itemlist
     global iconlist, mainbtnlist, menubtnlist, tbtnlist, itemlist
     iconsheet = pygame.image.load("Assets/Images/Iconsheet.png").convert_alpha()
     abtnsheet = pygame.image.load("Assets/Images/Mainbtnsheet.png").convert_alpha()
     ebtnsheet = pygame.image.load("Assets/Images/Menubtnsheet.png").convert_alpha()
     tbtnsheet = pygame.image.load("Assets/Images/Transactionbtnsheet.png").convert_alpha()
+    itemsheet = pygame.image.load("Assets/Images/Itemsheet.png").convert_alpha()
     itemsheet = pygame.image.load("Assets/Images/Itemsheet.png").convert_alpha()
 
     iconlist = get_sprite(30, 30, iconsheet)
@@ -91,23 +104,30 @@ def load_sprite():
     menubtnlist = get_sprite(271, 81, ebtnsheet)
     tbtnlist = get_sprite(76, 34, tbtnsheet)
     itemlist = get_sprite(208, 175, itemsheet, True)
+    itemlist = get_sprite(208, 175, itemsheet, True)
 
 def playsound(soundtype):
-    if soundtype == "btnclicked":
-        pygame.mixer.Sound("Assets/Audio/button_click.mp3").play()
-    elif soundtype == "success":
-        pygame.mixer.Sound("Assets/Audio/success.mp3").play(maxtime=2500)
-    elif soundtype == "fail":
-        pygame.mixer.Sound("Assets/Audio/fail.mp3").play()
-    elif soundtype == "transaction":
-        pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3").play(fade_ms=800)
+    if not pygame.mixer.music.get_busy(): return
+    volume, channel = pygame.mixer.music.get_volume(), None
+    if soundtype == "btnclicked": 
+        channel = pygame.mixer.Sound("Assets/Audio/button_click.mp3").play()
+    elif soundtype == "success": 
+        channel = pygame.mixer.Sound("Assets/Audio/success.mp3").play(maxtime=2500)
+    elif soundtype == "fail":  
+        channel = pygame.mixer.Sound("Assets/Audio/fail.mp3").play()
+    elif soundtype == "transaction": 
+        channel = pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3").play(fade_ms=800)
     elif soundtype == "eating": 
-        pygame.mixer.Sound("Assets/Audio/Eating-Effect (u_scysdwddsp).mp3").play(maxtime=1200)
+        channel = pygame.mixer.Sound("Assets/Audio/Eating-Effect (u_scysdwddsp).mp3").play(maxtime=1200)
+
+    if channel: channel.set_volume(volume)
 
 def play_music(path):
+    playing = pygame.mixer.music.get_busy()
     pygame.mixer.music.unload()
     pygame.mixer.music.load(f"Assets/Audio/{path}.mp3")
     pygame.mixer.music.play(-1)
+    if not playing: pygame.mixer.music.pause()
 
 class Menu():
     def __init__(self, W):
@@ -120,7 +140,7 @@ class Menu():
         self.quitbtnrect = self.quitbtn.get_rect(center = (W/2, 435))
         self.audiosliderrect = pygame.rect.Rect(0, 0, 20, 20)
         self.audiosliderrect.center = (0, 132)
-        self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn1.png").convert_alpha()
+        self.audiobtn = pygame.image.load("Assets/Images/MENU_Audiobtn.png").convert_alpha()
         self.audiobtnrect = self.audiobtn.get_rect(center = (400, 132))
 
         self.btnrectlist = [self.resumebtnrect, self.restartbtnrect, self.quitbtnrect, 
@@ -142,7 +162,6 @@ class Menu():
                     var_dict['prev_state'] = None
 
             elif self.quitbtnrect.collidepoint(E.pos):
-                pygame.mixer.music.unload()
                 var_dict['mg_state'] = None
 
             elif self.audiobtnrect.collidepoint(E.pos): 
@@ -183,9 +202,12 @@ class Menu():
         audiosliderxpos = self.audiobarxpos[0] + pygame.mixer.music.get_volume() * (self.audiobarxpos[1] - self.audiobarxpos[0])
         self.audiosliderrect.center = (audiosliderxpos, 132)
 
+        # Pause audio if volume = 0
+        if not pygame.mixer.music.get_volume(): pygame.mixer.music.pause()
+
         # Load audio btn if music playing, load muted btn otherwise
-        if pygame.mixer.music.get_busy(): self.audiobtn = self.muted = False
-        else: self.audiobtn = self.muted = True
+        if pygame.mixer.music.get_busy(): self.muted = False
+        else: self.muted = True
 
     def draw(self, S):
         pygame.draw.rect(S, (100, 100, 120), (339, 82, 344, 412))
@@ -201,11 +223,11 @@ class Menu():
 class Notifications():
     def __init__(self, S, vm_buyingprices, vm_income):
         self.S, self.vm_buyingprices, self.vm_income = S, vm_buyingprices, vm_income
-        self.displaynoti = [True, True, True, True]
+        self.displaynoti = [True, True, False, False]
         self.counter = 0
         self.anglecounter = 0
         self.iconcenter = [(38, 170), (78, 170), (118, 170), (158, 170)]
-        self.alertcenter = [(51, 159), (91, 159), (141, 159)]
+        self.alertcenter = [(51, 159), (91, 159), (131, 159)]
         self.angles = [0, 0, 25, -25, 25, -25]
         self.hovering = False
 
@@ -217,10 +239,11 @@ class Notifications():
                       {'surf': petnoti, 'rect': petnoti.get_rect()},
                       {'surf': sprint, 'rect': sprint.get_rect()}]
     
-    def displayicon(self, vm_level, xsfont, is_night):
+    def displayicon(self, vm_level, pet_npc, xsfont, is_night):
         if not displaystat: return
-        elif not self.displaynoti[0] and not self.displaynoti[1]: return
+        elif not self.displaynoti.count(True): return
 
+        self.displaynoti[2] = True if pet_npc.name_confirmed else False
         self.displaynoti[3] = True if sprinttime > 0 else False
         self.counter += 1
         if self.counter % 30 == 0:
@@ -240,21 +263,26 @@ class Notifications():
                     self.notis[i]['rect'].center = self.iconcenter[num]
                     self.S.blit(surf, self.notis[i]['rect'])
                     if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]: alert = True
-                    elif vm_level[i]:
+                    elif vm_level[i]: 
                         indicate = True
                         color = 'Grey' if is_night else 'Green'
 
                 else:
-                    if i == 2: pass
+                    if i == 2:
+                        percentage = pet_npc.pet_hp/pet_npc.MAXHP
+                        if percentage <= pet_npc.hp_percentage['hungry']: alert = True
+                        else: 
+                            color = 'Green' if (percentage >= pet_npc.hp_percentage['happy']) else 'Grey'
+                            indicate = True
                     self.notis[i]['rect'].center = self.iconcenter[num]
                     self.S.blit(self.notis[i]['surf'], self.notis[i]['rect'])
-                
+
                 if alert: self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[num])))
                 elif indicate:
-                    pygame.draw.circle(self.S, 'Green', (self.alertcenter[i]), 6)
-                    pygame.draw.circle(self.S, 'Black', (self.alertcenter[i]), 6, 1)
+                    pygame.draw.circle(self.S, color, (self.alertcenter[num]), 6)
+                    pygame.draw.circle(self.S, 'Black', (self.alertcenter[num]), 6, 1)
         
-        if self.hovering: self.displaytip(vm_level, xsfont, is_night)
+        if self.hovering: self.displaytip(vm_level, pet_npc, xsfont, is_night)
 
     def updatetip(self, E):
         if E.type == pygame.MOUSEMOTION: 
@@ -265,8 +293,8 @@ class Notifications():
                     break
                 else: self.hovering = False
 
-    def displaytip(self, vm_level, xsfont, is_night):
-        for i in range(len(self.displaynotil)):
+    def displaytip(self, vm_level, pet_npc, xsfont, is_night):
+        for i in range(len(self.displaynoti)):
             if self.displaynoti[i] and (self.notis[i]['rect']).collidepoint(pygame.mouse.get_pos()):
                 if i in [0, 1]:
                     if not vm_level[i]: 
@@ -279,10 +307,10 @@ class Notifications():
                     tipsurfs = [xsfont.render((f'VM{i + 1} ' + lvltxt).center(12), False, 'Black'), 
                                 xsfont.render(incometxt, False, 'Black')]
                     tipboxheight = 30
-                
+
                 elif i == 2:
-                    tipsurfs = [xsfont.render((f'name').center(12), False, 'Black'), 
-                                xsfont.render((f'HP: 500/500').center(12), False, 'Black')]
+                    tipsurfs = [xsfont.render((f'{pet_npc.pet_name}').center(12), False, 'Black'), 
+                                xsfont.render((f'HP: {pet_npc.pet_hp}/{pet_npc.MAXHP}').center(12), False, 'Black')]
                     tipboxheight = 30
 
                 elif i == 3:
@@ -305,7 +333,7 @@ class Inventory():
         self.effects = [{'effect': 'hp', 'value': 20}, {'effect': 'sprint', 'value': 10}, 
                         {'effect': 'hp', 'value': 150}, {'effect': 'hp', 'value': 500}, 
                         {'effect': 'pethp', 'value': 80}, {'effect': 'pethp', 'value': 200}]
-        self.statschange, self.usedcell = {'hp': None, 'mp': None}, None
+        self.statschange, self.usedcell = {'hpc': None, 'mpc': None, 'pethpc': None}, None
         self.bagprices = [-500, -2000]
         self.pricepos = [(150, 510), (130, 510)]
         self.baglvl, self.itemmax = 1, 0
@@ -313,7 +341,7 @@ class Inventory():
                             'c6': {}, 'c7': {}, 'c8': {}, 'c9': {}}
         self.keys = list(self.inventories.keys())
         self.load_inventories()
-
+        
         bagsheet = pygame.image.load("Assets/Images/Bagsheet.png").convert_alpha()
         self.baglist = get_sprite(136, 136, bagsheet)
         self.bag = self.baglist[0]
@@ -324,16 +352,17 @@ class Inventory():
         self.exitbtn = mainbtnlist[2]
         self.exitbtnrect = self.exitbtn.get_rect(center = exitbtnpos)
 
+
         self.itemsurflist = itemlist.copy()
-    
+            
         for i in range(len(self.itemsurflist)):
             surf = self.itemsurflist[i]
             Wratio, Hratio = surf.get_width()/120, surf.get_height()/120
-            if Wratio > 1 or Hratio > 1: ratio = min(1/Wratio, 1/Hratio)
+            if Wratio >= 1 or Hratio >= 1: ratio = min(1/Wratio, 1/Hratio)
             else: ratio = max(Wratio, Hratio)
-            self.itemsurflist[i] = pygame.transform.scale(surf, (surf.get_width() * ratio, surf.get_height() * ratio))
-            
-        self.btnrectlist = [self.btnrect, self.exitbtnrect] 
+            self.itemsurflist[i] = pygame.transform.scale(surf, (surf.get_width() * ratio, surf.get_height() * ratio)) 
+
+        self.btnrectlist = [self.btnrect, self.exitbtnrect]           
 
     def eventhandler(self, E, inventorypage=True):
         global sprinttime
@@ -342,7 +371,7 @@ class Inventory():
             soundtype = None
             if self.btnrect.collidepoint(E.pos):
                 if self.baglvl < 3 and money >= (-self.bagprices[self.baglvl - 1]):
-                    self.statschange['mp'] = self.bagprices[self.baglvl - 1]
+                    self.statschange['mpc'] = self.bagprices[self.baglvl - 1]
                     self.baglvl += 1
                     soundtype = 'transaction'
                 else: soundtype = 'btnclicked'
@@ -353,7 +382,7 @@ class Inventory():
                 soundtype = 'btnclicked'
                 playsound(soundtype)
                 return 1
-
+            
             for i in range(len(self.keys)):
                 key = self.keys[i]
                 if self.inventories[key]['lockrect'].collidepoint(E.pos):
@@ -404,7 +433,7 @@ class Inventory():
                             self.inventories[key]['id'] = id
                             self.inventories[key]['no'] = no
                         break
-            self.dragging = False
+                self.dragging = False
 
         elif E.type == pygame.KEYDOWN:      
             key = 'c' + E.unicode
@@ -416,23 +445,24 @@ class Inventory():
                     effect = self.effects[selectedcell['id'] - 1]['effect']
                     value = self.effects[selectedcell['id'] - 1]['value']
 
-                    if effect == 'hp': self.statschange['hp'] = value
+                    if effect == 'hp': self.statschange['hpc'] = value
                     elif effect == 'sprint': sprinttime = value
-                    elif effect == 'pethp': pass
+                    elif effect == 'pethp': self.statschange['pethpc'] = value
 
                 else: add_floating_text("Inventory slot empty!", 'inventoryE')
-            
+
         if not self.dragging: 
             if cursor: pygame.mouse.set_cursor(cursor)
             else: pygame.mouse.set_cursor()
         else: pygame.mouse.set_cursor(self.cursorcenter, self.cursorsurf)
-
-    def update(self):
+            
+    def update(self, pet_npc):
         global sprinttime
-        update_stats(self.statschange['hp'], self.statschange['mp'])
-        if self.statschange['hp']: add_floating_text(f"+{self.statschange['hp']}", 'hp')
-        if self.statschange['mp']: add_floating_text(f"{self.statschange['mp']}", 'mp')
-        self.statschange['hp'], self.statschange['mp'] = None, None
+        update_stats(self.statschange['hpc'], self.statschange['mpc'])
+        if self.statschange['hpc']: add_floating_text(f"+{self.statschange['hpc']}", 'hp')
+        if self.statschange['mpc']: add_floating_text(f"{self.statschange['mpc']}", 'mp')
+        if self.statschange['pethpc']: pet_npc.pet_hp  = min(pet_npc.pet_hp+self.statschange['pethpc'], pet_npc.MAXHP)
+        for key in self.statschange.keys(): self.statschange[key] = None
 
         if self.usedcell:
             self.inventories[self.usedcell]['no'] -= 1
@@ -441,7 +471,7 @@ class Inventory():
             self.usedcell = None
 
         self.itemmax = self.maxlist[self.baglvl - 1]
-        for key in self.inventories.keys():
+        for key in self.keys:
             if not self.inventories[key]['no'] and not self.inventories[key]['locked']: 
                 self.inventories[key]['id'] = None
                 surf = None
@@ -485,7 +515,7 @@ class Inventory():
             if cell['id']:
                 pygame.draw.circle(self.S, 'Grey', ((543  + dx), (68 + dy)), 15)
                 pygame.draw.circle(self.S, 'Black', ((543 + dx), (68 + dy)), 15, 1)
-                notext = xsfont.render(f"{cell['no']}/{self.itemmax}", True, 'Black')
+                notext = xsfont.render(f'{cell["no"]}/{self.itemmax}', True, 'Black')
                 self.S.blit(notext, ((531 + dx), (65 + dy)))
                 pygame.draw.circle(self.S, 'White', (cell['lockrect'].center), 15)
                 pygame.draw.circle(self.S, 'Black', (cell['lockrect'].center), 15, 1)
@@ -533,4 +563,3 @@ class Inventory():
             lockrect = pygame.rect.Rect((528  + dx), (187 + dy), 30, 30)
             self.inventories[key].update({'surf': None, 'rect': None, 'center': center, 
                                           'cellrect': cell, 'lockrect': lockrect})
-                    
