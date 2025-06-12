@@ -6,6 +6,8 @@ from Features import Functions
 pygame.init()
 pygame.mixer.init()
 screen = None
+NOTI = None
+event_var = None
 
 # Volume slider variables
 slider_x = 450
@@ -127,8 +129,10 @@ def full_map_screen():
                 return "quit"
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_3:
                 return "mg3_menu"
+            Functions.check_event(event, event_var) # Check for VM and pet event
 
         Functions.display_stats(screen)
+        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
         Functions.draw_floating_texts(screen)
         pygame.display.flip()
 
@@ -160,6 +164,8 @@ def mg3_menu():
                     Functions.playsound("btnclicked")
                     inside_menu_active = not inside_menu_active  
 
+            Functions.check_event(event, event_var) # Check for VM and pet event
+
         # Show the background of the main menu
         screen.blit(mg3_menu_image, (0, 0))
         screen.blit(menubtn, (920, 20))  
@@ -188,6 +194,7 @@ def mg3_menu():
             screen.blit(error_text, (380, 450))
 
         Functions.display_stats(screen)
+        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
         pygame.display.flip()
 
 def inside_menu_screen():
@@ -226,6 +233,8 @@ def inside_menu_screen():
                 volume = max(0, min(1, new_volume))
                 pygame.mixer.music.set_volume(volume)
 
+            Functions.check_event(event, event_var) # Check for VM and pet event
+
         screen.blit(Inside_menu_image, (250, 50))
 
         # Draw the volume slider
@@ -248,6 +257,9 @@ def mg3_instruction():
                 if back_button_rect.collidepoint(event.pos):
                     Functions.playsound("btnclicked")
                     return "mg3_menu"
+                
+            Functions.check_event(event, event_var) # Check for VM and pet event
+
         screen.blit(mg3_instruction_image, (0, 0))
         Functions.draw_floating_texts(screen)
         pygame.display.flip()
@@ -336,9 +348,12 @@ def mg3_base():
                 elif event.unicode and event.unicode.isprintable():
                     user_input += event.unicode
 
+            Functions.check_event(event, event_var) # Check for VM and pet event
+
         screen.blit(mg3_base_image, (0, 0))
         screen.blit(menubtn, (920, 20))
         Functions.display_stats(screen)
+        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
 
         y = 200
         for line in wrap_text(paragraph, font, 800):

@@ -5,6 +5,8 @@ from Features import Functions
 pygame.init()
 pygame.mixer.init()
 screen = None
+event_var = None
+NOTI = None
 
 # === Cursors ===
 default_cursor = pygame.SYSTEM_CURSOR_ARROW
@@ -94,6 +96,7 @@ def reset_bedroom_objects():
 
 def draw_stats():
     Functions.display_stats(screen)
+    NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
 
     if "brush" not in interacted_items:
         screen.blit(brush_img, brush_rect)
@@ -126,6 +129,8 @@ def handle_inside_menu_events(event):
         mouse_x, _ = event.pos
         volume = max(0, min(1, (mouse_x - slider_x) / slider_width))
         pygame.mixer.music.set_volume(volume)
+
+    Functions.check_event(event, event_var) # Check for VM and pet event
 
 def draw_inside_menu():
     volume = pygame.mixer.music.get_volume()
@@ -236,7 +241,7 @@ def run():
                 running = False
                 return
 
-            if game_state == "bedroom":
+            elif game_state == "bedroom":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if menu_button_rect.collidepoint(event.pos):
                         Functions.playsound("btnclicked")
@@ -287,6 +292,8 @@ def run():
                                 spooky_sound.play()
                                 Functions.energy -= 10  
                                 Functions.add_floating_text("-10 Energy", "hp", (255, 0, 0)) 
+
+                    Functions.check_event(event, event_var) # Check for VM and pet event
 
         if not inside_menu_active:
             if any(r.collidepoint(mouse_pos) for r in [brush_rect, towel_rect, mirror_rect, bed_rect]):

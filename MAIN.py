@@ -288,9 +288,7 @@ class FourDNPC:
         self.sound_played_for_state_5 = False
         self.sound_played_for_state_3 = False
 
-
-    def handle_input(self, event):
-        
+    def handle_input(self, event):        
         if event.type == pygame.KEYDOWN and self.talking:
             if self.dialogue_state == 0:  # BUY/BYE
                 if event.key == pygame.K_LEFT:
@@ -310,16 +308,14 @@ class FourDNPC:
                             
             elif event.key == pygame.K_SPACE:
                 if self.dialogue_state == 2:      
-                    Functions.update_stats (mpchange=self.reward_money, hpchange=self.reward_energy)   
+                    Functions.update_stats(mpchange=self.reward_money, hpchange=self.reward_energy)   
                     self.dialogue_state = 5
                     self.current_line = 5
                 elif self.dialogue_state in [3, 4, 5]:  
                     self.end_dialogue()
 
     def update(self):
-
-        if not self.active:
-            return
+        if not self.active: return
             
         if self.y < 460:
             self.y = 460
@@ -338,10 +334,8 @@ class FourDNPC:
         if random.random() < 0.01:
             self.direction = "left" if self.direction == "right" else "right"
             
-        if self.direction == "left":
-            self.x -= 1
-        else:
-            self.x += 1
+        if self.direction == "left": self.x -= 1
+        else: self.x += 1
             
         if pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
             self.walk_frame = (self.walk_frame + 1) % 3
@@ -354,7 +348,7 @@ class FourDNPC:
                 self.wallet_check_started = False
 
                 if Functions.money >= 30:
-                    Functions.update_stats (+0, -30)
+                    Functions.update_stats(mpchange=-30)
                     self.reward_money = random.choice([0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80])
                     self.reward_energy = random.choice([0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80])
                     self.dialogue_state = 2
@@ -362,23 +356,17 @@ class FourDNPC:
                 else:
                     self.dialogue_state = 3
                     self.current_line = 3
-        pass
                 
     def draw(self, surface, camera_x, camera_y):
-        if not self.active:
-            return
+        if not self.active: return
        
         # Draw NPC
         if self.direction == "left":
-            if self.walk_frame == 0 or self.walk_frame == 2:
-                img = npc_4d_img
-            else:
-                img = npc_4d_left1
+            if self.walk_frame == 0 or self.walk_frame == 2: img = npc_4d_img
+            else: img = npc_4d_left1
         else:
-            if self.walk_frame == 0 or self.walk_frame == 2:
-                img = npc_4d_img
-            else:
-                img = npc_4d_right1
+            if self.walk_frame == 0 or self.walk_frame == 2: img = npc_4d_img
+            else: img = npc_4d_right1
             
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
 
@@ -387,7 +375,6 @@ class FourDNPC:
             pygame.draw.rect(surface, WHITE, (50, HEIGHT-200, WIDTH-100, 150), 3)
             
             if self.dialogue_state == 0:  
-                
                 for i, option in enumerate(["BUY", "BYE"]):
                     color = HIGHLIGHT if i == self.selected_pay_option else WHITE
                     surface.blit(font.render(option, True, color), (100+i*200, HEIGHT-140))
@@ -413,7 +400,6 @@ class FourDNPC:
         if self.is_player_near() and not self.talking:
             text = FONT.render("Click Y to talk with 4D Seller", True, WHITE)
             surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
-        pass
     
     def is_player_near(self):
         distance = ((self.x - player_x)**2 + (self.y - player_y)**2)**0.5
@@ -440,7 +426,6 @@ class FourDNPC:
 
 class PetNPC:
     def __init__(self, x=590, y=355):
-    def __init__(self, x=590, y=355):
         self.x = x
         self.y = y
         self.owned = False
@@ -457,6 +442,7 @@ class PetNPC:
         self.pet_name = ""
         self.pet_hp = 888
         self.MAXHP = 999
+        self.pet_hpchange, self.happy_hpchange = -5, 1
         self.hp_percentage = {'happy': 0.33, 'hungry': 0.2}
         self.name_input_active = False
         self.name_confirmed = False
@@ -627,8 +613,6 @@ menu_var_dict = {'mg_state': "menu", 'prev_state': "game", 'dragging': False}
 mg1_var_dict = {'mg_state': "mainpage", 'time_passed': 0, 'msg': None, 'new_plate': True, 
                 'plates': 0, 'stains': None, 'dragging': None, 'prev_state': None,
                 'Lfont': large_font, 'Mfont': middle_font, 'XLfont': xlarge_font, 'fade': None}
-
-mg2_var_dict = {'TIMER_EVENT': pygame.USEREVENT + 1 }
 
 mg4_var_dict = {'mg_state': "mainpage", 'vm_level': vm_level, 'vm_income': vm_income, 
                 'VM_EVENT': VM_EVENT, 'Sfont': small_font, 'XSfont': xsmall_font, 
@@ -1426,8 +1410,11 @@ while running:
                     elif mgid == "MG2":
                         game_state = "mg2"
                         Functions.play_music("MG2_bgm")
+                        MiniGame2.screen, MiniGame2.clock, MiniGame2.NOTI = screen, clock, NOTI
+                        MiniGame2.event_var = {'VM_EVENT': VM_EVENT, 'is_night': is_night, 'pet_npc': pet_npc,
+                                               'mpchange': [vm_income[0][vm_level[0] - 1], vm_income[1][vm_level[1] - 1]],
+                                               'vm_level': vm_level, 'xsmall_font': xsmall_font}
                         MiniGame2.run_game(screen)
-                        pygame.time.set_timer(mg2_var_dict['TIMER_EVENT'], 0)  
                         Functions.play_music("background")
                         game_state = "game"
                         break
@@ -1435,7 +1422,10 @@ while running:
                     elif mgid == "MG3":
                         game_state = "mg3"
                         Functions.play_music("MG3_bgm")
-                        MiniGame3.screen = screen
+                        MiniGame3.screen, MiniGame3.NOTI = screen, NOTI
+                        MiniGame3.event_var = {'VM_EVENT': VM_EVENT, 'is_night': is_night, 'pet_npc': pet_npc,
+                                               'mpchange': [vm_income[0][vm_level[0] - 1], vm_income[1][vm_level[1] - 1]],
+                                               'vm_level': vm_level, 'xsmall_font': xsmall_font}
                         MiniGame3.load()
                         MiniGame3.game_state = "mg3_menu" 
                         while MiniGame3.game_state != "quit":
@@ -1463,7 +1453,10 @@ while running:
                     elif mgid == "bedroom":
                         Functions.play_music("bedroom")
                         show_sleep_popup = True
-                        Bedroom.screen, Bedroom.clock = screen, clock
+                        Bedroom.screen, Bedroom.clock, Bedroom.NOTI = screen, clock, NOTI
+                        Bedroom.event_var = {'VM_EVENT': VM_EVENT, 'is_night': is_night, 'pet_npc': pet_npc,
+                                             'mpchange': [vm_income[0][vm_level[0] - 1], vm_income[1][vm_level[1] - 1]],
+                                             'vm_level': vm_level, 'xsmall_font': xsmall_font}
                         Bedroom.load()
                         Bedroom.game_state = "bedroom"     
                         Bedroom.slept_once = False         
@@ -1586,14 +1579,14 @@ while running:
             elif four_d_npc.talking and event.key == pygame.K_SPACE:
                 four_d_npc.end_dialogue()
 
-        elif event.type == VM1 and not is_night : Functions.update_stats(mpchange=vm_income[0][vm_level[0] - 1])
-        elif event.type == VM2 and not is_night  : Functions.update_stats(mpchange=vm_income[1][vm_level[1] - 1])
+        elif event.type == VM1 and not is_night: Functions.update_stats(mpchange=vm_income[0][vm_level[0] - 1])
+        elif event.type == VM2 and not is_night: Functions.update_stats(mpchange=vm_income[1][vm_level[1] - 1])
 
         elif event.type == pet_npc.event:
             if pet_npc.pet_hp:
-                pet_npc.pet_hp = max(pet_npc.pet_hp-5, 0)
+                pet_npc.pet_hp = max(pet_npc.pet_hp-pet_npc.pet_hpchange, 0)
                 if (pet_npc.pet_hp/pet_npc.MAXHP >= pet_npc.hp_percentage['happy']): 
-                    Functions.update_stats(hpchange=1)
+                    Functions.update_stats(hpchange=pet_npc.happy_hpchange)
         
         if statemanager: statemanager.eventhandler(event)
         else: 

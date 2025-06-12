@@ -1,38 +1,27 @@
 import pygame
 import random
-import time
 from Features import Functions
 
 pygame.init()
 pygame.mixer.init()
 screen = None
-floating_texts = [] 
+clock = None
+NOTI = None
+event_var = None
 inside_menu_active = False
-total_energy_spent = 0
-total_money_earned = 0
 
 # Volume control variables
 slider_x = 450
 slider_y = 150 
 slider_width = 200  
 slider_height = 8   
-knob_radius = 12    
-volume = 0.5        
+knob_radius = 12       
 dragging = False    
 
-def add_floating_text(text, x, y, color):
-    floating_texts.append({
-        "text": text, 
-        "x": x, 
-        "y": y, 
-        "start_time": pygame.time.get_ticks(), 
-        "color": color
-    })
-
 def run_game(screen):
-    global inside_menu_active, volume, dragging
+    global inside_menu_active, volume, dragging, clock
     
-    clock = pygame.time.Clock()
+    volume = pygame.mixer.music.get_volume()
     font = pygame.font.Font(None, 48)
     input_text = ""
     current_receipt = None
@@ -42,7 +31,6 @@ def run_game(screen):
         try:
             return pygame.transform.scale(pygame.image.load(path).convert(), (1024, 576))
         except:
-            print(f"Error loading image: {path}")
             return pygame.Surface((1024, 576))
     
     # Game data
@@ -56,29 +44,13 @@ def run_game(screen):
     instruction_img = load_and_scale("Assets/Images/MG2-Instructions.png")
     success_img = load_and_scale("Assets/Images/MG2-Success.png")
     fail_img = load_and_scale("Assets/Images/MG2-Fail.png")
-    mge_statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
     Inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
     Menu_image = Functions.mainbtnlist[1]
     receipt_imgs = pygame.image.load("Assets/Images/MG2-Game.png").convert_alpha()
     receipt_imgslist = Functions.get_sprite(1024, 576, receipt_imgs)
-    receipt_imgs0 = receipt_imgslist[0]
-    receipt_imgs1 = receipt_imgslist[1]
-    receipt_imgs2 = receipt_imgslist[2]
-    receipt_imgs3 = receipt_imgslist[3]
-    receipt_imgs4 = receipt_imgslist[4]
-    receipt_imgs5 = receipt_imgslist[5]
-    receipt_imgs6 = receipt_imgslist[6]
-    receipt_imgs7 = receipt_imgslist[7]
-    receipt_imgs8 = receipt_imgslist[8]
-    receipt_imgs9 = receipt_imgslist[9]
     
     # Load sounds
-    success_sound = pygame.mixer.Sound("Assets/Audio/success.mp3")
-    fail_sound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
-    button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
-    pygame.mixer.music.load("Assets/Audio/MG2_bgm.mp3")
-    pygame.mixer.music.set_volume(volume)
-    pygame.mixer.music.play(-1)
+    Functions.play_music("MG2_bgm")
 
     # Game state
     minigame_state = "menu"
@@ -88,7 +60,6 @@ def run_game(screen):
     input_text = ""
     correct_amount = 0
     paused = False
-    pause_time = 0
     poor_message = False
     game_screen_snapshot = None
 
@@ -102,32 +73,6 @@ def run_game(screen):
     # Timer event
     TIMER_EVENT = pygame.USEREVENT + 1
     pygame.time.set_timer(TIMER_EVENT, 1000)
-
-    def draw_statsbar():
-        stats_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 25)
-        if minigame_state != "playing":
-            screen.blit(mge_statsbar_image, (0, 0))
-            energy_text = stats_font.render(f"{Functions.energy:06}", True, (0, 0, 0))
-            money_text = stats_font.render(f"{Functions.money:06}", True, (0, 0, 0))
-            screen.blit(energy_text, (80, 28))
-            screen.blit(money_text, (80, 105))
-        
-        current_time = pygame.time.get_ticks()
-        texts_to_remove = []
-        for ft in floating_texts[:]:
-            elapsed = (current_time - ft["start_time"]) / 1000
-            if elapsed > 1.5:
-                texts_to_remove.append(ft)
-                continue
-
-            offset_y = int(30 * elapsed)
-            alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
-            text_surface = stats_font.render(ft["text"], True, ft["color"])
-            text_surface.set_alpha(alpha)
-            screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
-
-        for ft in texts_to_remove:
-            floating_texts.remove(ft)
         
     def inside_menu_screen():
         nonlocal paused, game_screen_snapshot
@@ -158,18 +103,18 @@ def run_game(screen):
                         dragging = True
                     
                     elif resume_button_rect.collidepoint(mouse_pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         paused = False
                         inside_menu_active = False
                         return "resume"
                         
                     elif restart_button_rect.collidepoint(mouse_pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         inside_menu_active = False
                         return "restart"
                         
                     elif quit_button_rect.collidepoint(mouse_pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         inside_menu_active = False
                         return "quit"
                         
@@ -182,13 +127,15 @@ def run_game(screen):
                     volume = max(0, min(1, new_volume))
                     pygame.mixer.music.set_volume(volume)
 
+                Functions.check_event(event, event_var) # Check for VM and pet event
+
             # Draw volume control
             pygame.draw.rect(screen, (0, 0, 0), (slider_x, slider_y, slider_width, slider_height))
             knob_x = slider_x + int(volume * slider_width)
             pygame.draw.circle(screen, (0, 0, 0), (knob_x, slider_y + slider_height // 2), knob_radius)
 
             SLASH_FONT = pygame.font.SysFont('Arial', 80)
-            if volume == 0:
+            if not volume:
                 slash_symbol = SLASH_FONT.render("\\", True, (0, 0, 0))
                 screen.blit(slash_symbol, (slider_x + slider_width - 248, slider_y - 45))
 
@@ -200,48 +147,47 @@ def run_game(screen):
         time_left = 30
         input_text = ""
         idx = random.randint(0, 9)
-        current_receipt = receipt_imgs[idx]
+        current_receipt = receipt_imgslist[idx]
         correct_amount = receipt_answers[idx]
-        pygame.mixer.music.set_volume(volume)
-        pygame.mixer.music.play(-1)
+        Functions.play_music("MG2_bgm")
 
     running_minigame = True
     while running_minigame:
-        dt = clock.tick(60)
+        clock.tick(60)
         
         # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running_minigame = False
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
 
                 if minigame_state == "menu":
                     if 400 <= mouse_pos[0] <= 600 and 300 <= mouse_pos[1] <= 480:
-                        button_click.play()
-                        if Functions.money >= 200:
+                        Functions.playsound("btnclicked")
+                        if Functions.energy >= 20:
                             reset_minigame()
                             minigame_state = "playing"
-                            Functions.update_stats(0, -200)
-                            add_floating_text("-200", 250, 28, (255, 0, 0))
+                            Functions.update_stats(hpchange=-20)
+                            Functions.add_floating_text("-20", "hp" (255, 0, 0))
                             poor_message = False
                         else:
                             poor_message = True
                     elif 900 <= mouse_pos[0] <= 1000 and 100 <= mouse_pos[1] <= 160:
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         minigame_state = "instruction"
                     elif return_button.collidepoint(mouse_pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         running_minigame = False
                     elif menu_button_rect.collidepoint(mouse_pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         game_screen_snapshot = screen.copy()
                         inside_menu_active = True
 
                 elif minigame_state == "instruction":
                     if menu_button_rect.collidepoint(mouse_pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         game_screen_snapshot = screen.copy()
                         inside_menu_active = True
                     else:
@@ -249,31 +195,30 @@ def run_game(screen):
 
                 elif minigame_state == "playing":
                     if menu_button_rect.collidepoint(mouse_pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         game_screen_snapshot = screen.copy()
                         paused = True
                         inside_menu_active = True
-                        pause_time = time_left
                         pygame.time.set_timer(TIMER_EVENT, 0)
 
-            if event.type == pygame.KEYDOWN and minigame_state == "playing" and not paused:
+            elif event.type == pygame.KEYDOWN and minigame_state == "playing" and not paused:
                 if event.key == pygame.K_RETURN:
                     try:
                         if abs(float(input_text) - correct_amount) < 0.01:
                             order_left -= 1
                             if order_left == 0:
                                 minigame_state = "success"
-                                success_sound.play()
+                                Functions.playsound("success")
                                 Functions.update_stats(0, 1000)
-                                add_floating_text("+1000", 250, 110, (0, 255, 0))
+                                Functions.add_floating_text("+50", "mp" (0, 255, 0))
                             else:
                                 idx = random.randint(0, 9)
-                                current_receipt = receipt_imgs[idx]
+                                current_receipt = receipt_imgslist[idx]
                                 correct_amount = receipt_answers[idx]
                                 input_text = ""
                         else:
                             minigame_state = "fail"
-                            fail_sound.play()
+                            Functions.playsound("fail")
                     except:
                         minigame_state = "fail"
                 elif event.key == pygame.K_BACKSPACE:
@@ -285,7 +230,9 @@ def run_game(screen):
                 time_left -= 1
                 if time_left <= 0:
                     minigame_state = "fail"
-                    fail_sound.play()
+                    Functions.playsound("fail")
+
+            Functions.check_event(event, event_var) # Check for VM and pet event
 
         # Handle menu results
         if inside_menu_active:
@@ -308,7 +255,7 @@ def run_game(screen):
             
             if poor_message:
                 poor_font = pygame.font.Font(None, 60)
-                poor_text = poor_font.render("You are too poor! (Need at least $200)", True, (0, 0, 0))
+                poor_text = poor_font.render("You are too tired! (Need at least 20 energy)", True, (0, 0, 0))
                 screen.blit(poor_text, (150, 250))
             
         elif minigame_state == "instruction":
@@ -340,8 +287,7 @@ def run_game(screen):
             pygame.time.delay(2000)
             running_minigame = False
         
-        draw_statsbar()
+        Functions.display_stats(screen)
+        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
+        Functions.draw_floating_texts(screen)
         pygame.display.flip()
-
-    pygame.time.set_timer(TIMER_EVENT, 0)
-    pygame.mixer.music.stop()

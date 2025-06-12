@@ -129,6 +129,17 @@ def play_music(path):
     pygame.mixer.music.play(-1)
     if not playing: pygame.mixer.music.pause()
 
+def check_event(event, event_var):
+    for i in range(len(event_var['VM_EVENT'])):
+        if event.type == event_var['VM_EVENT'][i] and not event_var['is_night']: 
+            update_stats(mpchange=event_var['mpchange'][i])
+
+    if event.type == event_var['pet_npc'].event:
+        if event_var['pet_npc'].pet_hp:
+            event_var['pet_npc'].pet_hp = max(event_var['pet_npc'].pet_hp-event_var['pet_npc'].pet_hpchange, 0)
+            if (event_var['pet_npc'].pet_hp/event_var['pet_npc'].MAXHP >= event_var['pet_npc'].hp_percentage['happy']): 
+                update_stats(hpchange=event_var['pet_npc'].happy_hpchange)
+
 class Menu():
     def __init__(self, W):
         self.muted = False
