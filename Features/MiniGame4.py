@@ -2,7 +2,8 @@ import pygame
 from Features import Functions
 
 class MG4():
-    def __init__(self, W, H, Menu, vm_buyingprices):
+    def __init__(self, Menu, vm_buyingprices):
+        # Initializing MG4 game variable
         global temp_vm, mpchange
         temp_vm, mpchange = [], None
         self.Menu = Menu
@@ -15,11 +16,10 @@ class MG4():
         self.txtboxposY = [[340, 360], [290, 310], 420, 520]
         self.txtrectsize = [(50, 20), (80, 20), (90, 20), (90, 10)]
         self.txtinfo = ["f\"{self.buyingprices[i][vm_level[i]]}$\"", 
-                    "f\"({vm_income[i][vm_level[i]]}$/s)\"",
-                    "f\"({self.sellingprices[i][vm_level[i] - 1]}$)\""]
+                        "f\"({vm_income[i][vm_level[i]]}$/s)\"",
+                        "f\"({self.sellingprices[i][vm_level[i] - 1]}$)\""]
         
         Functions.play_music("I-Love-My-8-bit-Video-Game-Console (DJARTMUSIC)")
-
         self.title = pygame.image.load("Assets/Images/MG4_Title.png").convert_alpha()
         vmsheet = pygame.image.load("Assets/Images/MG4_VMsheet.png").convert_alpha()
         self.vm1, self.vm2 = Functions.get_sprite(250, 352, vmsheet)        
@@ -45,6 +45,7 @@ class MG4():
                     self.buttons.update(E, self.var_dict['VM_EVENT'])
                     for i in range(len(self.notitogglerect)):
                         if self.notitogglerect[i].collidepoint(E.pos):
+                            # Toggling on and off vending machine notification
                             self.var_dict['noti'].displaynoti[i] = not self.var_dict['noti'].displaynoti[i]
 
             elif mg_state == "menu":
@@ -150,7 +151,7 @@ class MG4():
             pygame.draw.line(S, 'Black', (c[0] - 3, c[1] + 6), (c[0] - 7, c[1] - 2), 3)
             pygame.draw.line(S, 'Black', (c[0] - 3, c[1] + 6), (c[0] + 6, c[1] - 6), 3)
 
-class Buttons(pygame.sprite.Sprite):
+class Buttons(pygame.sprite.Sprite): # Sprite grp for btns
     def __init__(self, vm, btnpath, vm_level, btnposX, btnposY, buyingprices, sellingprices):
         super().__init__()
         self.id, X_pos = vm, btnposX[vm]

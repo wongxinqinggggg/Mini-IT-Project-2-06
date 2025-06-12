@@ -269,7 +269,7 @@ class MG1():
             self.var_dict['mg_state'] = "game"
             self.update(self.var_dict['mg_state'], self.var_dict)
 
-class Stains(pygame.sprite.Sprite):
+class Stains(pygame.sprite.Sprite): # Sprite grp for stains
     def __init__(self, platerect, platemask, stains, stainsurf, scale):
         super().__init__()
         image = stainsurf[randint(0, (len(stainsurf) -1))]

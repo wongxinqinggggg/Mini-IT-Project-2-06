@@ -341,11 +341,9 @@ class FourDNPC:
 
         if self.talking and self.dialogue_state == 1 and self.wallet_check_started and not self.checked_wallet:
             current_time = pygame.time.get_ticks()
-            print(f"Checking wallet... Time elapsed: {current_time - self.wallet_check_timer}ms")  # 调试输出
             if current_time - self.wallet_check_timer >= self.wallet_check_duration:
                 self.checked_wallet = True
                 self.wallet_check_started = False
-                print(f"Current VM2 value: {VM2}")
 
                 if VM2 >= 30:
                     Functions.update_stats (+0, -30)
@@ -932,7 +930,6 @@ class StateManager():
         NOTI.displayicon(vm_level, pet_npc, xsmall_font, is_night)
         if self.var_dict.get('fade'): screen.blit(self.var_dict['fade'], (0, 0))
 
-
 DAY_LENGTH = 50000     # milliseconds for day
 NIGHT_LENGTH = 30000 # milliseconds for night
 last_switch_time = pygame.time.get_ticks()
@@ -1406,24 +1403,16 @@ while running:
 
                     elif mgid == "MG2":
                         game_state = "mg2"
-                        pygame.mixer.music.stop()  
-                        pygame.mixer.music.load("Assets/Audio/MG2_bgm.mp3")
-                        pygame.mixer.music.set_volume(0.5)
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("MG2_bgm")
                         MiniGame2.run_game(screen)
-                        pygame.mixer.music.stop()  
                         pygame.time.set_timer(mg2_var_dict['TIMER_EVENT'], 0)  
-                        pygame.mixer.music.load("Assets/Audio/background.mp3")
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("background")
                         game_state = "game"
                         break
 
                     elif mgid == "MG3":
                         game_state = "mg3"
-                        pygame.mixer.music.stop()
-                        pygame.mixer.music.load("Assets/Audio/MG3_bgm.mp3")
-                        pygame.mixer.music.set_volume(0.5)
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("MG3_bgm")
                         MiniGame3.screen = screen
                         MiniGame3.load()
                         MiniGame3.game_state = "mg3_menu" 
@@ -1436,32 +1425,30 @@ while running:
                                 MiniGame3.game_state = MiniGame3.mg3_base()
                             elif MiniGame3.game_state == "inside_menu":
                                 MiniGame3.game_state = MiniGame3.inside_menu_screen()
-                        pygame.mixer.music.load("Assets/Audio/background.mp3")
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("background")
                         break  
 
                     elif mgid == "MG4": 
-                        statemanager = StateManager(MiniGame4.MG4(WIDTH, HEIGHT, MENU, vm_buyingprices), mg4_var_dict.copy())
+                        statemanager = StateManager(MiniGame4.MG4(MENU, vm_buyingprices), mg4_var_dict.copy())
                         game_state = "mg4"
                         break
 
                     elif mgid == "STORE":
-                        statemanager = StateManager(Store.STORE(WIDTH, HEIGHT, MENU, INVENTORY), store_var_dict.copy())
+                        statemanager = StateManager(Store.STORE(MENU, INVENTORY), store_var_dict.copy())
                         game_state = "store"
                         break 
 
                     elif mgid == "bedroom":
-                        pygame.mixer.music.load("Assets/Audio/bedroom.mp3")
-                        pygame.mixer.music.set_volume(0.5)
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("bedroom")
                         show_sleep_popup = True
+                        Bedroom.screen, Bedroom.clock = screen, clock
+                        Bedroom.load()
                         Bedroom.game_state = "bedroom"     
                         Bedroom.slept_once = False         
                         result = Bedroom.run()
                         if result == "quit":
                             running = False
-                        pygame.mixer.music.load("Assets/Audio/background.mp3")
-                        pygame.mixer.music.play(-1)
+                        Functions.play_music("background")
                         break
 
             elif game_state == "inventory": 

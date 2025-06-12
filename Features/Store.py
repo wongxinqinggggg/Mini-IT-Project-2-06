@@ -2,7 +2,8 @@ import pygame
 from Features import Functions
 
 class STORE():
-    def __init__(self, W, H, Menu, Inventory):
+    def __init__(self, Menu, Inventory):
+        # Initializing variable for store
         global mpchange 
         self.Menu, self.Inventory = Menu, Inventory
         self.pricelist = [10, 25, 50, 120, 45, 100]
@@ -17,7 +18,6 @@ class STORE():
         mpchange = None
 
         Functions.play_music("Retro-Game-Music (moodmode)")
-
         self.menubtn = Functions.mainbtnlist[1]
         self.menubtnrect = self.menubtn.get_rect(center = menubtnpos)
         self.itemsurflist = Functions.itemlist
@@ -111,7 +111,7 @@ class STORE():
         self.buttons.draw(S)
         Functions.draw_floating_texts(S)
     
-class Buttons(pygame.sprite.Sprite):
+class Buttons(pygame.sprite.Sprite): # Sprite grp for btns
     def __init__(self, id, pricelist, btnpos):
         super().__init__()
         self.image = Functions.tbtnlist[0]

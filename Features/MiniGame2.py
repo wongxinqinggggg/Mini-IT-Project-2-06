@@ -41,7 +41,6 @@ def run_game(screen):
         try:
             return pygame.transform.scale(pygame.image.load(path).convert(), (1024, 576))
         except:
-            print(f"Error loading image: {path}")
             return pygame.Surface((1024, 576))
     
     # Game data
@@ -77,7 +76,6 @@ def run_game(screen):
     input_text = ""
     correct_amount = 0
     paused = False
-    pause_time = 0
     poor_message = False
     game_screen_snapshot = None
 

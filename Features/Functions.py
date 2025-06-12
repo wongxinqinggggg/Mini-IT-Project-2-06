@@ -30,7 +30,9 @@ def display_stats(S):
     S.blit(mpsurf, mprect)
 
 def add_floating_text(text, id, color=(128,128,128)):
-    floating_texts.append({"text": text, "x": floating_texts_pos[id]['x'], "y": floating_texts_pos[id]['y'], "start_time": pygame.time.get_ticks(), "color": color})
+    if floating_texts_pos[id].get(id): xpos, ypos = floating_texts_pos[id]['x'], floating_texts_pos[id]['y']
+    else: xpos, ypos = id[0], id[1]
+    floating_texts.append({"text": text, "x": xpos, "y": ypos, "start_time": pygame.time.get_ticks(), "color": color})
 
 def draw_floating_texts(S):
     floating_font=pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 26)
