@@ -438,7 +438,7 @@ class PetNPC:
         self.walk_timer = 0
         self.walk_delay = 200
         self.follow_speed = 3
-        self.follow_distance = 20
+        self.follow_distance = 42
         self.talking = False
         self.active = True
         self.dialogue_state = 0
@@ -455,62 +455,41 @@ class PetNPC:
         self.pet_img2 = Petlist[1]
         self.pet_img3 = Petlist[2]
         self.pet_img4 = Petlist[3]
-        self.collect_range = 50  
+        self.collect_range = 60  
         self.collect_cooldown = 0  
         self.happy_timer = 0  
         self.is_happy = False
 
     def update(self, player_x, player_y, collision_rects, money_drops):
-        if not self.owned or not self.pet_hp:
-            return
-
-        target_x = player_x - (self.follow_distance if self.direction == "right" else -self.follow_distance)
-        target_y = player_y
+        if not self.owned or not self.pet_hp: return
         
-        move_x = target_x - self.x
-        move_y = target_y - self.y
+        move_x = player_x - self.x
+        move_y = player_y - self.y
         distance = (move_x**2 + move_y**2)**0.5
         
-        if distance > 32: 
+        if distance > self.follow_distance: 
             move_x = move_x / distance * self.follow_speed
             move_y = move_y / distance * self.follow_speed
-            
-            new_x = self.x + move_x
-            new_y = self.y
-            pet_rect = pygame.Rect(new_x, new_y, self.width, self.height)
-            
-            can_move_x = True
+            pet_rect = pygame.Rect(self.x + move_x, self.y, self.width, self.height)
             for rect in collision_rects:
                 if pet_rect.colliderect(rect):
-                    can_move_x = False
+                    move_x = 0
                     break
             
-            if can_move_x:
-                self.x = new_x
-            else:
-                move_x = 0
-
+            self.x += move_x
             if move_x <= 0: self.direction = "left"
             elif move_x > 0: self.direction = "right"
             
-            new_x = self.x
-            new_y = self.y + move_y
-            pet_rect = pygame.Rect(new_x, new_y, self.width, self.height)
-            
-            can_move_y = True
+            pet_rect = pygame.Rect(self.x, self.y + move_y, self.width, self.height)
             for rect in collision_rects:
                 if pet_rect.colliderect(rect):
-                    can_move_y = False
+                    move_y = 0
                     break
             
-            if can_move_y:
-                self.y = new_y
-            else:
-                move_y = 0
+            self.y += move_y
 
             if not move_x and not move_y: self.walk_frame = 0 
-            
-            if pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
+            elif pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
                 self.walk_frame = (self.walk_frame + 1) % 4  # 现在有4帧动画
                 self.walk_timer = pygame.time.get_ticks()  
 
@@ -536,28 +515,21 @@ class PetNPC:
                 self.is_happy = False
 
     def draw(self, surface, camera_x, camera_y):
-        if not self.active:
-            return
+        if not self.active: return
             
         if self.direction == "left":
-            if self.walk_frame == 0 or self.walk_frame == 2:
-                img = self.pet_img4
-            else:
-                img = self.pet_img2
+            if self.walk_frame == 0 or self.walk_frame == 2: img = self.pet_img4
+            else: img = self.pet_img2
         elif self.direction == "right":
-            if self.walk_frame == 0 or self.walk_frame == 2:
-                img = self.pet_img3
-            else:
-                img = self.pet_img1
+            if self.walk_frame == 0 or self.walk_frame == 2: img = self.pet_img3
+            else: img = self.pet_img1
             
         if self.is_happy:
             img = pygame.transform.scale(img, (int(img.get_width()*1.2), int(img.get_height()*1.2)))
-
-        surface.blit(img, (self.x - camera_x, self.y - camera_y))
-        
-        if self.is_happy:
             heart = small_font.render("<3", True, (255, 0, 0))
             surface.blit(heart, (self.x - camera_x + img.get_width()//2 - heart.get_width()//2, self.y - camera_y - 20))
+
+        surface.blit(img, (self.x - camera_x, self.y - camera_y))
 
         if self.is_player_near() and not self.talking and not self.owned:
             text = FONT.render("Press P to talk with PET", True, WHITE)
@@ -786,17 +758,10 @@ def load_player_images(character):
     if character == "female": y = 0
     elif character == "male": y = 1
 
-    idle_s = get_sprite(0, y)
-    idle_a = get_sprite(1, y)
-    idle_d = get_sprite(2, y)
-    idle_w = get_sprite(3, y)
-
-    walk_s1 = get_sprite(4, y)
-    walk_s2 = get_sprite(5, y)
-    walk_a = get_sprite(6, y)
-    walk_d = get_sprite(7, y)
-    walk_w1 = get_sprite(8, y)
-    walk_w2 = get_sprite(9, y)
+    idle_s, idle_a, idle_d, idle_w = get_sprite(0, y), get_sprite(1, y), get_sprite(2, y), get_sprite(3, y)
+    walk_s1, walk_s2 = get_sprite(4, y), get_sprite(5, y)
+    walk_a, walk_d = get_sprite(6, y), get_sprite(7, y)
+    walk_w1, walk_w2 = get_sprite(8, y), get_sprite(9, y)
 
     return {
         # Walk (%4)
@@ -974,6 +939,7 @@ last_switch_time = pygame.time.get_ticks()
 
 # === GAME LOOP ===
 while running:
+    screen.fill(WHITE)
     dt = clock.tick(60)
     input_locked = show_intro_message or welcome_message != ""
     now = pygame.time.get_ticks()
@@ -986,7 +952,6 @@ while running:
         transitioning = True
         last_switch_time = now
 
-    screen.fill(WHITE)
     cursor_timer += dt
     if cursor_timer >= cursor_interval:
         cursor_visible = not cursor_visible
@@ -1081,7 +1046,7 @@ while running:
         
             if not ((keys[pygame.K_w] and keys[pygame.K_s]) or (keys[pygame.K_a] and keys[pygame.K_d])):
                 if (keys[pygame.K_w] or keys[pygame.K_s]) and (keys[pygame.K_a] or keys[pygame.K_d]):
-                    move_distance = ((player_speed**2)/2)**0.5  
+                    move_distance = ((player_speed**2)/2)**0.5  # Calculate move s=distance for diagonal movement
 
                 if keys[pygame.K_w]:
                     new_y -= move_distance
@@ -1104,10 +1069,12 @@ while running:
             collision_found = False
             for rect in collision_rects:
                 if player_rect.colliderect(rect):
-                    collision_found = True
+                    x_distance = abs(player_x + sprite_width/2 - rect.center[0]) - (sprite_width/2 + rect.width/2)
+                    if not x_distance: collision_found = True
+                    elif keys[pygame.K_a]: new_x = player_x - x_distance
+                    elif keys[pygame.K_d]: new_x = player_x + x_distance
                     break
-            if not collision_found:
-                player_x = new_x
+            if not collision_found: player_x = new_x
 
         if new_y != player_y:
             player_rect = pygame.Rect(player_x, new_y, sprite_width, sprite_height/2)
@@ -1115,10 +1082,12 @@ while running:
             collision_found = False
             for rect in collision_rects:
                 if player_rect.colliderect(rect):
-                    collision_found = True
+                    y_distance = abs(player_y + sprite_height/4 - rect.center[1]) - (sprite_height/4 + rect.height/2)
+                    if not y_distance: collision_found = True
+                    elif keys[pygame.K_w]: new_y = player_y - y_distance
+                    elif keys[pygame.K_s]: new_y = player_y + y_distance
                     break
-            if not collision_found:
-                player_y = new_y
+            if not collision_found: player_y = new_y
         
         # Determine if the player is actually moving
         moving = (player_x != old_x) or (player_y != old_y)
@@ -1128,22 +1097,19 @@ while running:
             if pygame.time.get_ticks() - walk_timer > walk_delay:
                 walk_frame = (walk_frame + 1) % len(player_imgs[player_direction])
                 walk_timer = pygame.time.get_ticks()
-        else:
-            walk_frame = 0
+        else: walk_frame = 0
 
         # Choose the correct sprite based on state
-        if moving:
-            current_img = player_imgs[player_direction][walk_frame]
-        else:
-            current_img = player_imgs["idle"][player_direction]
+        current_img = player_imgs[player_direction][walk_frame] if moving else player_imgs["idle"][player_direction]
 
         # --- DRAWING SEQUENCE STARTS HERE ---
-        # Draw player's lower half
-        screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
         pet_npc.update(player_x, player_y, collision_rects, money_drops)
         pet_npc.draw(screen, camera_x, camera_y)
+
+        # Draw player's lower half
+        screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
         
-        # **MOVED CODE**: Draw buildings and obstacles now
+        # Draw buildings and obstacles now
         for i in range(len(buildinglist)): 
             xpos, ypos = buildinglist[i][0]*TILE_SIZE - camera_x, buildinglist[i][1]*TILE_SIZE - camera_y
             if (-224 <= xpos <= WIDTH) and (-160 <= ypos <= HEIGHT):
@@ -1156,6 +1122,7 @@ while running:
                 if scale: surf = pygame.transform.scale_by(surf, scale)
                 screen.blit(surf, (xpos, ypos))
 
+        # Draw player's upper half
         upper_rect = pygame.Rect(0, 0, sprite_width, sprite_height/2)
         upper_rect.bottomleft = (player_x - camera_x, player_y - camera_y)
         screen.blit(current_img[0], upper_rect)
@@ -1268,7 +1235,7 @@ while running:
             dialog_box_rect = pygame.Rect(110, 380, 800, 180)
             draw_text_box(screen, typed_message, small_font, BLACK, dialog_box_rect, padding=15, line_height=22)
 
-        if welcome_message:
+        elif welcome_message:
             now = pygame.time.get_ticks()
             if now - welcome_message_start_time <= WELCOME_MESSAGE_DURATION:
                 text_surface = font.render(welcome_message, True, BLACK)
@@ -1280,7 +1247,7 @@ while running:
             else:
                 welcome_message = ""
 
-        if closed_message:
+        elif closed_message:
             still_near_closed_shop = False
             for character in characters:
                 if character["mg_state"] in ["MG1", "MG2", "MG4"]:
@@ -1301,7 +1268,6 @@ while running:
          # Only show popup for the first nearby character
         for character in characters:
             mgid_candidate = character['mg_state']
-            
             if is_near(player_x+sprite_width/2, player_y, character["x"], character["y"], character['img']):
                 if is_night and mgid_candidate in ["MG1", "MG2", "MG4"]:
                     closed_message = "This place is closed for the night. Come back during the day!"
@@ -1314,7 +1280,8 @@ while running:
                     popup_button_rect = draw_popup(screen, character["description"], small_font)
                 break 
 
-        screen.blit(menubtn, menubtnrect)
+        # Drawing UI element in game
+        screen.blit(menubtn, menubtnrect) 
         screen.blit(INVENTORY.bag, inventoryrect)
         Functions.display_stats(screen)
         NOTI.displayicon(vm_level, pet_npc, xsmall_font, is_night)
@@ -1547,10 +1514,9 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if game_state == "menu": var_dict['dragging'] = False
-            elif game_state == "inventory": 
-                INVENTORY.eventhandler(event)
+            elif game_state == "inventory": INVENTORY.eventhandler(event)
 
-        if event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN:
             if input_locked:
                 if event.key == pygame.K_RETURN:
                     button_click.play()
@@ -1577,7 +1543,6 @@ while running:
                     four_d_npc.start_dialogue()
                 elif event.key == pygame.K_p and pet_npc.active and pet_npc.is_player_near() and not pet_npc.talking and not pet_npc.owned:
                     pet_npc.start_dialogue()
-                
                 elif pet_npc.talking:
                     pet_npc.handle_input(event)
 
