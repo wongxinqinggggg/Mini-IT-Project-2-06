@@ -51,8 +51,6 @@ def run_game(screen):
         5: 45.10, 6: 15.20, 7: 66.00, 8: 1.30, 9: 9.00
     }
 
-    receipt_imgs = [load_and_scale(f"Assets/Images/MG2-Game{i}.png") for i in range(1, 11)]
-
     # Load images
     menu_img = load_and_scale("Assets/Images/MG2-Menu.png")
     instruction_img = load_and_scale("Assets/Images/MG2-Instructions.png")
@@ -61,6 +59,18 @@ def run_game(screen):
     mge_statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
     Inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
     Menu_image = Functions.mainbtnlist[1]
+    receipt_imgs = pygame.image.load("Assets/Images/MG2-Game.png").convert_alpha()
+    receipt_imgslist = Functions.get_sprite(1024, 576, receipt_imgs)
+    receipt_imgs0 = receipt_imgslist[0]
+    receipt_imgs1 = receipt_imgslist[1]
+    receipt_imgs2 = receipt_imgslist[2]
+    receipt_imgs3 = receipt_imgslist[3]
+    receipt_imgs4 = receipt_imgslist[4]
+    receipt_imgs5 = receipt_imgslist[5]
+    receipt_imgs6 = receipt_imgslist[6]
+    receipt_imgs7 = receipt_imgslist[7]
+    receipt_imgs8 = receipt_imgslist[8]
+    receipt_imgs9 = receipt_imgslist[9]
     
     # Load sounds
     success_sound = pygame.mixer.Sound("Assets/Audio/success.mp3")
