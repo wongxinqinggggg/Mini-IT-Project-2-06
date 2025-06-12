@@ -67,7 +67,6 @@ def draw_floating_texts(S):
         floating_texts.remove(ft)
 
 def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
-def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
     surflist = []
     for i in range(int(spritesheet.get_height()/sprite_height)):
         for j in range(int(spritesheet.get_width()/sprite_width)):
@@ -119,6 +118,8 @@ def playsound(soundtype):
         channel = pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3").play(fade_ms=800)
     elif soundtype == "eating": 
         channel = pygame.mixer.Sound("Assets/Audio/Eating-Effect (u_scysdwddsp).mp3").play(maxtime=1200)
+    elif soundtype == "coin":
+        channel = pygame.mixer.Sound("Assets/Audio/coinmusic.mp3").play()
 
     if channel: channel.set_volume(volume)
 

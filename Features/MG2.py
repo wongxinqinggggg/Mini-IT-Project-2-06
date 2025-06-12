@@ -1,6 +1,5 @@
 import pygame
 import random
-import time
 from Features import Functions
 
 pygame.init()

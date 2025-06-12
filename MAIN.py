@@ -29,8 +29,6 @@ money_sound = pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).m
 button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
-coin_sound = pygame.mixer.Sound("Assets/Audio/coinmusic.mp3")
-coin_sound.set_volume(0.3)
 
 # === COLORS ===
 BLACK = (0, 0, 0)
@@ -431,9 +429,10 @@ class FourDNPC:
         self.checked_wallet = False    
 
 class PetNPC:
-    def __init__(self, x=525, y=335):
+    def __init__(self, x=590, y=355):
         self.x = x
         self.y = y
+        self.owned = False
         self.direction = "right"
         self.walk_frame = 0
         self.walk_timer = 0
@@ -445,11 +444,10 @@ class PetNPC:
         self.dialogue_state = 0
         self.selected_option = 0
         self.pet_name = ""
-        self.pet_hp = 88
+        self.pet_hp = 888
         self.MAXHP = 999
         self.hp_percentage = {'happy': 0.33, 'hungry': 0.2}
         self.name_input_active = False
-        self.name_confirmed = False
         self.width = 32
         self.height = 32
         self.event = pygame.USEREVENT + 103  # This line was missing in the implementation
@@ -463,11 +461,8 @@ class PetNPC:
         self.is_happy = False
 
     def update(self, player_x, player_y, collision_rects, money_drops):
-        if not self.name_confirmed or not self.pet_hp:
+        if not self.owned or not self.pet_hp:
             return
-                
-        dx = player_x - self.x
-        dy = player_y - self.y
 
         target_x = player_x - (self.follow_distance if self.direction == "right" else -self.follow_distance)
         target_y = player_y
@@ -519,7 +514,7 @@ class PetNPC:
                 self.walk_frame = (self.walk_frame + 1) % 4  # 现在有4帧动画
                 self.walk_timer = pygame.time.get_ticks()  
 
-        if self.name_confirmed:  # Only collect money after naming
+        if self.owned:  # Only collect money after naming
             current_time = pygame.time.get_ticks()
             if current_time - self.collect_cooldown > 1000:  # 1 second cooldown
                 for money in money_drops[:]:
@@ -529,7 +524,7 @@ class PetNPC:
                         Functions.update_stats(mpchange=money["value"])
                         # Changed this line to use 'mp' as the ID instead of coordinates
                         Functions.add_floating_text(f"+{money['value']} Money", 'mp', (0, 255, 0))
-                        coin_sound.play()  # Play collection sound
+                        Functions.playsound("coin")  # Play collection sound
                         money_drops.remove(money)
                         self.collect_cooldown = current_time
                         self.is_happy = True
@@ -540,7 +535,7 @@ class PetNPC:
             if self.is_happy and current_time - self.happy_timer > 2000:
                 self.is_happy = False
 
-    def draw(self, surface, camera_x, camera_y, money_drops):
+    def draw(self, surface, camera_x, camera_y):
         if not self.active:
             return
             
@@ -564,7 +559,7 @@ class PetNPC:
             heart = small_font.render("<3", True, (255, 0, 0))
             surface.blit(heart, (self.x - camera_x + img.get_width()//2 - heart.get_width()//2, self.y - camera_y - 20))
 
-        if self.is_player_near() and not self.talking and not self.name_confirmed:
+        if self.is_player_near() and not self.talking and not self.owned:
             text = FONT.render("Press P to talk with PET", True, WHITE)
             surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
                 
@@ -574,7 +569,7 @@ class PetNPC:
     
     def start_dialogue(self):
         global player_x, player_y, moving
-        if not self.name_confirmed:  
+        if not self.owned:  
             self.talking = True
             self.dialogue_state = 0
             moving = False
@@ -609,7 +604,7 @@ class PetNPC:
                     self.selected_option = 1  
                 elif event.key == pygame.K_RETURN:
                     if self.selected_option == 0:  
-                        self.name_confirmed = True
+                        self.owned = True
                         pygame.time.set_timer(self.event, 5000)
                         self.end_dialogue()
                     else:  
@@ -619,7 +614,7 @@ class PetNPC:
     def end_dialogue(self):
         self.talking = False
         self.name_input_active = False
-        if not self.name_confirmed:
+        if not self.owned:
             self.dialogue_state = 0
 
 popup_button_rect = None
@@ -887,50 +882,32 @@ Characterssheet = pygame.image.load("Assets/Sprites/npc/characters.png").convert
 character  = Functions.get_sprite(42, 64, Characterssheet)
 characters = [
     {
-        "mg_state": "MG1",
-        "img": character[0],
-        "x": 790,
-        "y": 135,
+        "mg_state": "MG1", "img": character[0], "x": 790, "y": 135,
         "description": "Welcome to the restaurant, where the scent of sizzling meals meets the sound of scrubbing dishes. "
                        "Ready to roll up your sleeves? Take on the washing challenge and earn some well-deserved money."
     },
     {
-        "mg_state": "MG2",
-        "img": character[1], 
-        "x": 640,
-        "y": 670,
+        "mg_state": "MG2", "img": character[1], "x": 640, "y": 670,
         "description": "Bustling with customers and chaos. Today, you are not shopping — you are working! "
                        "Step behind the counter and become the cashier of the day."
     },
     {
-        "mg_state": "MG3",
-        "img": character[2],
-        "x": 110,
-        "y": 680,
+        "mg_state": "MG3", "img": character[2], "x": 110, "y": 680,
         "description": "This is the teenagers' zone, and the only way to win here is to type like lightning. "
                        "Put your speed and accuracy to the test and rake in digital dough with each correct keystroke."
     },
     {
-        "mg_state": "MG4",
-        "img": character[3],
-        "x": 70,
-        "y": 180,
+        "mg_state": "MG4", "img": character[3], "x": 70, "y": 180,
         "description": "This is not just shop — it is a gateway to passive income. "
                        "Invest wisely, and your money will grow while you rest."
     },
     {
-        "mg_state": "STORE",
-        "img": character[4],
-        "x": 770,
-        "y": 365,
+        "mg_state": "STORE", "img": character[4], "x": 770, "y": 365,
         "description": "Ready to bring you back to life. Choose your meal, sit back, and recover the energy you need to keep going. "
                        "After all, a hardworking spirit needs fuel to thrive."
     },
     {
-        "mg_state": "bedroom",
-        "img": character[5],
-        "x": 310,
-        "y": 380,
+        "mg_state": "bedroom", "img": character[5], "x": 310, "y": 380,
         "description": "You've survived another day in the pixel world! Time to face your toughest quest yet: getting out of bed." 
                         " Sleep now to recharge your energy!"
     },
@@ -1009,22 +986,6 @@ while running:
         transitioning = True
         last_switch_time = now
 
-    now = pygame.time.get_ticks()
-    if now - money_drop_timer > MONEY_DROP_INTERVAL and random.random() < 0.3:
-        money_drops.append({
-            "x": random.randint(50, MAP_WIDTH-50),
-            "y": random.randint(50, MAP_HEIGHT-50),
-            "value": random.randint(1, 10),
-            "time": now,
-            "duration": MONEY_DURATION
-        })
-        money_drop_timer = now
-
-    current_time = pygame.time.get_ticks()
-    for money in money_drops[:]:
-        if current_time - money["time"] > money["duration"]:
-            money_drops.remove(money)
-
     screen.fill(WHITE)
     cursor_timer += dt
     if cursor_timer >= cursor_interval:
@@ -1066,6 +1027,21 @@ while running:
             screen.blit(font.render(warning_message, True, WARNING_COLOR), (180, 530))
 
     elif game_state == "game":
+        if now - money_drop_timer > MONEY_DROP_INTERVAL and random.random() < 0.3:
+            money_drops.append({
+                "x": random.randint(50, MAP_WIDTH-50),
+                "y": random.randint(50, MAP_HEIGHT-50),
+                "value": random.randint(1, 10),
+                "time": now,
+                "duration": MONEY_DURATION
+            })
+            money_drop_timer = now
+    
+        current_time = pygame.time.get_ticks()
+        for money in money_drops[:]:
+            if current_time - money["time"] > money["duration"]:
+                money_drops.remove(money)
+    
         player_speed = speed if Functions.sprinttime <= 0 else speed * 2
         camera_x, camera_y = get_camera_offset()
         screen.blit(map_img, (-camera_x, -camera_y))
@@ -1165,7 +1141,7 @@ while running:
         # Draw player's lower half
         screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
         pet_npc.update(player_x, player_y, collision_rects, money_drops)
-        pet_npc.draw(screen, camera_x, camera_y, money_drops)
+        pet_npc.draw(screen, camera_x, camera_y)
         
         # **MOVED CODE**: Draw buildings and obstacles now
         for i in range(len(buildinglist)): 
@@ -1413,7 +1389,7 @@ while running:
                         if saved_data["pet_name"]:
                             pet_npc.pet_name = saved_data["pet_name"]
                             pet_npc.pet_hp = saved_data["pet_hp"]
-                            pet_npc.name_confirmed = True
+                            pet_npc.owned = True
                             pygame.time.set_timer(pet_npc.event, 5000)
                             if saved_data["pet_corpse"]:
                                 pet_npc.x = saved_data["pet_corpse"]['x']
@@ -1599,7 +1575,7 @@ while running:
                     tralalelo.start_dialogue()
                 elif event.key == pygame.K_y and four_d_npc.active and four_d_npc.is_player_near() and not four_d_npc.talking:  
                     four_d_npc.start_dialogue()
-                elif event.key == pygame.K_p and pet_npc.active and pet_npc.is_player_near() and not pet_npc.talking and not pet_npc.name_confirmed:
+                elif event.key == pygame.K_p and pet_npc.active and pet_npc.is_player_near() and not pet_npc.talking and not pet_npc.owned:
                     pet_npc.start_dialogue()
                 
                 elif pet_npc.talking:
