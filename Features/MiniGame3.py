@@ -481,17 +481,3 @@ while game_state != "quit":
         game_state = mg3_base()
     elif game_state == "inside_menu":
         game_state = inside_menu_screen()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
