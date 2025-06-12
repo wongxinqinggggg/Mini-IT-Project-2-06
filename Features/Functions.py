@@ -6,9 +6,6 @@ floating_texts = []
 floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110},
                       'inventoryE': {'x': 250, 'y': 500}, 'inventoryF': {'x': 350, 'y': 500}}
 sprinttime = 0
-floating_texts_pos = {'hp': {'x': 300, 'y': 40}, 'mp': {'x': 300, 'y': 110},
-                      'inventoryE': {'x': 250, 'y': 500}, 'inventoryF': {'x': 350, 'y': 500}}
-sprinttime = 0
 
 def initialize_stats(hp=520, mp=520):
     global energy, money, statsbar
@@ -244,7 +241,7 @@ class Notifications():
         if not displaystat: return
         elif not self.displaynoti.count(True): return
 
-        self.displaynoti[2] = True if pet_npc.name_confirmed else False
+        self.displaynoti[2] = True if pet_npc.owned else False
         self.displaynoti[3] = True if sprinttime > 0 else False
         self.counter += 1
         if self.counter % 30 == 0:
@@ -253,17 +250,14 @@ class Notifications():
         notialert = pygame.transform.rotate(self.alertbtn, self.angles[self.anglecounter])
 
         for i in range(len(self.displaynoti)):
-            alert, indicate = False, False
+            alert, indicate, surf = False, False, None
             if self.displaynoti[i]:
                 num = self.displaynoti[:i].count(True)
                 if i in [0, 1]:
                     if not vm_level[i]:
                         surf = pygame.transform.grayscale(self.notis[i]['surf'])
-                    else: surf = self.notis[i]['surf']
-
-                    self.notis[i]['rect'].center = self.iconcenter[num]
-                    self.S.blit(surf, self.notis[i]['rect'])
-                    if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]: alert = True
+                    elif vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]: 
+                        alert = True
                     elif vm_level[i]: 
                         indicate = True
                         color = 'Grey' if is_night else 'Green'
@@ -271,13 +265,16 @@ class Notifications():
                 else:
                     if i == 2:
                         percentage = pet_npc.pet_hp/pet_npc.MAXHP
-                        if percentage <= pet_npc.hp_percentage['hungry']: alert = True
+                        if percentage <= pet_npc.hp_percentage['hungry']: 
+                            alert = True
+                            if not percentage: surf = pygame.transform.grayscale(self.notis[i]['surf'])
                         else: 
                             color = 'Green' if (percentage >= pet_npc.hp_percentage['happy']) else 'Grey'
                             indicate = True
-                    self.notis[i]['rect'].center = self.iconcenter[num]
-                    self.S.blit(self.notis[i]['surf'], self.notis[i]['rect'])
 
+                if not surf: surf = self.notis[i]['surf']
+                self.notis[i]['rect'].center = self.iconcenter[num]
+                self.S.blit(surf, self.notis[i]['rect'])
                 if alert: self.S.blit(notialert, notialert.get_rect(center=(self.alertcenter[num])))
                 elif indicate:
                     pygame.draw.circle(self.S, color, (self.alertcenter[num]), 6)
@@ -365,7 +362,7 @@ class Inventory():
 
         self.btnrectlist = [self.btnrect, self.exitbtnrect]           
 
-    def eventhandler(self, E, inventorypage=True):
+    def eventhandler(self, E, pet_npc=None, inventorypage=True):
         global sprinttime
         cursor = False
         if E.type == pygame.MOUSEBUTTONDOWN and inventorypage:
@@ -441,6 +438,9 @@ class Inventory():
             if self.inventories.get(key): 
                 selectedcell = self.inventories[key]
                 if selectedcell['id'] and selectedcell['no']:
+                    if effect == 'pethp' and not pet_npc.owned:
+                        add_floating_text("Item unusable!", 'inventoryF')
+                        return
                     playsound('eating')
                     self.usedcell =  key
                     effect = self.effects[selectedcell['id'] - 1]['effect']
@@ -461,8 +461,8 @@ class Inventory():
         global sprinttime
         update_stats(self.statschange['hpc'], self.statschange['mpc'])
         if self.statschange['hpc']: add_floating_text(f"+{self.statschange['hpc']}", 'hp')
-        if self.statschange['mpc']: add_floating_text(f"{self.statschange['mpc']}", 'mp')
-        if self.statschange['pethpc']: pet_npc.pet_hp  = min(pet_npc.pet_hp+self.statschange['pethpc'], pet_npc.MAXHP)
+        elif self.statschange['mpc']: add_floating_text(f"{self.statschange['mpc']}", 'mp')
+        elif self.statschange['pethpc']: pet_npc.pet_hp  = min(pet_npc.pet_hp+self.statschange['pethpc'], pet_npc.MAXHP)
         for key in self.statschange.keys(): self.statschange[key] = None
 
         if self.usedcell:
@@ -554,8 +554,7 @@ class Inventory():
     def load_inventories(self, data=None):
         for i in range(len(self.keys)):
             key = self.keys[i]
-            if data: 
-                self.inventories[key].update(data[key])
+            if data: self.inventories[key].update(data[key])
             else: self.inventories[key].update({'id': None, 'no': 0, 'locked': False})
 
             dx, dy = int(i % 3) * 170, int(i / 3) * 170

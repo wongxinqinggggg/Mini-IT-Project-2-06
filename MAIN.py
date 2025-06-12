@@ -1546,7 +1546,9 @@ while running:
                 elif pet_npc.talking:
                     pet_npc.handle_input(event)
 
-                INVENTORY.eventhandler(event, False)
+                INVENTORY.eventhandler(event, pet_npc, False)
+
+            elif game_state == "inventory": INVENTORY.eventhandler(event, pet_npc, False)
 
             # Dialogue navigation
             if adeline.talking and adeline.dialogue_state == 0:
