@@ -4,10 +4,11 @@ from random import randint
 
 class MG1():
     def __init__(self, W, H, Menu, C):
+        # Initialize minigame variable and load assets
         self.W, self.H, self.C = W, H, C
         self.STATS = {'hp': 10, 'mp': 10}
         self.Menu = Menu
-        self.time_limit, self.plate_requirement = 20, 3
+        self.time_limit, self.plate_requirement = 40, 10
         self.msg = [["YOU LOSE!", 380], ["YOU WIN!", 400], ["INSUFFICIENT ENERGY!", 190]]
         menubtnpos = (975, 50)
         self.statschange = {'hpc': None, 'mpc': None}
@@ -94,12 +95,14 @@ class MG1():
 
     def update(self, mg_state, var_dict):
         self.var_dict = var_dict
+        # update energy and money stats
         Functions.update_stats(self.statschange['hpc'], self.statschange['mpc'])
         if self.statschange['hpc']: Functions.add_floating_text(f"{self.statschange['hpc']}", 'hp')
-        if self.statschange['mpc']: Functions.add_floating_text(f"+{self.statschange['mpc']}", 'mp')
-        self.statschange['hpc'], self.statschange['mpc'] = None, None
+        elif self.statschange['mpc']: Functions.add_floating_text(f"+{self.statschange['mpc']}", 'mp')
+        for key in self.statschange: self.statschange[key] = None
 
         if mg_state == "game":
+            # Updating in match variable
             self.stains, self.time_passed = self.var_dict['stains'], self.var_dict['time_passed']
             self.time_passed += self.C.get_time()/1000
 
@@ -126,6 +129,7 @@ class MG1():
                 self.var_dict['new_plate'] = False
 
             if not self.stains:
+                # Creating new plate or end game once current plate is cleared
                 self.var_dict['plates'] += 1
                 if self.var_dict['plates'] < self.plate_requirement:  self.var_dict['new_plate'] = True
                 else: 
@@ -147,7 +151,7 @@ class MG1():
 
     def draw(self, S, mg_state):
         S.blit(self.base, (0, 0))
-
+        # Draw UI based on mg_state
         if mg_state == "mainpage": 
             self.mainpage(S, self.W, self.var_dict['Lfont'])
         elif mg_state == "instruc": 
@@ -224,6 +228,7 @@ class MG1():
         S.blit(Lfont.render(msg, True, 'Black'), (xpos, ypos))
 
     def newgame(self):
+        # Starting new game
         if Functions.energy < self.STATS['hp']:
             self.var_dict['msg'] = self.msg[2]
             self.var_dict['mg_state'] = "mainpage"
@@ -241,6 +246,7 @@ class MG1():
         self.fadealpha = 0
 
     def countdown(self, S, W, H, C, XLfont):
+        # Countdown timer before entering a match
         if self.statschangetimer >= 0:
             self.mainpage(S, W, XLfont)
             self.fadesurf = pygame.Surface((W, H), pygame.SRCALPHA)

@@ -1395,8 +1395,6 @@ while running:
                     game_state = "menu"
 
                 elif popup_button_rect and popup_button_rect.collidepoint(event.pos):
-                    print("ENTER button clicked!")
-
                     if is_night and mgid in ["MG1", "MG2", "MG4"]:
                         closed_message = "This place is closed for the night. Come back during the day!"
                         closed_message_timer = pygame.time.get_ticks()
@@ -1596,7 +1594,7 @@ while running:
 
     if statemanager: statemanager.update()
     elif game_state == "menu": MENU.update()
-    elif game_state == "game" or game_state == "inventory": INVENTORY.update(pet_npc)
+    elif (game_state == "game") or (game_state == "inventory"): INVENTORY.update(pet_npc)
 
     pygame.display.flip()
     
