@@ -1154,7 +1154,7 @@ while running:
                     else:
                         text = "Bingo! As your new bestie, I'm giving you 50 Money!"
                         if not tralalelo.reward_given:
-                            Functions.update_stats (+0,+50)
+                            Functions.update_stats(mpchange=50)
                             tralalelo.reward_given = True
                             money_sound.play()
                     screen.blit(small_font.render(text, True, WHITE), (70, HEIGHT - 160))
@@ -1186,7 +1186,7 @@ while running:
                     else:
                         text = "Bingo! As your new bestie, I'm giving you 50 Energy!"
                         if not adeline.reward_given:
-                            Functions.update_stats (+50,+0)
+                            Functions.update_stats(hpchange=50)
                             adeline.reward_given = True
                             money_sound.play()
                     screen.blit(small_font.render(text, True, WHITE), (70, HEIGHT - 160))
