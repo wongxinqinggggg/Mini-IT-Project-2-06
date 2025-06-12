@@ -27,6 +27,8 @@ xsmall_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 8)
 pygame.mixer.music.load("Assets/Audio/background.mp3")
 money_sound = pygame.mixer.Sound("Assets/Audio/Cashier-Ka-Ching (u_byub5wd934).mp3")
 button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
+coin_sound = pygame.mixer.Sound("Assets/Audio/coinmusic.mp3")
+fail_sound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
 
@@ -42,21 +44,25 @@ BUTTON_COLOR = (220, 220, 220)
 # === IMAGES ===
 bg_img = pygame.transform.scale(pygame.image.load("Assets/Images/main.png").convert(), (WIDTH, HEIGHT))
 map_img = pygame.image.load("Assets/Images/final_map.png").convert()
-NPC = pygame.image.load("Assets/Sprites/npc/NPC.png").convert_alpha()
-NPClist = Functions.get_sprite(83, 70, NPC)
+NPC1 = pygame.image.load("Assets/Sprites/npc/adeline.png").convert_alpha()
+NPC1list = Functions.get_sprite(48, 56, NPC1)
+NPC2 = pygame.image.load("Assets/Sprites/npc/tralalelo_tralala.png").convert_alpha()
+NPC2list = Functions.get_sprite(64, 51, NPC2)
+NPC3 = pygame.image.load("Assets/Sprites/npc/boneca_ambalabu.png").convert_alpha()
+NPC3list = Functions.get_sprite(32, 53, NPC3)
 MAP_WIDTH, MAP_HEIGHT = ((800, 800))
-npc_left1 = NPClist[3]
-npc_left2 = NPClist[4]
-npc_right1 = NPClist[5]
-npc_right2 = NPClist[6]
-npc_tralalelo_tralala_left = NPClist[7]
-npc_tralalelo_tralala_right = NPClist[8]
-npc_4d_img = NPClist[0]
-npc_4d_left1 = NPClist[1]
-npc_4d_right1 = NPClist[2]
+npc_left1 = NPC1list[0]
+npc_left2 = NPC1list[1]
+npc_right1 = NPC1list[2]
+npc_right2 = NPC1list[3]
+npc_tralalelo_tralala_left = NPC2list[0]
+npc_tralalelo_tralala_right = NPC2list[1]
+npc_4d_img = NPC3list[0]
+npc_4d_left1 = NPC3list[1]
+npc_4d_right1 = NPC3list[2]
 four_d_img = pygame.image.load("Assets/Images/Four_d.png").convert_alpha()
 Pet = pygame.image.load("Assets/Sprites/npc/PET.png").convert_alpha()
-Petlist = Functions.get_sprite(30, 34, Pet)
+Petlist = Functions.get_sprite(25, 42, Pet)
 pet_img1 = Petlist[0]
 pet_img2 = Petlist[1]
 pet_img3 = Petlist[2]
@@ -167,7 +173,7 @@ class AdelineNPC:
         global player_x, player_y, moving
         self.talking = True
         self.dialogue_state = 0
-        moving = False
+        moving = False 
     
     def end_dialogue(self):
         self.talking = False
@@ -243,7 +249,7 @@ class TralaleloTralalaNPC:
         global player_x, player_y, moving
         self.talking = True
         self.dialogue_state = 0
-        moving = False
+        moving = False 
     
     def end_dialogue(self):
         self.talking = False
@@ -279,6 +285,9 @@ class FourDNPC:
         self.wallet_check_timer = 0
         self.wallet_check_duration = 3000  
         self.wallet_check_started = False
+        self.sound_played_for_state_5 = False
+        self.sound_played_for_state_3 = False
+
 
     def handle_input(self, event):
         
@@ -308,7 +317,6 @@ class FourDNPC:
                     self.end_dialogue()
 
     def update(self):
-        global VM2
 
         if not self.active:
             return
@@ -345,7 +353,7 @@ class FourDNPC:
                 self.checked_wallet = True
                 self.wallet_check_started = False
 
-                if VM2 >= 30:
+                if Functions.money >= 30:
                     Functions.update_stats (+0, -30)
                     self.reward_money = random.choice([0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80])
                     self.reward_energy = random.choice([0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80])
@@ -354,11 +362,12 @@ class FourDNPC:
                 else:
                     self.dialogue_state = 3
                     self.current_line = 3
+        pass
                 
     def draw(self, surface, camera_x, camera_y):
         if not self.active:
             return
-
+       
         # Draw NPC
         if self.direction == "left":
             if self.walk_frame == 0 or self.walk_frame == 2:
@@ -372,7 +381,7 @@ class FourDNPC:
                 img = npc_4d_right1
             
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
-       
+
         if self.talking:
             pygame.draw.rect(surface, (0, 0, 0), (50, HEIGHT-200, WIDTH-100, 150))
             pygame.draw.rect(surface, WHITE, (50, HEIGHT-200, WIDTH-100, 150), 3)
@@ -404,6 +413,7 @@ class FourDNPC:
         if self.is_player_near() and not self.talking:
             text = FONT.render("Click Y to talk with 4D Seller", True, WHITE)
             surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
+        pass
     
     def is_player_near(self):
         distance = ((self.x - player_x)**2 + (self.y - player_y)**2)**0.5
@@ -415,7 +425,9 @@ class FourDNPC:
         self.dialogue_state = 0
         self.current_line = 0
         self.selected_pay_option = 0 
-        self.reward_given = False  
+        self.reward_given = False 
+        self.sound_played_for_state_5 = False
+        self.sound_played_for_state_3 = False
         moving = False 
     
     def end_dialogue(self):
@@ -427,6 +439,7 @@ class FourDNPC:
         self.checked_wallet = False    
 
 class PetNPC:
+    def __init__(self, x=590, y=355):
     def __init__(self, x=590, y=355):
         self.x = x
         self.y = y
@@ -446,8 +459,9 @@ class PetNPC:
         self.MAXHP = 999
         self.hp_percentage = {'happy': 0.33, 'hungry': 0.2}
         self.name_input_active = False
-        self.width = 32
-        self.height = 32
+        self.name_confirmed = False
+        self.width = 25
+        self.height = 42
         self.event = pygame.USEREVENT + 103  # This line was missing in the implementation
         self.pet_img1 = Petlist[0]
         self.pet_img2 = Petlist[1]
@@ -516,15 +530,15 @@ class PetNPC:
         if not self.active: return
             
         if self.direction == "left":
-            if self.walk_frame == 0 or self.walk_frame == 2: img = self.pet_img4
-            else: img = self.pet_img2
-        elif self.direction == "right":
             if self.walk_frame == 0 or self.walk_frame == 2: img = self.pet_img3
-            else: img = self.pet_img1
+            else: img = self.pet_img4
+        elif self.direction == "right":
+            if self.walk_frame == 0 or self.walk_frame == 2: img = self.pet_img1
+            else: img = self.pet_img2
             
         if self.is_happy:
-            img = pygame.transform.scale(img, (int(img.get_width()*1.2), int(img.get_height()*1.2)))
-            heart = small_font.render("<3", True, (255, 0, 0))
+            img = pygame.transform.scale(img, (int(img.get_width()*1.5), int(img.get_height()*1.5)))
+            heart = font.render("<3", True, (255, 0, 0))
             surface.blit(heart, (self.x - camera_x + img.get_width()//2 - heart.get_width()//2, self.y - camera_y - 20))
 
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
@@ -779,7 +793,7 @@ def load_player_images(character):
 def is_any_npc_talking():
     return (tralalelo.talking or adeline.talking or four_d_npc.talking or 
             (pet_npc.active and pet_npc.talking))
-    
+
 # === CAMERA ===
 def get_camera_offset():
     camera_x = max(0, min(player_x - WIDTH // 2, MAP_WIDTH - WIDTH))
@@ -1166,6 +1180,14 @@ while running:
             four_d_npc.draw(screen, camera_x, camera_y)
             if four_d_npc.talking:
                 screen.blit(small_font.render(four_d_npc.dialogue_lines[four_d_npc.current_line], True, WHITE), (70, HEIGHT-180))
+                if four_d_npc.dialogue_state == 5 and not four_d_npc.sound_played_for_state_5:
+                    money_sound.play()
+                    four_d_npc.sound_played_for_state_5 = True
+                if four_d_npc.dialogue_state == 3 and not four_d_npc.sound_played_for_state_3:
+                    fail_sound.play()
+                    four_d_npc.sound_played_for_state_3 = True
+
+                
 
         if adeline.active:
             adeline.update()
