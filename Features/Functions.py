@@ -30,9 +30,9 @@ def display_stats(S):
     S.blit(mpsurf, mprect)
 
 def add_floating_text(text, id, color=(128,128,128)):
-    if floating_texts_pos[id].get(id): xpos, ypos = floating_texts_pos[id]['x'], floating_texts_pos[id]['y']
+    if floating_texts_pos.get(id): xpos, ypos = floating_texts_pos[id]['x'], floating_texts_pos[id]['y']
     else: xpos, ypos = id[0], id[1]
-    floating_texts.append({"text": text, "x": xpos, "y": ypos, "start_time": pygame.time.get_ticks(), "color": color})
+    floating_texts.append({"text": str(text), "x": xpos, "y": ypos, "start_time": pygame.time.get_ticks(), "color": color})
 
 def draw_floating_texts(S):
     floating_font=pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 26)
@@ -58,9 +58,9 @@ def draw_floating_texts(S):
                 if dx != 0 or dy != 0:
                     outline_surface = floating_font.render(ft["text"], True, outline_color)
                     outline_surface.set_alpha(alpha)
-                    S.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
+                    S.blit(outline_surface, (ft['x'] + dx, ft['y'] - offset_y + dy))
     
-        S.blit(text_surface, (ft["x"], ft["y"] - offset_y))
+        S.blit(text_surface, (ft['x'], ft['y'] - offset_y), )
 
     for ft in texts_to_remove:
         floating_texts.remove(ft)
@@ -78,7 +78,6 @@ def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
                 surflist.append(surface)
             else: 
                 surflist.append(surf)
-
     return surflist
 
 def load_sprite():
@@ -261,7 +260,7 @@ class Notifications():
                 if i in [0, 1]:
                     if not vm_level[i]:
                         surf = pygame.transform.grayscale(self.notis[i]['surf'])
-                    elif vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]: 
+                    if vm_level[i] < 3 and money >= self.vm_buyingprices[i][vm_level[i]]: 
                         alert = True
                     elif vm_level[i]: 
                         indicate = True
@@ -443,17 +442,19 @@ class Inventory():
             if self.inventories.get(key): 
                 selectedcell = self.inventories[key]
                 if selectedcell['id'] and selectedcell['no']:
-                    if effect == 'pethp' and not pet_npc.owned:
-                        add_floating_text("Item unusable!", 'inventoryF')
-                        return
-                    playsound('eating')
-                    self.usedcell =  key
                     effect = self.effects[selectedcell['id'] - 1]['effect']
                     value = self.effects[selectedcell['id'] - 1]['value']
 
                     if effect == 'hp': self.statschange['hpc'] = value
                     elif effect == 'sprint': sprinttime = value
-                    elif effect == 'pethp': self.statschange['pethpc'] = value
+                    elif effect == 'pethp': 
+                        if not pet_npc.owned:
+                            add_floating_text("Item unusable!", 'inventoryF')
+                            return
+                        else: self.statschange['pethpc'] = value
+
+                    playsound('eating')
+                    self.usedcell =  key
 
                 else: add_floating_text("Inventory slot empty!", 'inventoryE')
 

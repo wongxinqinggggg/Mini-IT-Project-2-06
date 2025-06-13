@@ -110,23 +110,32 @@ def draw_stats():
 def handle_inside_menu_events(event):
     global inside_menu_active, slider_dragging, game_state
     volume = pygame.mixer.music.get_volume()
-    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+
+    if event.type == pygame.QUIT: return 1
+
+    elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
         inside_menu_active = False
+
     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         if resume_button_rect.collidepoint(event.pos):
             Functions.playsound("btnclicked")
             inside_menu_active = False
+
         elif restart_button_rect.collidepoint(event.pos):
             pygame.mouse.set_cursor(error_cursor)
+
         elif quit_button_rect.collidepoint(event.pos):
             Functions.playsound("btnclicked")
             inside_menu_active = False
             game_state = "game"
+
         knob_x = slider_x + int(volume * slider_width)
         if (event.pos[0] - knob_x) ** 2 + (event.pos[1] - (slider_y + slider_height // 2)) ** 2 <= knob_radius ** 2:
             slider_dragging = True
+
     elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
         slider_dragging = False
+
     elif event.type == pygame.MOUSEMOTION and slider_dragging:
         mouse_x, _ = event.pos
         volume = max(0, min(1, (mouse_x - slider_x) / slider_width))
@@ -224,10 +233,10 @@ def run():
             interacted_items.clear()    
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT: return "quit"
+            if event.type == pygame.QUIT: return 1
 
             if inside_menu_active:
-                handle_inside_menu_events(event)
+                if handle_inside_menu_events(event): return 1
                 continue
 
             if sleeping: continue

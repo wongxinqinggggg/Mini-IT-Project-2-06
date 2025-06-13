@@ -28,10 +28,8 @@ def run_game(screen):
     correct_amount = 0
 
     def load_and_scale(path):
-        try:
-            return pygame.transform.scale(pygame.image.load(path).convert(), (1024, 576))
-        except:
-            return pygame.Surface((1024, 576))
+        try: return pygame.transform.scale(pygame.image.load(path).convert(), (1024, 576))
+        except: return pygame.Surface((1024, 576))
     
     # Game data
     receipt_answers = {
@@ -64,7 +62,6 @@ def run_game(screen):
     game_screen_snapshot = None
 
     # Button areas
-    return_button = pygame.Rect(20, 20, 120, 50)
     menu_button_rect = pygame.Rect(920, 20, 80, 80)
     resume_button_rect = pygame.Rect(390, 195, 270, 80)
     restart_button_rect = pygame.Rect(380, 300, 270, 80)
@@ -92,8 +89,7 @@ def run_game(screen):
             screen.blit(Inside_menu_image, (250, 50))
 
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return "quit"
+                if event.type == pygame.QUIT: return "quit"
                     
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
@@ -116,7 +112,7 @@ def run_game(screen):
                     elif quit_button_rect.collidepoint(mouse_pos):
                         Functions.playsound("btnclicked")
                         inside_menu_active = False
-                        return "quit"
+                        return "exit"
                         
                 elif event.type == pygame.MOUSEBUTTONUP:
                     dragging = False
@@ -159,6 +155,7 @@ def run_game(screen):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running_minigame = False
+                return 1
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
@@ -174,12 +171,11 @@ def run_game(screen):
                             poor_message = False
                         else:
                             poor_message = True
+
                     elif 900 <= mouse_pos[0] <= 1000 and 100 <= mouse_pos[1] <= 160:
                         Functions.playsound("btnclicked")
                         minigame_state = "instruction"
-                    elif return_button.collidepoint(mouse_pos):
-                        Functions.playsound("btnclicked")
-                        running_minigame = False
+
                     elif menu_button_rect.collidepoint(mouse_pos):
                         Functions.playsound("btnclicked")
                         game_screen_snapshot = screen.copy()
@@ -239,6 +235,9 @@ def run_game(screen):
         if inside_menu_active:
             result = inside_menu_screen()
             if result == "quit":
+                running_minigame = False
+                return 1
+            elif result == "exit":
                 running_minigame = False
             elif result == "restart":
                 reset_minigame()

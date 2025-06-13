@@ -1304,8 +1304,7 @@ while running:
     for event in pygame.event.get():
         cursorclicked, cursorcollide = False, False
     
-        if event.type == pygame.QUIT:
-            running = False
+        if event.type == pygame.QUIT: running = False
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "intro":
@@ -1398,9 +1397,11 @@ while running:
                         MiniGame2.event_var = {'VM_EVENT': VM_EVENT, 'is_night': is_night, 'pet_npc': pet_npc,
                                                'mpchange': [vm_income[0][vm_level[0] - 1], vm_income[1][vm_level[1] - 1]],
                                                'vm_level': vm_level, 'xsmall_font': xsmall_font}
-                        MiniGame2.run_game(screen)
-                        Functions.play_music("background")
-                        game_state = "game"
+                        if MiniGame2.run_game(screen): running = False
+                        else:
+                            game_state = "game"
+                            Functions.play_music("background")
+                        
                         break
 
                     elif mgid == "MG3":
@@ -1412,17 +1413,19 @@ while running:
                                                'vm_level': vm_level, 'xsmall_font': xsmall_font}
                         MiniGame3.load()
                         MiniGame3.game_state = "mg3_menu" 
-                        while MiniGame3.game_state != "quit":
+                        while MiniGame3.game_state != "exit" and MiniGame3.game_state != "quit":
                             if MiniGame3.game_state == "mg3_menu":
                                 MiniGame3.game_state = MiniGame3.mg3_menu()
                             elif MiniGame3.game_state == "instruction":
                                 MiniGame3.game_state = MiniGame3.mg3_instruction()
                             elif MiniGame3.game_state == "mg3_base":
                                 MiniGame3.game_state = MiniGame3.mg3_base()
-                            elif MiniGame3.game_state == "inside_menu":
-                                MiniGame3.game_state = MiniGame3.inside_menu_screen()
-                        Functions.play_music("background")
-                        break  
+
+                        if MiniGame3.game_state == "quit": running = False
+                        else: 
+                            game_state = "game"
+                            Functions.play_music("background")
+                            break  
 
                     elif mgid == "MG4": 
                         statemanager = StateManager(MiniGame4.MG4(MENU, vm_buyingprices), mg4_var_dict.copy())
@@ -1444,9 +1447,8 @@ while running:
                         Bedroom.load()
                         Bedroom.game_state = "bedroom"     
                         Bedroom.slept_once = False         
-                        result = Bedroom.run()
-                        if result == "quit":
-                            running = False
+                        if Bedroom.run(): running = False
+                        else: game_state = "game"
                         Functions.play_music("background")
                         break
 

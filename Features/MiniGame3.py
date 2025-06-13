@@ -9,6 +9,9 @@ screen = None
 NOTI = None
 event_var = None
 
+# Game loop
+game_state = "quit"
+
 # Volume slider variables
 slider_x = 450
 slider_y = 150 
@@ -74,7 +77,7 @@ retry_button_rect = pygame.Rect(450, 460, 120, 50)
 menu_button_base_screen = pygame.Rect(920, 20, 80, 80) 
 restart_button_rect = pygame.Rect(380, 300, 270, 80)
 quit_button_rect = pygame.Rect(380, 400, 270, 80)
-resume_button_rect = pygame.Rect(390, 195, 270, 80)
+resume_button_rect = pygame.Rect(380, 195, 270, 80)
 
 # Set Energy etc
 total_energy_spent = 0
@@ -124,10 +127,8 @@ def full_map_screen():
 
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_3:
-                return "mg3_menu"
+            if event.type == pygame.QUIT: return "quit"
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_3: return "mg3_menu"
             Functions.check_event(event, event_var) # Check for VM and pet event
 
         Functions.display_stats(screen)
@@ -145,8 +146,7 @@ def mg3_menu():
         screen.fill((0, 0, 0))  
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return "quit"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if question_button_rect.collidepoint(event.pos):
@@ -173,17 +173,10 @@ def mg3_menu():
         # Display the inside menu if it's active
         if inside_menu_active:
             result = inside_menu_screen()  
-            if result == "resume":
-                inside_menu_active = False  
-            elif result == "restart":
-                inside_menu_active = False  
-                return "mg3_base"
-            elif result == "full_map":
-                inside_menu_active = False  
-                return "full_map"
-            elif result == "quit":
-                inside_menu_active = False  
-                return "quit"
+            inside_menu_active = False 
+            if result == "resume": pass
+            elif result == "restart": return "mg3_base"
+            else: return result
 
         # Handle the error message if the energy is insufficient
         if time.time() - error_display_time < error_duration:
@@ -199,8 +192,7 @@ def inside_menu_screen():
     dragging, volume = False, pygame.mixer.music.get_volume()
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return "quit"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_x, mouse_y = event.pos
@@ -215,7 +207,7 @@ def inside_menu_screen():
 
                 elif quit_button_rect.collidepoint(event.pos):
                     Functions.playsound("btnclicked")
-                    return "quit"
+                    return "exit"
 
                 # Handle volume dragging
                 knob_x = slider_x + int(volume * slider_width)
@@ -249,8 +241,7 @@ def inside_menu_screen():
 def mg3_instruction():
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return "quit"
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if back_button_rect.collidepoint(event.pos):
                     Functions.playsound("btnclicked")
@@ -314,8 +305,8 @@ def mg3_base():
                 elif menu_button_base_screen.collidepoint(event.pos):
                     Functions.playsound("btnclicked")
                     result = inside_menu_screen()
-                    if result == "resume":
-                        continue
+                    if result == "resume": continue
+
                     elif result == "restart":
                         if Functions.energy >= 20:
                             Functions.update_stats(hpchange=-20)
@@ -331,20 +322,19 @@ def mg3_base():
                         else:
                             result_message = "Not enough energy to restart."
                         continue
-                    elif result == "quit":
+                    
+                    elif result == "exit":
                         success_sound.stop()
                         fail_sound.stop()
-                        return "quit"
+                        return "exit"
+                    
+                    return result
 
             elif event.type == pygame.KEYDOWN and not result_shown:
-                if not typing_started:
-                    typing_started = True
-                if event.key == pygame.K_BACKSPACE:
-                    user_input = user_input[:-1]
-                elif event.key == pygame.K_RETURN:
-                    pass
+                if not typing_started: typing_started = True
+                if event.key == pygame.K_BACKSPACE: user_input = user_input[:-1]
                 elif event.unicode and event.unicode.isprintable():
-                    user_input += event.unicode
+                    if len(user_input) < 200: user_input += event.unicode
 
             Functions.check_event(event, event_var) # Check for VM and pet event
 
@@ -420,17 +410,3 @@ def mg3_base():
         
         Functions.draw_floating_texts(screen)
         pygame.display.flip()
-
-# Game loop
-game_state = "quit"
-while game_state != "quit":
-    if game_state == "full_map":
-        game_state = full_map_screen()
-    elif game_state == "mg3_menu":
-        game_state = mg3_menu()
-    elif game_state == "instruction":
-        game_state = mg3_instruction()
-    elif game_state == "mg3_base":
-        game_state = mg3_base()
-    elif game_state == "inside_menu":
-        game_state = inside_menu_screen()
