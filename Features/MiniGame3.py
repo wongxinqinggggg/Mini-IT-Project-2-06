@@ -36,22 +36,12 @@ def load():
     fail_sound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
     Functions.play_music("MG3_bgm")
 
-# Paragraphs
-paragraphs = [
-    "The sun was setting behind the hills, painting the sky in shades of orange and pink. Birds flew back to their nests while the air grew cooler. It was the perfect time for a quiet walk through the park.",
-    "In a world where information flows freely and instantaneously, it's more important than ever to distinguish fact from fiction. Misinformation can spread like wildfire, affecting public opinion and societal stability. A balanced approach to media literacy and critical thinking is crucial.",
-    "The library was quiet except for the soft rustle of pages turning. Rows of books stretched across the room, each filled with knowledge and adventure. A young girl sat at a corner table, her eyes glued to a story about dragons and hidden treasure.",
-    "A dog barked in the distance as the wind rustled the trees. Leaves danced across the sidewalk, crunching under every step. Autumn had truly arrived.",
-    "He tied his shoes, grabbed his backpack, and headed out the door. School was only a few blocks away, but he enjoyed the fresh morning air during the walk.",
-    "Exploring the depths of the ocean is as challenging as exploring outer space, with its vast, uncharted territories and hidden ecosystems. Deep-sea expeditions reveal species that remain largely unknown.",
-    "At the edge of the forest stood an old cabin, half-covered in ivy. No one had lived there in years, but something about it still felt alive. Leaves rustled in the wind, and every now and then, a bird landed on the roof. It was quiet, but not empty.",
-    "She took a deep breath and stepped on stage. Her heart was racing, but she remembered all her lines. The spotlight was bright, and the audience waited in silence.",
-    "The boy threw a stone into the lake and watched the ripples spread. It was a calm day, with clouds drifting slowly above. Everything felt peaceful and quiet.",
-    "The human brain is one of the most complex and least understood organs in the body, with over 100 billion neurons communicating through trillions of synapses. Many aspects of brain function remain a mystery, fueling ongoing investigations into neurological disorders.",
-    "The stars sparkled above as the quiet wind carried the scent of the ocean. He walked slowly, hands in pockets, enjoying the peaceful rhythm of the waves against the shore.",
-    "She reached for her notebook and began to write. It didn’t matter if the words were perfect; what mattered was letting her thoughts out, one sentence at a time.",
-    "Typing is not just about speed — it’s about rhythm, flow, and focus. When your fingers move in sync with your thoughts, it becomes an art form in itself."
-]   
+# Words
+words = []
+word_limit = (150, 200)
+with open("mg3_words.txt", "r") as f:
+    txt = f.read()
+    words = txt.split(", ")
 
 # High score functions
 def load_high_score():
@@ -89,8 +79,17 @@ def draw_timer_box(elapsed_time):
     screen.blit(timer_text, (510, 20))
 
 def wrap_text(text, font, max_width):
-    words = text.split()
-    lines, current_line = [], ""
+    temp = text.split()
+    max_char = max_width//font.size('w')[0]
+    print(max_char, max_width//font.size('i')[0])
+    lines, current_line, words = [], "", []
+
+    for word in temp: 
+        if font.size(word)[0] >= max_width:
+            words.extend(wrap_typed_text(word, font, max_width))
+        else:
+            words.append(word)
+    
     for word in words:
         test_line = current_line + word + " "
         if font.size(test_line)[0] < max_width:
@@ -98,7 +97,8 @@ def wrap_text(text, font, max_width):
         else:
             lines.append(current_line)
             current_line = word + " "
-    lines.append(current_line)
+
+    if current_line: lines.append(current_line)
     return lines
 
 def wrap_typed_text(text, font, max_width):
@@ -112,6 +112,15 @@ def wrap_typed_text(text, font, max_width):
     if current_line:
         lines.append(current_line)
     return lines
+
+def create_new_paragraph():
+    paragraph = ""
+    while len(paragraph) < word_limit[0]:
+        i = random.randint(0, len(words)-1)
+        temp = paragraph + words[i] + " "
+        if len(temp) <= word_limit[1]: paragraph = temp
+
+    return paragraph
 
 def full_map_screen():
     global total_energy_spent, total_money_earned
@@ -260,7 +269,7 @@ def mg3_base():
     total_energy_spent += 20
     cursor_x = 100
     cursor_y = 300
-    paragraph = random.choice(paragraphs)
+    paragraph = create_new_paragraph()
     user_input = ""
     typing_started = False
     remaining_time = 60.0
@@ -290,7 +299,7 @@ def mg3_base():
                         Functions.update_stats(hpchange=-20)
                         attempts += 1
                         total_energy_spent += 20
-                        paragraph = random.choice(paragraphs)
+                        paragraph = create_new_paragraph()
                         user_input = ""
                         typing_started = False
                         remaining_time = 60.0
@@ -311,7 +320,7 @@ def mg3_base():
                         if Functions.energy >= 20:
                             Functions.update_stats(hpchange=-20)
                             total_energy_spent += 20
-                            paragraph = random.choice(paragraphs)
+                            paragraph = create_new_paragraph()
                             user_input = ""
                             typing_started = False
                             remaining_time = 60.0
@@ -322,7 +331,7 @@ def mg3_base():
                         else:
                             result_message = "Not enough energy to restart."
                         continue
-                    
+
                     elif result == "exit":
                         success_sound.stop()
                         fail_sound.stop()
@@ -334,7 +343,7 @@ def mg3_base():
                 if not typing_started: typing_started = True
                 if event.key == pygame.K_BACKSPACE: user_input = user_input[:-1]
                 elif event.unicode and event.unicode.isprintable():
-                    if len(user_input) < 200: user_input += event.unicode
+                    if len(user_input) < 300: user_input += event.unicode
 
             Functions.check_event(event, event_var) # Check for VM and pet event
 
@@ -348,7 +357,7 @@ def mg3_base():
             screen.blit(font.render(line, True, (0, 0, 0)), (100, y))
             y += 30
 
-        typed_lines = wrap_typed_text(user_input, font, 800)
+        typed_lines = wrap_text(user_input, font, 800)
         y = 300
         for line in typed_lines:
             x_offset = 100
