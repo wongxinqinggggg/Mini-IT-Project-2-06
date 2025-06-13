@@ -147,7 +147,7 @@ class MG4():
     def notitoggle(self, S, c, i):
         pygame.draw.circle(S, 'White', c, 12)
         pygame.draw.circle(S, 'Black', c, 12, 2)
-        if Functions.displaynoti[i]:
+        if self.var_dict['noti'].displaynoti[i]:
             pygame.draw.line(S, 'Black', (c[0] - 3, c[1] + 6), (c[0] - 7, c[1] - 2), 3)
             pygame.draw.line(S, 'Black', (c[0] - 3, c[1] + 6), (c[0] + 6, c[1] - 6), 3)
 

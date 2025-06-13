@@ -97,6 +97,8 @@ def reset_bedroom_objects():
 def draw_stats():
     Functions.display_stats(screen)
     NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
+    time_text = timing_font.render(get_game_time(), True, (0, 0, 0))
+    screen.blit(time_text, (505, 120))
 
     if "brush" not in interacted_items:
         screen.blit(brush_img, brush_rect)

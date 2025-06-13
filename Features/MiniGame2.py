@@ -170,7 +170,7 @@ def run_game(screen):
                             reset_minigame()
                             minigame_state = "playing"
                             Functions.update_stats(hpchange=-20)
-                            Functions.add_floating_text("-20", "hp" (255, 0, 0))
+                            Functions.add_floating_text("-20", "hp", (255, 0, 0))
                             poor_message = False
                         else:
                             poor_message = True
@@ -209,8 +209,8 @@ def run_game(screen):
                             if order_left == 0:
                                 minigame_state = "success"
                                 Functions.playsound("success")
-                                Functions.update_stats(0, 1000)
-                                Functions.add_floating_text("+50", "mp" (0, 255, 0))
+                                Functions.update_stats(mpchange=50)
+                                Functions.add_floating_text("+50", "mp", (0, 255, 0))
                             else:
                                 idx = random.randint(0, 9)
                                 current_receipt = receipt_imgslist[idx]
@@ -224,7 +224,8 @@ def run_game(screen):
                 elif event.key == pygame.K_BACKSPACE:
                     input_text = input_text[:-1]
                 elif event.unicode.isdigit() or event.unicode == '.':
-                    input_text += event.unicode
+                    if len(input_text) < 6:
+                        input_text += event.unicode
 
             if event.type == TIMER_EVENT and minigame_state == "playing" and not paused:
                 time_left -= 1
@@ -251,7 +252,7 @@ def run_game(screen):
         # Draw game state
         if minigame_state == "menu":
             screen.blit(menu_img, (0, 0))
-            screen.blit(Menu_image, (720, 0))
+            screen.blit(Menu_image, (920, 20))
             
             if poor_message:
                 poor_font = pygame.font.Font(None, 60)
@@ -260,20 +261,20 @@ def run_game(screen):
             
         elif minigame_state == "instruction":
             screen.blit(instruction_img, (0, 0))
-            screen.blit(Menu_image, (720, 0))
+            screen.blit(Menu_image, (920, 20))
             
         elif minigame_state == "playing":
             if not paused:
                 screen.blit(current_receipt, (0, 0))
-                screen.blit(font.render(f"Orders Left: {order_left}", True, (0, 0, 0)), (30, 40))
-                screen.blit(font.render(f"Time: {time_left}", True, (0, 0, 0)), (774, 40))
+                screen.blit(font.render(f"Orders Left: {order_left}", True, (0, 0, 0)), (40, 40))
+                screen.blit(font.render(f"Time: {time_left}", True, (0, 0, 0)), (750, 40))
 
                 input_surface = font.render(input_text, True, (0, 0, 0))
                 input_rect = input_surface.get_rect(center=(700, 175))
                 pygame.draw.rect(screen, (200, 200, 200), input_rect.inflate(20, 20))
                 screen.blit(input_surface, input_rect)
                 
-                screen.blit(Menu_image, (720, 0))
+                screen.blit(Menu_image, (920, 20))
 
         elif minigame_state == "success":
             screen.blit(success_img, (0, 0))
@@ -287,7 +288,8 @@ def run_game(screen):
             pygame.time.delay(2000)
             running_minigame = False
         
-        Functions.display_stats(screen)
-        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
+        if minigame_state != "playing" and minigame_state != "instruction":
+            Functions.display_stats(screen)
+            NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
         Functions.draw_floating_texts(screen)
         pygame.display.flip()

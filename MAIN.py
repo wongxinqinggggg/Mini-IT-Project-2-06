@@ -409,7 +409,7 @@ class PetNPC:
         self.pet_name = ""
         self.pet_hp = 888
         self.MAXHP = 999
-        self.pet_hpchange, self.happy_hpchange = -5, 1
+        self.pet_hpchange, self.happy_hpchange = 5, 1
         self.hp_percentage = {'happy': 0.33, 'hungry': 0.2}
         self.name_input_active = False
         self.name_confirmed = False

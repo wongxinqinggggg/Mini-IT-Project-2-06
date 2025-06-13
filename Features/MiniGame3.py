@@ -25,7 +25,6 @@ def load():
     mg3_question_image = Functions.mainbtnlist[0]
     mg3_instruction_image = pygame.image.load("Assets/Images/MG3-Instructions.png").convert()
     mg3_base_image = pygame.image.load("Assets/Images/MG3-Base.png").convert()
-    mge_statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
     menubtn = Functions.mainbtnlist[1]
     Inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
 
@@ -45,9 +44,9 @@ paragraphs = [
     "At the edge of the forest stood an old cabin, half-covered in ivy. No one had lived there in years, but something about it still felt alive. Leaves rustled in the wind, and every now and then, a bird landed on the roof. It was quiet, but not empty.",
     "She took a deep breath and stepped on stage. Her heart was racing, but she remembered all her lines. The spotlight was bright, and the audience waited in silence.",
     "The boy threw a stone into the lake and watched the ripples spread. It was a calm day, with clouds drifting slowly above. Everything felt peaceful and quiet.",
-    "The human brain is one of the most complex and least understood organs in the body, with over 100 billion neurons communicating through trillions of synapses. Many aspects of brain function remain a mystery, fueling ongoing investigations into neurological disorders."
-    "The stars sparkled above as the quiet wind carried the scent of the ocean. He walked slowly, hands in pockets, enjoying the peaceful rhythm of the waves against the shore."
-    "She reached for her notebook and began to write. It didn’t matter if the words were perfect; what mattered was letting her thoughts out, one sentence at a time."
+    "The human brain is one of the most complex and least understood organs in the body, with over 100 billion neurons communicating through trillions of synapses. Many aspects of brain function remain a mystery, fueling ongoing investigations into neurological disorders.",
+    "The stars sparkled above as the quiet wind carried the scent of the ocean. He walked slowly, hands in pockets, enjoying the peaceful rhythm of the waves against the shore.",
+    "She reached for her notebook and began to write. It didn’t matter if the words were perfect; what mattered was letting her thoughts out, one sentence at a time.",
     "Typing is not just about speed — it’s about rhythm, flow, and focus. When your fingers move in sync with your thoughts, it becomes an art form in itself."
 ]   
 
@@ -82,9 +81,9 @@ total_energy_spent = 0
 total_money_earned = 0
 
 def draw_timer_box(elapsed_time):
-    pygame.draw.rect(screen, (0, 128, 0), (870, 10, 140, 40))
+    pygame.draw.rect(screen, (0, 128, 0), (500, 10, 140, 40))
     timer_text = font.render(f"Time: {elapsed_time:.2f}s", True, (255, 255, 255))
-    screen.blit(timer_text, (880, 20))
+    screen.blit(timer_text, (510, 20))
 
 def wrap_text(text, font, max_width):
     words = text.split()
@@ -170,7 +169,6 @@ def mg3_menu():
         screen.blit(mg3_menu_image, (0, 0))
         screen.blit(menubtn, (920, 20))  
         screen.blit(mg3_question_image, (920, 120))  
-        screen.blit(mge_statsbar_image, (0, 0))
 
         # Display the inside menu if it's active
         if inside_menu_active:
