@@ -67,7 +67,7 @@ pet_img1 = Petlist[0]
 pet_img2 = Petlist[1]
 pet_img3 = Petlist[2]
 pet_img4 = Petlist[3]
-coin_img = pygame.image.load("Assets/Images/coin.webp").convert_alpha()
+coin_img = pygame.image.load("Assets/Images/coin.png").convert_alpha()
 coin_img = pygame.transform.scale(coin_img, (20, 20))
 
 # === GAME VARIABLES ===
