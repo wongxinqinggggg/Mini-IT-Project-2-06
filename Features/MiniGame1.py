@@ -6,7 +6,7 @@ class MG1():
     def __init__(self, W, H, Menu, C):
         # Initialize minigame variable and load assets
         self.W, self.H, self.C = W, H, C
-        self.STATS = {'hp': 10, 'mp': 10}
+        self.STATS = {'hp': 20, 'mp': 50}
         self.Menu = Menu
         self.time_limit, self.plate_requirement = 40, 10
         self.msg = [["YOU LOSE!", 380], ["YOU WIN!", 400], ["INSUFFICIENT ENERGY!", 190]]

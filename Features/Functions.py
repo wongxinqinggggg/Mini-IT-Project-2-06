@@ -78,13 +78,7 @@ def get_sprite(sprite_width, sprite_height, spritesheet, trim=False):
                 surflist.append(surface)
             else: 
                 surflist.append(surf)
-            if trim:
-                rect = surf.get_bounding_rect()
-                surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
-                surface.blit(spritesheet, (0,0), (j*sprite_width, i*sprite_height, sprite_width, sprite_height))
-                surflist.append(surface)
-            else: 
-                surflist.append(surf)
+
     return surflist
 
 def load_sprite():
@@ -95,13 +89,11 @@ def load_sprite():
     ebtnsheet = pygame.image.load("Assets/Images/Menubtnsheet.png").convert_alpha()
     tbtnsheet = pygame.image.load("Assets/Images/Transactionbtnsheet.png").convert_alpha()
     itemsheet = pygame.image.load("Assets/Images/Itemsheet.png").convert_alpha()
-    itemsheet = pygame.image.load("Assets/Images/Itemsheet.png").convert_alpha()
 
     iconlist = get_sprite(30, 30, iconsheet)
     mainbtnlist = get_sprite(80, 80, abtnsheet)
     menubtnlist = get_sprite(271, 81, ebtnsheet)
     tbtnlist = get_sprite(76, 34, tbtnsheet)
-    itemlist = get_sprite(208, 175, itemsheet, True)
     itemlist = get_sprite(208, 175, itemsheet, True)
 
 def playsound(soundtype):

@@ -110,6 +110,8 @@ class AdelineNPC:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.x_range = (300, 570)
+        self.height = 56
         self.direction = random.choice(["left", "right"])
         self.walk_frame = 0
         self.walk_timer = 0
@@ -120,44 +122,31 @@ class AdelineNPC:
         self.reward_given = False
         
     def update(self):
-        if not self.active or self.talking:
-            return
-            
-        if self.y < 190:
-            self.y = 190
-            self.direction = "right"
-        elif self.y > 200:
-            self.y = 200
-            self.direction = "left"
+        if not self.active or self.talking: return
 
-        if self.x < -5:
-            self.x = -5
+        if self.x < self.x_range[0]:
+            self.x = self.x_range[0]
             self.direction = "right"
-        elif self.x > 1020:
-            self.x = 1020
+        elif self.x > self.x_range[1]:
+            self.x = self.x_range[1]
             self.direction = "left"
 
         if random.random() < 0.01:  # 1%的几率改变方向
             self.direction = "left" if self.direction == "right" else "right"
             
-        if self.direction == "left":
-            self.x -= 1
-        else:
-            self.x += 1
+        if self.direction == "left": self.x -= 1
+        else: self.x += 1
             
         if pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
             self.walk_frame = (self.walk_frame + 1) % 2
             self.walk_timer = pygame.time.get_ticks()
     
     def draw(self, surface, camera_x, camera_y):
-        if not self.active:
-            return
+        if not self.active: return
             
         # NPC
-        if self.direction == "left":
-            img = npc_left1 if self.walk_frame == 0 else npc_left2
-        else:
-            img = npc_right1 if self.walk_frame == 0 else npc_right2
+        if self.direction == "left": img = npc_left1 if self.walk_frame == 0 else npc_left2
+        else: img = npc_right1 if self.walk_frame == 0 else npc_right2
             
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
         
@@ -177,15 +166,14 @@ class AdelineNPC:
     
     def end_dialogue(self):
         self.talking = False
-        if self.dialogue_state == 2:  
-            self.active = False  # NPC Disappear
-        if selected_color_option != 0:
-            self.active = False    
+        if self.dialogue_state == 2: self.active = False  # NPC Disappear
+        if selected_color_option != 0: self.active = False    
 
 class TralaleloTralalaNPC:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.height = 51
         self.direction = random.choice(["left", "right"])
         self.walk_frame = 0
         self.walk_timer = 0
@@ -196,15 +184,7 @@ class TralaleloTralalaNPC:
         self.reward_given = False
         
     def update(self):
-        if not self.active or self.talking:
-            return
-            
-        if self.y < 750:
-            self.y = 750
-            self.direction = "right"
-        elif self.y > 850:
-            self.y = 850
-            self.direction = "left"
+        if not self.active or self.talking:  return
 
         if self.x < -5:
             self.x = -5
@@ -216,24 +196,19 @@ class TralaleloTralalaNPC:
         if random.random() < 0.01:  # 1%的几率改变方向
             self.direction = "left" if self.direction == "right" else "right"
             
-        if self.direction == "left":
-            self.x -= 1
-        else:
-            self.x += 1
+        if self.direction == "left": self.x -= 1
+        else: self.x += 1
             
         if pygame.time.get_ticks() - self.walk_timer > self.walk_delay:
             self.walk_frame = (self.walk_frame + 1) % 2
             self.walk_timer = pygame.time.get_ticks()
     
     def draw(self, surface, camera_x, camera_y):
-        if not self.active:
-            return
+        if not self.active: return
             
         # NPC
-        if self.direction == "left":
-            img = npc_tralalelo_tralala_left
-        else:
-            img = npc_tralalelo_tralala_right
+        if self.direction == "left": img = npc_tralalelo_tralala_left
+        else: img = npc_tralalelo_tralala_right
             
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
         
@@ -253,15 +228,14 @@ class TralaleloTralalaNPC:
     
     def end_dialogue(self):
         self.talking = False
-        if self.dialogue_state == 2:  
-            self.active = False  
-        if selected_friend_option != 0:
-            self.active = False
+        if self.dialogue_state == 2:   self.active = False  
+        if selected_friend_option != 0: self.active = False
 
 class FourDNPC:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.height = 53
         self.direction = random.choice(["left", "right"])
         self.walk_frame = 0
         self.walk_timer = 0
@@ -316,13 +290,6 @@ class FourDNPC:
 
     def update(self):
         if not self.active: return
-            
-        if self.y < 460:
-            self.y = 460
-            self.direction = "right"
-        elif self.y > 560:
-            self.y = 560
-            self.direction = "left"
 
         if self.x < -5:
             self.x = -5
@@ -500,7 +467,7 @@ class PetNPC:
                         # Collect money
                         Functions.update_stats(mpchange=money["value"])
                         # Changed this line to use 'mp' as the ID instead of coordinates
-                        Functions.add_floating_text(f"+{money['value']} Money", 'mp', (0, 255, 0))
+                        Functions.add_floating_text(f"+{money['value']}", 'mp', (0, 255, 0))
                         Functions.playsound("coin")  # Play collection sound
                         money_drops.remove(money)
                         self.collect_cooldown = current_time
@@ -601,8 +568,8 @@ MENU = Functions.Menu(WIDTH)
 NOTI = Functions.Notifications(screen, vm_buyingprices, vm_income)
 INVENTORY = Functions.Inventory(screen, clock)
 adeline = AdelineNPC(300, 195)
-tralalelo = TralaleloTralalaNPC(500, 375)
-four_d_npc = FourDNPC(400, 350)
+tralalelo = TralaleloTralalaNPC(500, 750)
+four_d_npc = FourDNPC(400, 460)
 pet_npc = PetNPC()
 color_options = ["TEAL", "MAUVE"]
 selected_color_option = 0
@@ -1101,6 +1068,23 @@ while running:
         pet_npc.update(player_x, player_y, collision_rects, money_drops)
         pet_npc.draw(screen, camera_x, camera_y)
 
+        
+        if tralalelo.active and ((tralalelo.y + tralalelo.height) <= (player_y + sprite_height/2)): 
+            tralalelo.draw(screen, camera_x, camera_y)
+
+        if four_d_npc.active and ((four_d_npc.y + four_d_npc.height) <= (player_y + sprite_height/2)): 
+            four_d_npc.draw(screen, camera_x, camera_y)
+
+        if adeline.active and ((adeline.y + adeline.height) <= (player_y + sprite_height/2)): 
+            adeline.draw(screen, camera_x, camera_y)
+
+        for money in money_drops:
+            time_left = money["duration"] - (current_time - money["time"])
+            if time_left > BLINK_START or (time_left // 500) % 2 == 0:
+                screen.blit(coin_img, (money["x"] - camera_x - coin_img.get_width()//2, money["y"] - camera_y - coin_img.get_height()//2))
+                text = xsmall_font.render(str(money["value"]), True, WHITE)
+                screen.blit(text, (money["x"] - camera_x - text.get_width()//2, money["y"] - camera_y - 25))
+
         # Draw player's lower half
         screen.blit(current_img[1], (player_x - camera_x, player_y - camera_y))
         
@@ -1117,25 +1101,28 @@ while running:
                 if scale: surf = pygame.transform.scale_by(surf, scale)
                 screen.blit(surf, (xpos, ypos))
 
+        for character in characters:
+            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
+
         # Draw player's upper half
         upper_rect = pygame.Rect(0, 0, sprite_width, sprite_height/2)
         upper_rect.bottomleft = (player_x - camera_x, player_y - camera_y)
         screen.blit(current_img[0], upper_rect)
 
-        for money in money_drops:
-            time_left = money["duration"] - (current_time - money["time"])
-            if time_left > BLINK_START or (time_left // 500) % 2 == 0:
-                screen.blit(coin_img, (money["x"] - camera_x - coin_img.get_width()//2, money["y"] - camera_y - coin_img.get_height()//2))
-                text = xsmall_font.render(str(money["value"]), True, WHITE)
-                screen.blit(text, (money["x"] - camera_x - text.get_width()//2, money["y"] - camera_y - 25))
-
         popup_button_rect = None
-        for character in characters:
-            screen.blit(character["img"], (character["x"] - camera_x, character["y"] - camera_y))
+        
+        if tralalelo.active and ((tralalelo.y + tralalelo.height) > (player_y + sprite_height/2)): 
+            tralalelo.draw(screen, camera_x, camera_y)
+
+        if four_d_npc.active and ((four_d_npc.y + four_d_npc.height) > (player_y + sprite_height/2)): 
+            four_d_npc.draw(screen, camera_x, camera_y)
+
+        if adeline.active and ((adeline.y + adeline.height) > (player_y + sprite_height/2)): 
+            adeline.draw(screen, camera_x, camera_y)
 
         if tralalelo.active:
             tralalelo.update()
-            tralalelo.draw(screen, camera_x, camera_y)
+
             if tralalelo.talking:
                 pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 200, WIDTH - 100, 150))
                 pygame.draw.rect(screen, WHITE, (50, HEIGHT - 200, WIDTH - 100, 150), 3)
@@ -1161,7 +1148,7 @@ while running:
     
         if four_d_npc.active:
             four_d_npc.update()
-            four_d_npc.draw(screen, camera_x, camera_y)
+
             if four_d_npc.talking:
                 screen.blit(small_font.render(four_d_npc.dialogue_lines[four_d_npc.current_line], True, WHITE), (70, HEIGHT-180))
                 if four_d_npc.dialogue_state == 5 and not four_d_npc.sound_played_for_state_5:
@@ -1171,11 +1158,9 @@ while running:
                     fail_sound.play()
                     four_d_npc.sound_played_for_state_3 = True
 
-                
-
         if adeline.active:
             adeline.update()
-            adeline.draw(screen, camera_x, camera_y)
+                
             if adeline.talking:
                 pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 200, WIDTH - 100, 150))
                 pygame.draw.rect(screen, WHITE, (50, HEIGHT - 200, WIDTH - 100, 150), 3)
@@ -1320,7 +1305,6 @@ while running:
         cursorclicked, cursorcollide = False, False
     
         if event.type == pygame.QUIT:
-            save_game()
             running = False
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
