@@ -6,9 +6,11 @@ from Features import Functions
 pygame.init()
 pygame.mixer.init()
 screen = None
-floating_texts = [] 
-post_game_floating_texts = []
-inside_menu_active = False
+NOTI = None
+event_var = None
+
+# Game loop
+game_state = "quit"
 
 # Volume slider variables
 slider_x = 450
@@ -16,46 +18,30 @@ slider_y = 150
 slider_width = 200  
 slider_height = 8   
 knob_radius = 12    
-volume = 0.5        
-dragging = False    
 
 # Load images
 def load():
     global mg3_menu_image, mg3_question_image, mg3_instruction_image, mg3_base_image
     global mge_statsbar_image, Inside_menu_image, menubtn 
-    global success_sound, fail_sound, button_click
+    global success_sound, fail_sound
     mg3_menu_image = pygame.image.load("Assets/Images/MG3-Menu.png").convert()
     mg3_question_image = Functions.mainbtnlist[0]
     mg3_instruction_image = pygame.image.load("Assets/Images/MG3-Instructions.png").convert()
     mg3_base_image = pygame.image.load("Assets/Images/MG3-Base.png").convert()
-    mge_statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
     menubtn = Functions.mainbtnlist[1]
     Inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
 
     # Load sounds
     success_sound = pygame.mixer.Sound("Assets/Audio/success.mp3")
     fail_sound = pygame.mixer.Sound("Assets/Audio/fail.mp3")
-    button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
-    pygame.mixer.music.load("Assets/Audio/MG3_bgm.mp3")
-    pygame.mixer.music.set_volume(0.5)
-    pygame.mixer.music.play(-1)
+    Functions.play_music("MG3_bgm")
 
-# Paragraphs
-paragraphs = [
-    "The sun was setting behind the hills, painting the sky in shades of orange and pink. Birds flew back to their nests while the air grew cooler. It was the perfect time for a quiet walk through the park.",
-    "In a world where information flows freely and instantaneously, it's more important than ever to distinguish fact from fiction. Misinformation can spread like wildfire, affecting public opinion and societal stability. A balanced approach to media literacy and critical thinking is crucial.",
-    "The library was quiet except for the soft rustle of pages turning. Rows of books stretched across the room, each filled with knowledge and adventure. A young girl sat at a corner table, her eyes glued to a story about dragons and hidden treasure.",
-    "A dog barked in the distance as the wind rustled the trees. Leaves danced across the sidewalk, crunching under every step. Autumn had truly arrived.",
-    "He tied his shoes, grabbed his backpack, and headed out the door. School was only a few blocks away, but he enjoyed the fresh morning air during the walk.",
-    "Exploring the depths of the ocean is as challenging as exploring outer space, with its vast, uncharted territories and hidden ecosystems. Deep-sea expeditions reveal species that remain largely unknown.",
-    "At the edge of the forest stood an old cabin, half-covered in ivy. No one had lived there in years, but something about it still felt alive. Leaves rustled in the wind, and every now and then, a bird landed on the roof. It was quiet, but not empty.",
-    "She took a deep breath and stepped on stage. Her heart was racing, but she remembered all her lines. The spotlight was bright, and the audience waited in silence.",
-    "The boy threw a stone into the lake and watched the ripples spread. It was a calm day, with clouds drifting slowly above. Everything felt peaceful and quiet.",
-    "The human brain is one of the most complex and least understood organs in the body, with over 100 billion neurons communicating through trillions of synapses. Many aspects of brain function remain a mystery, fueling ongoing investigations into neurological disorders."
-    "The stars sparkled above as the quiet wind carried the scent of the ocean. He walked slowly, hands in pockets, enjoying the peaceful rhythm of the waves against the shore."
-    "She reached for her notebook and began to write. It didn’t matter if the words were perfect; what mattered was letting her thoughts out, one sentence at a time."
-    "Typing is not just about speed — it’s about rhythm, flow, and focus. When your fingers move in sync with your thoughts, it becomes an art form in itself."
-]   
+# Words
+words = []
+word_limit = (150, 200)
+with open("mg3_words.txt", "r") as f:
+    txt = f.read()
+    words = txt.split(", ")
 
 # High score functions
 def load_high_score():
@@ -69,46 +55,6 @@ def save_high_score(score):
     with open("mg3_highscore.txt", "w") as f:
         f.write(f"{score:.2f}")
 
-# Floating text
-def add_floating_text(text, x, y, color):
-    floating_texts.append({"text": text, "x": x, "y": y, "start_time": pygame.time.get_ticks(), "color": color})
-
-def draw_floating_texts():
-    current_time = pygame.time.get_ticks()
-    texts_to_remove = []
-    for ft in floating_texts[:]:
-        elapsed = (current_time - ft["start_time"]) / 1000
-        if elapsed > 1.5:
-            texts_to_remove.append(ft)
-            continue
-
-        offset_y = int(30 * elapsed)
-        alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
-
-        # Create the text surface
-        text_surface = floating_font.render(ft["text"], True, ft["color"])
-        text_surface.set_alpha(alpha)
-
-        # Create an outline by drawing black text slightly shifted
-        outline_color = (50, 50, 50)  
-        for dx in [-2, 0, 2]:
-            for dy in [-2, 0, 2]:
-                if dx != 0 or dy != 0:
-                    outline_surface = floating_font.render(ft["text"], True, outline_color)
-                    outline_surface.set_alpha(alpha)
-                    screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
-    
-        screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
-
-    for ft in texts_to_remove:
-        floating_texts.remove(ft)
-
-def draw_statsbar():
-    energy_text = custom_font.render(f"{Functions.energy:06}", True, (0, 0, 0))
-    money_text = custom_font.render(f"{Functions.money:06}", True, (0, 0, 0))
-    screen.blit(energy_text, (80, 20))
-    screen.blit(money_text, (80, 95))
-
 font = pygame.font.SysFont('Assets/Fonts/PressStart2P.ttf', 28, bold=True)
 floating_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 30)  
 custom_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 32)
@@ -121,20 +67,29 @@ retry_button_rect = pygame.Rect(450, 460, 120, 50)
 menu_button_base_screen = pygame.Rect(920, 20, 80, 80) 
 restart_button_rect = pygame.Rect(380, 300, 270, 80)
 quit_button_rect = pygame.Rect(380, 400, 270, 80)
-resume_button_rect = pygame.Rect(390, 195, 270, 80)
+resume_button_rect = pygame.Rect(380, 195, 270, 80)
 
 # Set Energy etc
 total_energy_spent = 0
 total_money_earned = 0
 
 def draw_timer_box(elapsed_time):
-    pygame.draw.rect(screen, (0, 128, 0), (870, 10, 140, 40))
+    pygame.draw.rect(screen, (0, 128, 0), (500, 10, 140, 40))
     timer_text = font.render(f"Time: {elapsed_time:.2f}s", True, (255, 255, 255))
-    screen.blit(timer_text, (880, 20))
+    screen.blit(timer_text, (510, 20))
 
 def wrap_text(text, font, max_width):
-    words = text.split()
-    lines, current_line = [], ""
+    temp = text.split()
+    max_char = max_width//font.size('w')[0]
+    print(max_char, max_width//font.size('i')[0])
+    lines, current_line, words = [], "", []
+
+    for word in temp: 
+        if font.size(word)[0] >= max_width:
+            words.extend(wrap_typed_text(word, font, max_width))
+        else:
+            words.append(word)
+    
     for word in words:
         test_line = current_line + word + " "
         if font.size(test_line)[0] < max_width:
@@ -142,7 +97,8 @@ def wrap_text(text, font, max_width):
         else:
             lines.append(current_line)
             current_line = word + " "
-    lines.append(current_line)
+
+    if current_line: lines.append(current_line)
     return lines
 
 def wrap_typed_text(text, font, max_width):
@@ -157,33 +113,40 @@ def wrap_typed_text(text, font, max_width):
         lines.append(current_line)
     return lines
 
+def create_new_paragraph():
+    paragraph = ""
+    while len(paragraph) < word_limit[0]:
+        i = random.randint(0, len(words)-1)
+        temp = paragraph + words[i] + " "
+        if len(temp) <= word_limit[1]: paragraph = temp
+
+    return paragraph
+
 def full_map_screen():
     global total_energy_spent, total_money_earned
 
     # Transfer final post-game floating texts
     if total_energy_spent > 0:
-        add_floating_text(f"-{total_energy_spent}", 250, 28, (128, 128, 128))
+        Functions.add_floating_text(f"-{total_energy_spent}", 'hp')
         total_energy_spent = 0
 
     if total_money_earned > 0:
-        add_floating_text(f"+{total_money_earned}", 250, 110, (128, 128, 128))
+        Functions.add_floating_text(f"+{total_money_earned}", 'mp')
         total_money_earned = 0
 
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_3:
-                return "mg3_menu"
+            if event.type == pygame.QUIT: return "quit"
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_3: return "mg3_menu"
+            Functions.check_event(event, event_var) # Check for VM and pet event
 
-        screen.blit(mge_statsbar_image, (0, 0))
-
-        draw_statsbar()
-        draw_floating_texts()
+        Functions.display_stats(screen)
+        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
+        Functions.draw_floating_texts(screen)
         pygame.display.flip()
 
 def mg3_menu():
-    global inside_menu_active  
+    inside_menu_active = False
     error_display_time = 0
     error_duration = 2
     result = None  
@@ -192,45 +155,37 @@ def mg3_menu():
         screen.fill((0, 0, 0))  
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return "quit"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if question_button_rect.collidepoint(event.pos):
-                    button_click.play()
+                    Functions.playsound("btnclicked")
                     return "instruction"
                 elif start_button_rect.collidepoint(event.pos):
                     if Functions.energy < 20:
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         error_display_time = time.time()
                     else:
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         return "mg3_base"
                 elif menu_button_base_screen.collidepoint(event.pos):  
-                    button_click.play()
+                    Functions.playsound("btnclicked")
                     inside_menu_active = not inside_menu_active  
-                    print(f"Inside menu active state toggled: {inside_menu_active}")  
+
+            Functions.check_event(event, event_var) # Check for VM and pet event
 
         # Show the background of the main menu
         screen.blit(mg3_menu_image, (0, 0))
         screen.blit(menubtn, (920, 20))  
         screen.blit(mg3_question_image, (920, 120))  
-        screen.blit(mge_statsbar_image, (0, 0))
 
         # Display the inside menu if it's active
         if inside_menu_active:
             result = inside_menu_screen()  
-            if result == "resume":
-                inside_menu_active = False  
-            elif result == "restart":
-                inside_menu_active = False  
-                return "mg3_base"
-            elif result == "full_map":
-                inside_menu_active = False  
-                return "full_map"
-            elif result == "quit":
-                inside_menu_active = False  
-                return "quit"
+            inside_menu_active = False 
+            if result == "resume": pass
+            elif result == "restart": return "mg3_base"
+            else: return result
 
         # Handle the error message if the energy is insufficient
         if time.time() - error_display_time < error_duration:
@@ -238,30 +193,30 @@ def mg3_menu():
             error_text = error_font.render("Error: Insufficient HP", True, (255, 0, 0))
             screen.blit(error_text, (380, 450))
 
-        draw_statsbar()
+        Functions.display_stats(screen)
+        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
         pygame.display.flip()
 
 def inside_menu_screen():
-    global dragging, volume
+    dragging, volume = False, pygame.mixer.music.get_volume()
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return "quit"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_x, mouse_y = event.pos
 
                 if resume_button_rect.collidepoint(event.pos):
-                    button_click.play()
+                    Functions.playsound("btnclicked")
                     return "resume"
 
                 elif restart_button_rect.collidepoint(event.pos):
-                    button_click.play()
+                    Functions.playsound("btnclicked")
                     return "restart"
 
                 elif quit_button_rect.collidepoint(event.pos):
-                    button_click.play()
-                    return "quit"
+                    Functions.playsound("btnclicked")
+                    return "exit"
 
                 # Handle volume dragging
                 knob_x = slider_x + int(volume * slider_width)
@@ -277,6 +232,8 @@ def inside_menu_screen():
                 volume = max(0, min(1, new_volume))
                 pygame.mixer.music.set_volume(volume)
 
+            Functions.check_event(event, event_var) # Check for VM and pet event
+
         screen.blit(Inside_menu_image, (250, 50))
 
         # Draw the volume slider
@@ -285,7 +242,7 @@ def inside_menu_screen():
         pygame.draw.circle(screen, (0, 0, 0), (knob_x, slider_y + slider_height // 2), knob_radius)
 
         SLASH_FONT = pygame.font.SysFont('Arial', 80)
-        if volume == 0:
+        if not volume:
             slash_symbol = SLASH_FONT.render("\\", True, (0, 0, 0))
             screen.blit(slash_symbol, (slider_x + slider_width - 248, slider_y - 45))
         pygame.display.flip()
@@ -293,25 +250,26 @@ def inside_menu_screen():
 def mg3_instruction():
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return "quit"
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if back_button_rect.collidepoint(event.pos):
-                    button_click.play()
+                    Functions.playsound("btnclicked")
                     return "mg3_menu"
-        screen.blit(mg3_instruction_image, (0, 0))
+                
+            Functions.check_event(event, event_var) # Check for VM and pet event
 
-        draw_floating_texts()
+        screen.blit(mg3_instruction_image, (0, 0))
+        Functions.draw_floating_texts(screen)
         pygame.display.flip()
 
 def mg3_base():
     global total_energy_spent, total_money_earned
     attempts = 1
-    Functions.update_stats(-20, 0)
+    Functions.update_stats(hpchange=-20)
     total_energy_spent += 20
     cursor_x = 100
     cursor_y = 300
-    paragraph = random.choice(paragraphs)
+    paragraph = create_new_paragraph()
     user_input = ""
     typing_started = False
     remaining_time = 60.0
@@ -319,7 +277,6 @@ def mg3_base():
     clock = pygame.time.Clock()
     result_message = ""
     high_score = load_high_score()
-    new_high = False
     wpm = 0
 
     while True:
@@ -333,17 +290,16 @@ def mg3_base():
                 result_shown = True
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return "quit"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if result_shown and retry_button_rect.collidepoint(event.pos):
                     if Functions.energy >= 20:
-                        button_click.play()
-                        Functions.update_stats(-20, 0)
+                        Functions.playsound("btnclicked")
+                        Functions.update_stats(hpchange=-20)
                         attempts += 1
                         total_energy_spent += 20
-                        paragraph = random.choice(paragraphs)
+                        paragraph = create_new_paragraph()
                         user_input = ""
                         typing_started = False
                         remaining_time = 60.0
@@ -352,21 +308,19 @@ def mg3_base():
                         success_sound.stop()
                         fail_sound.stop()
                     else:
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         result_message = "Not enough energy to retry."
 
                 elif menu_button_base_screen.collidepoint(event.pos):
-                    button_click.play()
+                    Functions.playsound("btnclicked")
                     result = inside_menu_screen()
-                    if result == "resume":
-                        inside_menu_active = False  
-                        continue
+                    if result == "resume": continue
+
                     elif result == "restart":
-                        inside_menu_active = False
                         if Functions.energy >= 20:
-                            Functions.update_stats(-20, 0)
+                            Functions.update_stats(hpchange=-20)
                             total_energy_spent += 20
-                            paragraph = random.choice(paragraphs)
+                            paragraph = create_new_paragraph()
                             user_input = ""
                             typing_started = False
                             remaining_time = 60.0
@@ -377,34 +331,33 @@ def mg3_base():
                         else:
                             result_message = "Not enough energy to restart."
                         continue
-                    elif result == "quit":
-                        inside_menu_active = False
+
+                    elif result == "exit":
                         success_sound.stop()
                         fail_sound.stop()
-                        return "quit"
+                        return "exit"
+                    
+                    return result
 
             elif event.type == pygame.KEYDOWN and not result_shown:
-                if not typing_started:
-                    typing_started = True
-                if event.key == pygame.K_BACKSPACE:
-                    user_input = user_input[:-1]
-                elif event.key == pygame.K_RETURN:
-                    pass
+                if not typing_started: typing_started = True
+                if event.key == pygame.K_BACKSPACE: user_input = user_input[:-1]
                 elif event.unicode and event.unicode.isprintable():
-                    user_input += event.unicode
+                    if len(user_input) < 300: user_input += event.unicode
+
+            Functions.check_event(event, event_var) # Check for VM and pet event
 
         screen.blit(mg3_base_image, (0, 0))
         screen.blit(menubtn, (920, 20))
-        screen.blit(mge_statsbar_image, (0, 0))
-
-        draw_statsbar()
+        Functions.display_stats(screen)
+        NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
 
         y = 200
         for line in wrap_text(paragraph, font, 800):
             screen.blit(font.render(line, True, (0, 0, 0)), (100, y))
             y += 30
 
-        typed_lines = wrap_typed_text(user_input, font, 800)
+        typed_lines = wrap_text(user_input, font, 800)
         y = 300
         for line in typed_lines:
             x_offset = 100
@@ -441,8 +394,7 @@ def mg3_base():
             if wpm > high_score:
                 save_high_score(wpm)
                 high_score = wpm
-                new_high = True
-            Functions.money += 50
+            Functions.update_stats(mpchange=50)
             total_money_earned += 50
             success_sound.play()
 
@@ -458,26 +410,12 @@ def mg3_base():
 
         # Transfer final post-game floating texts
         if total_energy_spent > 0:
-            add_floating_text(f"-{total_energy_spent}", 250, 28, (128, 128, 128))
+            Functions.add_floating_text(f"-{total_energy_spent}", 'hp')
             total_energy_spent = 0
 
         if total_money_earned > 0:
-            add_floating_text(f"+{total_money_earned}", 250, 110, (128, 128, 128))
+            Functions.add_floating_text(f"+{total_money_earned}", 'mp')
             total_money_earned = 0
         
-        draw_floating_texts()
+        Functions.draw_floating_texts(screen)
         pygame.display.flip()
-
-# Game loop
-game_state = "quit"
-while game_state != "quit":
-    if game_state == "full_map":
-        game_state = full_map_screen()
-    elif game_state == "mg3_menu":
-        game_state = mg3_menu()
-    elif game_state == "instruction":
-        game_state = mg3_instruction()
-    elif game_state == "mg3_base":
-        game_state = mg3_base()
-    elif game_state == "inside_menu":
-        game_state = inside_menu_screen()

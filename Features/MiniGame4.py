@@ -2,10 +2,11 @@ import pygame
 from Features import Functions
 
 class MG4():
-    def __init__(self, W, H, vm_buyingprices):
+    def __init__(self, Menu, vm_buyingprices):
+        # Initializing MG4 game variable
         global temp_vm, mpchange
         temp_vm, mpchange = [], None
-        self.menu = Functions.Menu(W)
+        self.Menu = Menu
         self.infolist = []
         self.buyingprices = vm_buyingprices
         self.sellingprices = [[150, 350, 600], [400, 850, 1350]]
@@ -15,11 +16,10 @@ class MG4():
         self.txtboxposY = [[340, 360], [290, 310], 420, 520]
         self.txtrectsize = [(50, 20), (80, 20), (90, 20), (90, 10)]
         self.txtinfo = ["f\"{self.buyingprices[i][vm_level[i]]}$\"", 
-                    "f\"({vm_income[i][vm_level[i]]}$/s)\"",
-                    "f\"({self.sellingprices[i][vm_level[i] - 1]}$)\""]
+                        "f\"({vm_income[i][vm_level[i]]}$/s)\"",
+                        "f\"({self.sellingprices[i][vm_level[i] - 1]}$)\""]
         
-        Functions.play_music("Retro-Game-Arcade (moodmode)")
-
+        Functions.play_music("I-Love-My-8-bit-Video-Game-Console (DJARTMUSIC)")
         self.title = pygame.image.load("Assets/Images/MG4_Title.png").convert_alpha()
         vmsheet = pygame.image.load("Assets/Images/MG4_VMsheet.png").convert_alpha()
         self.vm1, self.vm2 = Functions.get_sprite(250, 352, vmsheet)        
@@ -29,9 +29,9 @@ class MG4():
         self.menubtnrect = self.menubtn.get_rect(center = self.menubtnpos)
         noti1, noti2 = pygame.rect.Rect(0, 0, 24, 24), pygame.rect.Rect(0, 0, 24, 24)
         noti1.center, noti2.center = (self.posX[0], self.btnposY[3]), (self.posX[1], self.btnposY[3])
-        self.displaynoti = [noti1, noti2]
+        self.notitogglerect = [noti1, noti2]
 
-        self.btnrectdict = {'mainpage': [self.menubtnrect, noti1, noti2], 'menu': None}
+        self.btnrectdict = {'mainpage': [self.menubtnrect, noti1, noti2]}
 
     def eventhandler(self, mg_state, E):
         if E.type == pygame.MOUSEBUTTONDOWN:
@@ -43,12 +43,13 @@ class MG4():
 
                 else: 
                     self.buttons.update(E, self.var_dict['VM_EVENT'])
-                    for i in range(len(self.displaynoti)):
-                        if self.displaynoti[i].collidepoint(E.pos):
-                            Functions.displaynoti[i] = not Functions.displaynoti[i]
+                    for i in range(len(self.notitogglerect)):
+                        if self.notitogglerect[i].collidepoint(E.pos):
+                            # Toggling on and off vending machine notification
+                            self.var_dict['noti'].displaynoti[i] = not self.var_dict['noti'].displaynoti[i]
 
             elif mg_state == "menu":
-                self.var_dict, cursorclicked = self.menu.eventhandler(E, self.var_dict)
+                self.var_dict, cursorclicked = self.Menu.eventhandler(E, self.var_dict)
 
             if self.btnrectdict.get(mg_state): 
                 for rect in self.btnrectdict[mg_state]:
@@ -59,9 +60,8 @@ class MG4():
         elif E.type == pygame.MOUSEMOTION:
             global cursorcollide
             cursorcollide = False
-
             if mg_state == "menu":
-                self.var_dict, cursorcollide = self.menu.eventhandler(E, self.var_dict)
+                self.var_dict, cursorcollide = self.Menu.eventhandler(E, self.var_dict)
 
             if self.btnrectdict.get(mg_state): 
                 for rect in self.btnrectdict[mg_state]:
@@ -80,7 +80,6 @@ class MG4():
     def update(self, mg_state, var_dict):
         global temp_vm, mpchange
         self.var_dict, temp_vm = var_dict, var_dict['vm_level']
-
         if mg_state == "mainpage":
             Sfont, XSfont = self.var_dict['Sfont'], self.var_dict['XSfont']
             vm_level, vm_income = self.var_dict['vm_level'], self.var_dict['vm_income']
@@ -96,8 +95,7 @@ class MG4():
 
                 for btnpath in btnpaths: self.buttons.add(Buttons(i, btnpath, vm_level[i], self.posX, self.btnposY, self.buyingprices, self.sellingprices))
 
-            for i in range(len(vm_level)):
-                if vm_level[i] <= 2:
+                if vm_level[i] <= 2: # Upgrade btns info
                     for j in range(2):
                         surf = Sfont.render(eval(self.txtinfo[j]), True, 'Black')
                         k = 1 if vm_level[i] else 0
@@ -105,7 +103,7 @@ class MG4():
                         rect.center = (self.posX[i], self.txtboxposY[k][j])
                         self.infolist.append([surf, rect])
 
-                if vm_level[i]:
+                if vm_level[i]: # Sell btns info
                     surf = Sfont.render(eval(self.txtinfo[2]), True, 'Black')
                     if len(str(self.sellingprices[i][vm_level[i] - 1])) <= 3:
                         rect = pygame.rect.Rect((0, 0), self.txtrectsize[1])
@@ -120,7 +118,7 @@ class MG4():
                 rect.center = (self.posX[i], self.txtboxposY[3])
                 self.infolist.append([surf, rect])
 
-        elif mg_state == "menu": self.menu.update()
+        elif mg_state == "menu": self.Menu.update()
 
         if mpchange: 
             Functions.update_stats(mpchange=mpchange)
@@ -135,13 +133,13 @@ class MG4():
         S.fill((255, 107, 151))
         S.blit(self.title, (390, 30))
         if mg_state == "mainpage": self.mainpage(S)
-        elif mg_state == "menu": self.menu.draw(S)
+        elif mg_state == "menu": self.Menu.draw(S)
 
     def mainpage(self, S):
         S.blit(self.menubtn, self.menubtnrect)
         S.blit(self.vm1surf, self.vm1rect)
         S.blit(self.vm2surf, self.vm2rect)
-        for i in range(len(self.displaynoti)): self.notitoggle(S, self.displaynoti[i].center, i)
+        for i in range(len(self.notitogglerect)): self.notitoggle(S, self.notitogglerect[i].center, i)
         for surf, rect in self.infolist: S.blit(surf, rect)
         self.buttons.draw(S)
         Functions.draw_floating_texts(S)
@@ -149,15 +147,14 @@ class MG4():
     def notitoggle(self, S, c, i):
         pygame.draw.circle(S, 'White', c, 12)
         pygame.draw.circle(S, 'Black', c, 12, 2)
-        if Functions.displaynoti[i]:
+        if self.var_dict['noti'].displaynoti[i]:
             pygame.draw.line(S, 'Black', (c[0] - 3, c[1] + 6), (c[0] - 7, c[1] - 2), 3)
             pygame.draw.line(S, 'Black', (c[0] - 3, c[1] + 6), (c[0] + 6, c[1] - 6), 3)
-            pass
 
-class Buttons(pygame.sprite.Sprite):
-    def __init__(self, vm, btnpath, vm_level, posX, btnposY, buyingprices, sellingprices):
+class Buttons(pygame.sprite.Sprite): # Sprite grp for btns
+    def __init__(self, vm, btnpath, vm_level, btnposX, btnposY, buyingprices, sellingprices):
         super().__init__()
-        self.id, X_pos = vm, posX[vm]
+        self.id, X_pos = vm, btnposX[vm]
 
         if btnpath == "Buybtn" or btnpath == "Upgradebtn": 
             self.image = Functions.tbtnlist[0] if btnpath == "Buybtn" else Functions.tbtnlist[1]

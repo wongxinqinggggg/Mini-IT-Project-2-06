@@ -4,8 +4,9 @@ from Features import Functions
 
 pygame.init()
 pygame.mixer.init()
-screen = pygame.display.set_mode((1024, 576))
-Functions.load_sprite() 
+screen = None
+event_var = None
+NOTI = None
 
 # === Cursors ===
 default_cursor = pygame.SYSTEM_CURSOR_ARROW
@@ -13,14 +14,13 @@ error_cursor = pygame.SYSTEM_CURSOR_NO
 bed_cursor = pygame.SYSTEM_CURSOR_HAND
 
 # === Clock ===
-clock = pygame.time.Clock()
+clock = None
 FPS = 60
 
 # === Volume & Slider ===
 slider_x, slider_y = 450, 150
 slider_width, slider_height = 200, 8
 knob_radius = 12
-volume = 0.5
 slider_dragging = False
 
 # === Load Assets ===
@@ -28,36 +28,25 @@ def load_and_scale(path, scale_factor=0.1):
     img = pygame.image.load(path).convert_alpha()
     new_size = (int(img.get_width() * scale_factor), int(img.get_height() * scale_factor))
     return pygame.transform.smoothscale(img, new_size)
-Bedroom_image = pygame.image.load("Assets/Images/Bedroom.png").convert()
-inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
-statsbar_image = pygame.image.load("Assets/Images/MAIN_Statsbar.png").convert_alpha()
-menubtn = Functions.mainbtnlist[1]
-bedroomsheet = pygame.image.load("Assets/Images/Bedroomsheet.png").convert_alpha()
-towel_img, brush_img, mirror_img = Functions.get_sprite(78, 83, bedroomsheet)
+
+def load():
+    global Bedroom_image, inside_menu_image, menubtn, towel_img, brush_img, mirror_img
+    global brush_rect, towel_rect, mirror_rect
+    Bedroom_image = pygame.image.load("Assets/Images/Bedroom.png").convert()
+    inside_menu_image = pygame.image.load("Assets/Images/MG3_Menu2.png").convert_alpha()
+    menubtn = Functions.mainbtnlist[1]
+    bedroomsheet = pygame.image.load("Assets/Images/Bedroomsheet.png").convert_alpha()
+    towel_img, brush_img, mirror_img = Functions.get_sprite(78, 83, bedroomsheet)
+    brush_rect = brush_img.get_rect(topleft=(0,0))
+    towel_rect = towel_img.get_rect(topleft=(0,0))
+    mirror_rect = mirror_img.get_rect(topleft=(0,0))
 
 # === Sounds ===
-button_click = pygame.mixer.Sound("Assets/Audio/button_click.mp3")
 energy_increase = pygame.mixer.Sound("Assets/Audio/energy_increase.mp3")
 correct_click = pygame.mixer.Sound("Assets/Audio/correct_sound.mp3")
 error_click = pygame.mixer.Sound("Assets/Audio/error_sound.mp3")
 spooky_sound = pygame.mixer.Sound("Assets/Audio/Bedroom_spooky.mp3") 
 narcissism_sound = pygame.mixer.Sound("Assets/Audio/bedroom_narcissism.mp3")
-
-# === Music ===
-def play_background_music():
-    pygame.mixer.music.load("Assets/Audio/background.mp3")
-    pygame.mixer.music.set_volume(volume)
-    pygame.mixer.music.play(-1)
-
-def play_bedroom_music():
-    pygame.mixer.music.load("Assets/Audio/bedroom.mp3")
-    pygame.mixer.music.set_volume(volume)
-    pygame.mixer.music.play(-1)
-
-def play_sleep_start():
-    pygame.mixer.music.load("Assets/Audio/sleep_start.mp3")
-    pygame.mixer.music.set_volume(volume)
-    pygame.mixer.music.play(-1)
 
 # === Fonts ===
 xs_font = pygame.font.Font("Assets/Fonts/PressStart2P.ttf", 15)
@@ -89,45 +78,14 @@ interacted_items_popup = False
 bedroom_objects_initialized = False
 previous_game_state = None
 mirror_click_count = 0
-Functions.energy = 50
 game_minutes = 170
 minutes_per_real_second = 1  # Can be adjusted for faster/slower time
 last_minute_update = pygame.time.get_ticks()
-
-# === Stats ===
-floating_texts = []
-
-play_background_music()
-
-def add_floating_text(text, x, y, color):
-    floating_texts.append({"text": text, "x": x, "y": y, "start_time": pygame.time.get_ticks(), "color": color})
-
-def draw_floating_texts():
-    current_time = pygame.time.get_ticks()
-    for ft in floating_texts[:]:
-        elapsed = (current_time - ft["start_time"]) / 1000
-        if elapsed > 1.5:
-            floating_texts.remove(ft)
-            continue
-        offset_y = int(30 * elapsed)
-        alpha = max(255 - int(255 * (elapsed / 1.5)), 0)
-        text_surface = xs_font.render(ft["text"], True, ft["color"])
-        text_surface.set_alpha(alpha)
-        for dx in [-2, 0, 2]:
-            for dy in [-2, 0, 2]:
-                if dx != 0 or dy != 0:
-                    outline_surface = xs_font.render(ft["text"], True, (50, 50, 50))
-                    outline_surface.set_alpha(alpha)
-                    screen.blit(outline_surface, (ft["x"] + dx, ft["y"] - offset_y + dy))
-        screen.blit(text_surface, (ft["x"], ft["y"] - offset_y))
 
 spawn_points = [(100, 380),  (300, 320),  (500, 400),  (700, 350),  (850, 420),  (600, 200),  (400, 150), (470, 280), (10, 280), (340, 160) ]
 
 def get_random_position():
     return random.choice(spawn_points)
-brush_rect = brush_img.get_rect(topleft=(0,0))
-towel_rect = towel_img(topleft=(0,0))
-mirror_rect = mirror_img.get_rect(topleft=(0,0))
 
 def reset_bedroom_objects():
     positions = spawn_points.copy()
@@ -137,13 +95,10 @@ def reset_bedroom_objects():
     mirror_rect.topleft = positions[2]
 
 def draw_stats():
-    screen.blit(statsbar_image, (0, 0))
-    energy_text = custom_font.render(f"{Functions.energy:06}", True, (0, 0, 0))
-    money_text = custom_font.render(f"{Functions.money:06}", True, (0, 0, 0))
-    screen.blit(energy_text, (80, 20))
-    screen.blit(money_text, (80, 95))
+    Functions.display_stats(screen)
+    NOTI.displayicon(event_var['vm_level'], event_var['pet_npc'], event_var['xsmall_font'], event_var['is_night'])
     time_text = timing_font.render(get_game_time(), True, (0, 0, 0))
-    screen.blit(time_text, (505, 120)) 
+    screen.blit(time_text, (505, 120))
 
     if "brush" not in interacted_items:
         screen.blit(brush_img, brush_rect)
@@ -153,36 +108,48 @@ def draw_stats():
         screen.blit(mirror_img, mirror_rect)
 
 def handle_inside_menu_events(event):
-    global inside_menu_active, slider_dragging, volume, game_state
-    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+    global inside_menu_active, slider_dragging, game_state
+    volume = pygame.mixer.music.get_volume()
+
+    if event.type == pygame.QUIT: return 1
+
+    elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
         inside_menu_active = False
+
     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         if resume_button_rect.collidepoint(event.pos):
-            button_click.play()
+            Functions.playsound("btnclicked")
             inside_menu_active = False
+
         elif restart_button_rect.collidepoint(event.pos):
             pygame.mouse.set_cursor(error_cursor)
+
         elif quit_button_rect.collidepoint(event.pos):
-            button_click.play()
+            Functions.playsound("btnclicked")
             inside_menu_active = False
             game_state = "game"
-            play_background_music()
+
         knob_x = slider_x + int(volume * slider_width)
         if (event.pos[0] - knob_x) ** 2 + (event.pos[1] - (slider_y + slider_height // 2)) ** 2 <= knob_radius ** 2:
             slider_dragging = True
+
     elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
         slider_dragging = False
+
     elif event.type == pygame.MOUSEMOTION and slider_dragging:
         mouse_x, _ = event.pos
         volume = max(0, min(1, (mouse_x - slider_x) / slider_width))
         pygame.mixer.music.set_volume(volume)
 
+    Functions.check_event(event, event_var) # Check for VM and pet event
+
 def draw_inside_menu():
+    volume = pygame.mixer.music.get_volume()
     screen.blit(inside_menu_image, (250, 50))
     pygame.draw.rect(screen, (0, 0, 0), (slider_x, slider_y, slider_width, slider_height))
     knob_x = slider_x + int(volume * slider_width)
     pygame.draw.circle(screen, (0, 0, 0), (knob_x, slider_y + slider_height // 2), knob_radius)
-    if volume == 0:
+    if not volume:
         slash_symbol = slash_font.render("\\", True, (0, 0, 0))
         screen.blit(slash_symbol, (slider_x + slider_width - 248, slider_y - 45))
 
@@ -216,13 +183,10 @@ def bedroom_screen():
     screen.blit(Bedroom_image, (0, 0))
     draw_stats()
     screen.blit(menubtn, (920, 20))
-    if inside_menu_active:
-        draw_inside_menu()
-    if show_sleep_popup:
-        draw_sleep_popup()
-    draw_floating_texts()
-    if sleeping:
-        draw_sleep_overlay()
+    if inside_menu_active: draw_inside_menu()
+    if show_sleep_popup: draw_sleep_popup()
+    Functions.draw_floating_texts(screen)
+    if sleeping: draw_sleep_overlay()
     if already_slept_popup and pygame.time.get_ticks():
         message = "You can only sleep once per entry, GO AND WORK NOW!"
         text_surf = xs_font.render(message, True, (255, 0, 0))
@@ -269,15 +233,13 @@ def run():
             interacted_items.clear()    
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+            if event.type == pygame.QUIT: return 1
 
             if inside_menu_active:
-                handle_inside_menu_events(event)
+                if handle_inside_menu_events(event): return 1
                 continue
 
-            if sleeping:
-                continue
+            if sleeping: continue
 
             if show_sleep_popup or already_slept_popup or interacted_items_popup:
                 if event.type == pygame.KEYDOWN and event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
@@ -290,34 +252,34 @@ def run():
                 running = False
                 return
 
-            if game_state == "bedroom":
+            elif game_state == "bedroom":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if menu_button_rect.collidepoint(event.pos):
-                        button_click.play()
+                        Functions.playsound("btnclicked")
                         inside_menu_active = True
 
                     elif brush_rect.collidepoint(event.pos):
                         correct_click.play()
                         interacted_items.add("brush")
-                        add_floating_text("Brushed teeth!", event.pos[0], event.pos[1], (0, 100, 255))  # Blue
+                        Functions.add_floating_text("Brushed teeth!", event.pos, (0, 100, 255))  # Blue
 
                     elif towel_rect.collidepoint(event.pos):
                         correct_click.play()
                         interacted_items.add("towel")
-                        add_floating_text("Wiped face!", event.pos[0], event.pos[1], (0, 180, 0))  # Green
+                        Functions.add_floating_text("Wiped face!", event.pos, (0, 180, 0))  # Green
 
                     elif mirror_rect.collidepoint(event.pos):
                         mirror_click_count += 1
                         if mirror_click_count == 5:
                             narcissism_sound.play()
                             Functions.energy += 10
-                            add_floating_text("You're so narcissism!", event.pos[0], event.pos[1] - 50, (255, 20, 147))
-                            add_floating_text("+10 Energy", 200, 28, (255, 0, 0))  
+                            Functions.add_floating_text("You're so narcisstic!", (event.pos[0], event.pos[1] - 50), (255, 20, 147))
+                            Functions.add_floating_text("+10 Energy", "hp", (255, 0, 0))  
                             mirror_click_count = 0  
                         else:
                             correct_click.play()
                         interacted_items.add("mirror")
-                        add_floating_text("Pretty!", event.pos[0], event.pos[1], (255, 105, 180))  # Pink
+                        Functions.add_floating_text("Pretty!", event.pos, (255, 105, 180))  # Pink
 
                     elif bed_rect.collidepoint(event.pos) and not sleeping:
                         if slept_once:
@@ -334,13 +296,15 @@ def run():
                             sleeping = True
                             sleep_start_time = current_time
                             slept_once = True
-                            play_sleep_start()
+                            Functions.play_music("sleep_start")
 
                             current_minutes = game_minutes % (24 * 60)  
                             if 180 <= current_minutes <= 185:  
                                 spooky_sound.play()
                                 Functions.energy -= 10  
-                                add_floating_text("-10 Energy", 200, 28, (255, 0, 0)) 
+                                Functions.add_floating_text("-10 Energy", "hp", (255, 0, 0)) 
+
+                    Functions.check_event(event, event_var) # Check for VM and pet event
 
         if not inside_menu_active:
             if any(r.collidepoint(mouse_pos) for r in [brush_rect, towel_rect, mirror_rect, bed_rect]):
@@ -353,12 +317,11 @@ def run():
             if elapsed >= sleep_duration:
                 Functions.update_stats(hpchange=30)
                 energy_increase.play()
-                add_floating_text("+30 Energy", 200, 28, (128, 128, 128))
+                Functions.add_floating_text("+30 Energy", "hp")
                 sleeping = False
-                play_bedroom_music()
+                Functions.play_music("bedroom")
 
-        if game_state == "bedroom":
-            bedroom_screen()
+        if game_state == "bedroom": bedroom_screen()
 
         previous_game_state = game_state
         pygame.display.flip()
