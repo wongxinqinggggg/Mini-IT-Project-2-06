@@ -121,9 +121,6 @@ def handle_inside_menu_events(event):
             Functions.playsound("btnclicked")
             inside_menu_active = False
 
-        elif restart_button_rect.collidepoint(event.pos):
-            pygame.mouse.set_cursor(error_cursor)
-
         elif quit_button_rect.collidepoint(event.pos):
             Functions.playsound("btnclicked")
             inside_menu_active = False
@@ -136,10 +133,14 @@ def handle_inside_menu_events(event):
     elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
         slider_dragging = False
 
-    elif event.type == pygame.MOUSEMOTION and slider_dragging:
-        mouse_x, _ = event.pos
-        volume = max(0, min(1, (mouse_x - slider_x) / slider_width))
-        pygame.mixer.music.set_volume(volume)
+    elif event.type == pygame.MOUSEMOTION:
+        if slider_dragging:
+            mouse_x, _ = event.pos
+            volume = max(0, min(1, (mouse_x - slider_x) / slider_width))
+            pygame.mixer.music.set_volume(volume)
+        if restart_button_rect.collidepoint(event.pos):
+            pygame.mouse.set_cursor(error_cursor)
+        else: pygame.mouse.set_cursor()
 
     Functions.check_event(event, event_var) # Check for VM and pet event
 
