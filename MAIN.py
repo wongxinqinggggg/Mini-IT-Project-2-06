@@ -173,6 +173,7 @@ class TralaleloTralalaNPC:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.x_range = [0, 800]
         self.height = 51
         self.direction = random.choice(["left", "right"])
         self.walk_frame = 0
@@ -186,11 +187,11 @@ class TralaleloTralalaNPC:
     def update(self):
         if not self.active or self.talking:  return
 
-        if self.x < -5:
-            self.x = -5
+        if self.x < self.x_range[0]:
+            self.x = self.x_range[0]
             self.direction = "right"
-        elif self.x > 1000:
-            self.x = 1000
+        elif self.x > self.x_range[1]:
+            self.x = self.x_range[1]
             self.direction = "left"
 
         if random.random() < 0.01:  # 1%的几率改变方向
@@ -337,6 +338,11 @@ class FourDNPC:
             
         surface.blit(img, (self.x - camera_x, self.y - camera_y))
 
+        if self.is_player_near() and not self.talking:
+            text = FONT.render("Click Y to talk with 4D Seller", True, WHITE)
+            surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
+
+    def draw_dialogue(self, surface):
         if self.talking:
             pygame.draw.rect(surface, (0, 0, 0), (50, HEIGHT-200, WIDTH-100, 150))
             pygame.draw.rect(surface, WHITE, (50, HEIGHT-200, WIDTH-100, 150), 3)
@@ -363,10 +369,6 @@ class FourDNPC:
 
             elif self.dialogue_state == 5:
                 surface.blit(small_font.render("Come back anytime!", True, WHITE), (70, HEIGHT-180))
-
-        if self.is_player_near() and not self.talking:
-            text = FONT.render("Click Y to talk with 4D Seller", True, WHITE)
-            surface.blit(text, (self.x - camera_x - text.get_width()//2, self.y - camera_y - 30))
     
     def is_player_near(self):
         distance = ((self.x - player_x)**2 + (self.y - player_y)**2)**0.5
@@ -1114,15 +1116,16 @@ while running:
         if tralalelo.active and ((tralalelo.y + tralalelo.height) > (player_y + sprite_height/2)): 
             tralalelo.draw(screen, camera_x, camera_y)
 
-        if four_d_npc.active and ((four_d_npc.y + four_d_npc.height) > (player_y + sprite_height/2)): 
-            four_d_npc.draw(screen, camera_x, camera_y)
+        if four_d_npc.active:
+            four_d_npc.draw_dialogue(screen)
+            if ((four_d_npc.y + four_d_npc.height) > (player_y + sprite_height/2)): 
+                four_d_npc.draw(screen, camera_x, camera_y)
 
         if adeline.active and ((adeline.y + adeline.height) > (player_y + sprite_height/2)): 
             adeline.draw(screen, camera_x, camera_y)
 
         if tralalelo.active:
             tralalelo.update()
-
             if tralalelo.talking:
                 pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 200, WIDTH - 100, 150))
                 pygame.draw.rect(screen, WHITE, (50, HEIGHT - 200, WIDTH - 100, 150), 3)
@@ -1148,7 +1151,6 @@ while running:
     
         if four_d_npc.active:
             four_d_npc.update()
-
             if four_d_npc.talking:
                 screen.blit(small_font.render(four_d_npc.dialogue_lines[four_d_npc.current_line], True, WHITE), (70, HEIGHT-180))
                 if four_d_npc.dialogue_state == 5 and not four_d_npc.sound_played_for_state_5:
@@ -1160,7 +1162,6 @@ while running:
 
         if adeline.active:
             adeline.update()
-                
             if adeline.talking:
                 pygame.draw.rect(screen, (0, 0, 0), (50, HEIGHT - 200, WIDTH - 100, 150))
                 pygame.draw.rect(screen, WHITE, (50, HEIGHT - 200, WIDTH - 100, 150), 3)
